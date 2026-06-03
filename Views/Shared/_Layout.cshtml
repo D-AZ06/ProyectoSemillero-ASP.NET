@@ -1,40 +1,248 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@ViewBag.Title - Mi aplicación ASP.NET</title>
-    @Styles.Render("~/Content/css")
-    @Scripts.Render("~/bundles/modernizr")
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title - GesSi</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --bg-body: #f4f7f6;
+            --bg-sidebar: #2c3e50;
+            --bg-sidebar-hover: #34495e;
+            --blue-light: #e0f2fe;
+            --blue-primary: #0284c7;
+            --navbar-height: 70px; /* Altura fija para la barra superior */
+            --sidebar-width: 260px; /* Ancho fijo del menú */
+        }
+
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* --- 1 y 2: BARRA SUPERIOR FIJA Y LOGO VISIBLE --- */
+        .top-navbar {
+            height: var(--navbar-height);
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed; /* Se queda pegada arriba al hacer scroll */
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050; /* Por encima de todo en la página */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1.5rem;
+        }
+
+        /* Espacio para que el contenido no quede oculto detrás de la barra fija */
+        #wrapper {
+            padding-top: var(--navbar-height);
+        }
+
+        /* --- 3: MENÚ LATERAL (SIDEBAR) --- */
+        #sidebar-wrapper {
+            position: fixed;
+            top: var(--navbar-height);
+            left: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--navbar-height));
+            background-color: var(--bg-sidebar);
+            color: white;
+            overflow-y: auto;
+            z-index: 1040;
+            transition: transform 0.3s ease-in-out;
+            /* Por defecto en móvil: oculto hacia la izquierda */
+            transform: translateX(-100%);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        /* En móvil: cuando se abre, flota POR ENCIMA del contenido (no lo achica) */
+        #wrapper.toggled #sidebar-wrapper {
+            transform: translateX(0);
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+
+        /* Área de contenido principal */
+        #page-content-wrapper {
+            width: 100%;
+            transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+        }
+
+        /* Comportamiento en pantallas grandes (Desktop) */
+        @@media (min-width: 768px) {
+            #sidebar-wrapper {
+                transform: translateX(0); /* Visible por defecto */
+                box-shadow: none;
+                border-right: 1px solid rgba(0,0,0,0.1);
+            }
+
+            #page-content-wrapper {
+                margin-left: var(--sidebar-width); /* Empuja el contenido */
+                width: calc(100% - var(--sidebar-width));
+            }
+            /* En PC: Si se oculta el menú, el contenido ocupa toda la pantalla */
+            #wrapper.toggled #sidebar-wrapper {
+                transform: translateX(-100%);
+            }
+
+            #wrapper.toggled #page-content-wrapper {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* --- ESTILOS INTERNOS DEL MENÚ --- */
+        .sidebar-user-info {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: rgba(0,0,0,0.15);
+        }
+
+        .list-group-item-action {
+            background-color: transparent;
+            color: #cbd5e1;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+            .list-group-item-action:hover, .list-group-item-action:focus {
+                background-color: var(--bg-sidebar-hover);
+                color: white;
+                border-left: 4px solid var(--blue-primary);
+            }
+
+        .list-group-item i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Componentes de la vista */
+        .search-bar-container {
+            background-color: var(--blue-light);
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .main-content-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        /* Ajuste de botones superiores para celular */
+        @@media (max-width: 576px) {
+            .btn-text {
+                display: none;
+            }
+            /* Oculta el texto, deja solo íconos */
+            .top-navbar {
+                padding: 0 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
-        <div class="container">
-            @Html.ActionLink("Nombre de la aplicación", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
-            <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" title="Alternar navegación" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+
+    <header class="top-navbar">
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-light" id="menu-toggle" title="Alternar menú" style="border: 1px solid #ddd;">
+                <i class="bi bi-list fs-4"></i>
             </button>
-            <div class="collapse navbar-collapse d-sm-inline-flex justify-content-between">
-                <ul class="navbar-nav flex-grow-1">
-                    <li>@Html.ActionLink("Inicio", "Index", "Home", new { area = "" }, new { @class = "nav-link" })</li>
-                    <li>@Html.ActionLink("Acerca de", "About", "Home", new { area = "" }, new { @class = "nav-link" })</li>
-                    <li>@Html.ActionLink("Contacto", "Contact", "Home", new { area = "" }, new { @class = "nav-link" })</li>
-                </ul>
+
+            <div class="fs-4 fw-bold text-info m-0 d-flex align-items-center gap-2">
+                <i class="bi bi-cpu"></i>
+                <span class="d-none d-sm-inline text-dark">GesSi</span>
             </div>
         </div>
-    </nav>
-    <div class="container body-content">
-        @RenderBody()
-        <hr />
-        <footer>
-            <p>&copy; @DateTime.Now.Year - Mi aplicación ASP.NET</p>
-        </footer>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-info">
+                <i class="bi bi-robot"></i> <span class="btn-text">Ayuda IA</span>
+            </button>
+            <a href="@Url.Action("Logout", "Auth")" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i> <span class="btn-text">Salir</span>
+            </a>
+        </div>
+    </header>
+
+    <div id="wrapper">
+        <div id="sidebar-wrapper">
+            <div class="sidebar-user-info">
+                <div class="fw-bold">Bienvenido Líder</div>
+                <small class="text-light">¿Qué desea gestionar hoy?</small>
+            </div>
+            <div class="list-group list-group-flush mt-2">
+                <a href="@Url.Action("Index", "Usuarios")" class="list-group-item list-group-item-action"><i class="bi bi-person-badge"></i> Usuarios</a>
+                <a href="@Url.Action("Index", "Semillero")" class="list-group-item list-group-item-action"><i class="bi bi-tree"></i> Semillero</a>
+                <a href="@Url.Action("Index", "Proyectos")" class="list-group-item list-group-item-action"><i class="bi bi-folder2-open"></i> Proyectos</a>
+                <a href="@Url.Action("Index", "Actividades")" class="list-group-item list-group-item-action"><i class="bi bi-card-checklist"></i> Actividades</a>
+                <a href="@Url.Action("Index", "Fases")" class="list-group-item list-group-item-action"><i class="bi bi-signpost-split"></i> Fases</a>
+                <a href="@Url.Action("Index", "Reuniones")" class="list-group-item list-group-item-action"><i class="bi bi-people"></i> Reuniones</a>
+                <a href="@Url.Action("Index", "Eventos")" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event"></i> Eventos</a>
+                <a href="@Url.Action("Index", "Patrocinadores")" class="list-group-item list-group-item-action"><i class="bi bi-heart"></i> Patrocinadores</a>
+                <a href="@Url.Action("Index", "Reportes")" class="list-group-item list-group-item-action"><i class="bi bi-file-earmark-bar-graph"></i> Reportes</a>
+
+            </div>
+        </div>
+
+        <div id="page-content-wrapper">
+            <main class="container-fluid p-3 p-md-4">
+
+                <div class="search-bar-container">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-auto">
+                            <span class="fw-bold text-secondary mb-0">Consultar por parámetros:</span>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <select class="form-select">
+                                <option value="">Selecciona la opción</option>
+                                <option value="1">ID</option>
+                                <option value="2">Nombre</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md">
+                            <input type="text" class="form-control" placeholder="Ingrese el parámetro de búsqueda...">
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button class="btn w-100 text-white" style="background-color: var(--blue-primary);">
+                                <i class="bi bi-search"></i> Consultar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-content-card position-relative">
+                    @RenderBody()
+                </div>
+
+            </main>
+        </div>
     </div>
 
-    @Scripts.Render("~/bundles/jquery")
-    @Scripts.Render("~/bundles/bootstrap")
-    @RenderSection("scripts", required: false)
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.getElementById("menu-toggle").addEventListener("click", function (e) {
+            e.preventDefault();
+            document.getElementById("wrapper").classList.toggle("toggled");
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

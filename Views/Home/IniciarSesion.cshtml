@@ -1,0 +1,25 @@
+﻿@{
+    ViewBag.Title = "Bienvenido a GesSi";
+
+    // ESTA LÍNEA ES LA MAGIA: Le dice al _Layout que oculte el menú y expanda la pantalla
+    ViewBag.OcultarElementosLayout = true;
+}
+
+<div class="d-flex flex-column justify-content-center align-items-center" style="min-height: 60vh;">
+
+    <div class="text-center p-5 rounded shadow-sm bg-white" style="border-top: 5px solid var(--blue-primary); max-width: 600px;">
+
+        <i class="bi bi-cpu display-1 text-info mb-3"></i>
+
+        <h1 class="text-secondary fw-bold mb-3">Bienvenido a GesSi</h1>
+
+        <p class="text-muted mb-4 fs-5">
+            Sistema de Gestión Integrado. Por favor, inicie sesión con sus credenciales para acceder a su panel de control y opciones correspondientes a su rol.
+        </p>
+
+        <a href="@Url.Action("Login", "Auth")" class="btn btn-lg text-white shadow-sm" style="background-color: var(--blue-primary); padding: 12px 40px; border-radius: 8px;">
+            <i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión
+        </a>
+
+    </div>
+</div>
