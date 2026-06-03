@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build results
+bin/
+obj/
+Debug/
+Release/
+
+# Crystal Reports temporales
+*.rpt.temp
+*.rpt.backup
+*.rpt.log
+
+# MongoDB local data
+data/
+dump/
+*.lock
+
+# Configuración sensible
+appsettings.json
+appsettings.Development.json
+
