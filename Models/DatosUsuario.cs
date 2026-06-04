@@ -26,6 +26,6 @@ namespace ProyectoSemillero_ASP.NET.Models
         public string RolUsuario { get; set; }
 
         [BsonElement("idSemillero")]
-        public int IdSemillero { get; set; }
+        public int? IdSemillero { get; set; }
     }
 }

@@ -27,38 +27,56 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult IniciarSesion(ValidarInicioSesion model)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var conexion = new Conexion();
-                var coleccion = conexion.Database.GetCollection<DatosUsuario>("Usuarios");
-
-                var usuarioEncontrado = coleccion.Find(u =>
-                    u.CorreoUsuario == model.Correo &&
-                    u.ContrasenaUsuario == model.Contrasena).FirstOrDefault();
-
-                if (usuarioEncontrado != null)
+                if (ModelState.IsValid)
                 {
-                    // Guardamos las sesiones
-                    Session["UsuarioLogueado"] = usuarioEncontrado.NombreUsuario;
-                    Session["Rol"] = usuarioEncontrado.RolUsuario;
-                    Session["IdUsuario"] = usuarioEncontrado.IdUsuario;
+                    var conexion = new Conexion();
+                    var coleccion = conexion.Database.GetCollection<DatosUsuario>("Usuarios");
 
-                    // ¡ESTA ES LA LÍNEA QUE FALTABA PARA QUE EL FILTRO FUNCIONE!
-                    Session["IdSemillero"] = usuarioEncontrado.IdSemillero;
+                    var usuarioEncontrado = coleccion.Find(u =>
+                        u.CorreoUsuario == model.Correo &&
+                        u.ContrasenaUsuario == model.Contrasena).FirstOrDefault();
 
-                    // EN LUGAR DE REDIRIGIR AQUÍ, LE AVISAMOS A LA VISTA QUE FUE EXITOSO
-                    ViewBag.LoginExitoso = true;
-                    return View(model);
+                    if (usuarioEncontrado != null)
+                    {
+                        // Guardamos las sesiones
+                        Session["UsuarioLogueado"] = usuarioEncontrado.NombreUsuario;
+                        Session["Rol"] = usuarioEncontrado.RolUsuario;
+                        Session["IdUsuario"] = usuarioEncontrado.IdUsuario;
+
+                        // Solo asignamos el IdSemillero si NO es administrador (y si no es nulo)
+                        // Ajusta la cadena "Administrador" al nombre exacto de tu rol
+                        if (usuarioEncontrado.RolUsuario != "Administrador")
+                        {
+                            Session["IdSemillero"] = usuarioEncontrado.IdSemillero;
+                        }
+                        else
+                        {
+                            // Limpiamos la sesión o asignamos un valor por defecto si tu filtro lo exige
+                            Session["IdSemillero"] = null;
+                        }
+
+                        // EN LUGAR DE REDIRIGIR AQUÍ, LE AVISAMOS A LA VISTA QUE FUE EXITOSO
+                        ViewBag.LoginExitoso = true;
+                        return View(model);
+                    }
+                    else
+                    {
+                        // LE AVISAMOS A LA VISTA QUE HUBO UN ERROR
+                        ViewBag.ErrorLogin = "El correo o la contraseña son incorrectos.";
+                        return View(model);
+                    }
                 }
-                else
-                {
-                    // LE AVISAMOS A LA VISTA QUE HUBO UN ERROR
-                    ViewBag.ErrorLogin = "El correo o la contraseña son incorrectos.";
-                    return View(model);
-                }
+
+                return View(model);
             }
-
-            return View(model);
+            catch (Exception ex)
+            {
+                // Aquí puedes manejar cualquier excepción que ocurra durante el proceso de inicio de sesión
+                ViewBag.ErrorLogin = "Ocurrió un error al intentar iniciar sesión. Por favor, inténtalo de nuevo.";
+                return View(model);
+            }
         }
 
         // Así debe quedar tu método para cerrar sesión

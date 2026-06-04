@@ -9,6 +9,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
     public class GessiController : Controller
     {
         // GET: Gessi
+        [HttpGet]
         public ActionResult Index()
         {
             return View();

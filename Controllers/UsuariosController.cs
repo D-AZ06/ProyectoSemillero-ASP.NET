@@ -17,127 +17,178 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // GET: Usuarios
         public ActionResult Index()
         {
-            // 1. SEGURIDAD: Verificamos que la sesión exista. 
-            // Si alguien intenta entrar a la URL directo sin iniciar sesión, lo devolvemos al Login.
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
+                // Seguridad por Rol
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                string rolUsuario = Session["Rol"].ToString();
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                List<DatosUsuario> listaUsuarios = new List<DatosUsuario>();
+
+                if (rolUsuario == "Administrador")
+                {
+                    listaUsuarios = coleccionUsuarios.Find(_ => true).ToList();
+                }
+                else
+                {
+                    if (Session["IdSemillero"] != null)
+                    {
+                        int idSemillero = (int)Session["IdSemillero"];
+                        listaUsuarios = coleccionUsuarios.Find(u => u.IdSemillero == idSemillero).ToList();
+                    }
+                    else
+                    {
+                        TempData["Error"] = "Tu usuario no tiene un semillero asignado correctamente.";
+                    }
+                }
+
+                return View(listaUsuarios);
             }
-
-            // 2. Extraemos el ID del semillero del líder que inició sesión
-            int idSemilleroLider = (int)Session["IdSemillero"];
-
-            // Apuntamos a la colección
-            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-
-            // 3. EL FILTRO MAGICO: Le decimos a MongoDB que solo traiga los usuarios que 
-            // tengan el mismo IdSemillero que el líder.
-            List<DatosUsuario> listaUsuarios = coleccionUsuarios
-                .Find(usuario => usuario.IdSemillero == idSemilleroLider)
-                .ToList();
-
-            // Enviamos la lista ya filtrada a la vista
-            return View(listaUsuarios);
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Ocurrió un error al cargar la lista: " + ex.Message;
+                return View(new List<DatosUsuario>()); // Retorna lista vacía en caso de error
+            }
         }
 
         // GET: Usuarios/Agregar
         [HttpGet]
         public ActionResult Agregar()
         {
-            // Seguridad: Verificamos que el líder esté logueado
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
-            }
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-            return View();
+                // Restricción para Investigador
+                if (Session["Rol"].ToString() == "Investigador")
+                {
+                    TempData["Error"] = "No tienes permisos para agregar usuarios.";
+                    return RedirectToAction("Index");
+                }
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al intentar abrir el formulario: " + ex.Message;
+                return RedirectToAction("Index");
+            }
         }
 
-        // POST: Usuarios/Agregar
         // POST: Usuarios/Agregar
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Agregar(DatosUsuario nuevoUsuario)
         {
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
-            }
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-            // Como el ID lo vamos a generar nosotros, le decimos al sistema 
-            // que ignore si el formulario lo envió vacío, para que no dé error de validación.
-            ModelState.Remove("IdUsuario");
+                string rolUsuario = Session["Rol"].ToString();
 
-            if (ModelState.IsValid)
-            {
-                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-
-                // --- LÓGICA DE ID AUTOMÁTICO (Ej: 208, 209, 2010) ---
-                // 1. Buscamos el último usuario registrado ordenando por IdUsuario de mayor a menor
-                var ultimoUsuario = coleccionUsuarios.Find(new MongoDB.Bson.BsonDocument())
-                                                     .SortByDescending(u => u.IdUsuario)
-                                                     .FirstOrDefault();
-
-                int correlativo = 1; // Si no hay usuarios, empezamos en 1
-
-                if (ultimoUsuario != null)
+                // Restricción de seguridad extra por si fuerzan la petición POST
+                if (rolUsuario == "Investigador")
                 {
-                    string ultimoIdStr = ultimoUsuario.IdUsuario.ToString();
-
-                    // Verificamos que empiece con "20" para no romper la lógica
-                    if (ultimoIdStr.StartsWith("20"))
-                    {
-                        // Le quitamos los dos primeros caracteres ("20") para obtener el número real
-                        string numeroStr = ultimoIdStr.Substring(2);
-                        if (int.TryParse(numeroStr, out int numero))
-                        {
-                            correlativo = numero + 1; // Sumamos 1 al correlativo
-                        }
-                    }
+                    TempData["Error"] = "No tienes permisos para agregar usuarios.";
+                    return RedirectToAction("Index");
                 }
 
-                // 2. Armamos el nuevo ID concatenando "20" + el correlativo
-                string idGeneradoStr = "20" + correlativo.ToString();
-                nuevoUsuario.IdUsuario = int.Parse(idGeneradoStr);
-                // -----------------------------------------------------
+                ModelState.Remove("IdUsuario");
 
-                // 3. Asignamos el semillero del líder logueado
-                nuevoUsuario.IdSemillero = (int)Session["IdSemillero"];
+                if (ModelState.IsValid)
+                {
+                    var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
 
-                // 4. Guardamos en MongoDB
-                coleccionUsuarios.InsertOne(nuevoUsuario);
+                    // 1. Lógica de ID automático
+                    var ultimoUsuario = coleccionUsuarios.Find(new MongoDB.Bson.BsonDocument())
+                                                         .SortByDescending(u => u.IdUsuario)
+                                                         .FirstOrDefault();
+                    int correlativo = 1;
 
-                // Pasamos el nuevo ID en el mensaje de éxito para que el usuario lo vea
-                TempData["Exito"] = $"El usuario ha sido registrado correctamente con el ID: {nuevoUsuario.IdUsuario}";
+                    if (ultimoUsuario != null)
+                    {
+                        string ultimoIdStr = ultimoUsuario.IdUsuario.ToString();
+                        if (ultimoIdStr.StartsWith("20"))
+                        {
+                            string numeroStr = ultimoIdStr.Substring(2);
+                            if (int.TryParse(numeroStr, out int numero))
+                            {
+                                correlativo = numero + 1;
+                            }
+                        }
+                    }
 
-                return RedirectToAction("Index");
+                    nuevoUsuario.IdUsuario = int.Parse("20" + correlativo.ToString());
+
+                    // 2. Asignación del Semillero
+                    if (rolUsuario == "Líder")
+                    {
+                        nuevoUsuario.IdSemillero = (int)Session["IdSemillero"];
+                    }
+                    // NOTA: Si es Administrador, el IdSemillero se tomará de lo que 
+                    // el Administrador haya llenado en el formulario HTML.
+
+                    // 3. Guardar
+                    coleccionUsuarios.InsertOne(nuevoUsuario);
+
+                    TempData["Exito"] = $"El usuario ha sido registrado correctamente con el ID: {nuevoUsuario.IdUsuario}";
+                    return RedirectToAction("Index");
+                }
+
+                return View(nuevoUsuario);
             }
-
-            return View(nuevoUsuario);
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error inesperado al guardar el usuario: " + ex.Message;
+                return View(nuevoUsuario);
+            }
         }
 
         // GET: Usuarios/Modificar
         [HttpGet]
         public ActionResult Modificar(int id)
         {
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                string rolUsuario = Session["Rol"].ToString();
+
+                // Restricción para Investigador
+                if (rolUsuario == "Investigador")
+                {
+                    TempData["Error"] = "No tienes permisos para modificar usuarios.";
+                    return RedirectToAction("Index");
+                }
+
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                var usuario = coleccionUsuarios.Find(u => u.IdUsuario == id).FirstOrDefault();
+
+                if (usuario == null)
+                {
+                    TempData["Error"] = "No se encontró el usuario solicitado.";
+                    return RedirectToAction("Index");
+                }
+
+                // Si es Líder, aseguramos que el usuario a editar pertenezca a su semillero
+                if (rolUsuario == "Líder")
+                {
+                    int idSemilleroLider = (int)Session["IdSemillero"];
+                    if (usuario.IdSemillero != idSemilleroLider)
+                    {
+                        TempData["Error"] = "Acceso denegado: Este usuario pertenece a otro semillero.";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                return View(usuario);
             }
-
-            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-
-            // Buscamos al usuario que coincida con el ID que envió el botón
-            var usuario = coleccionUsuarios.Find(u => u.IdUsuario == id).FirstOrDefault();
-
-            if (usuario == null)
+            catch (Exception ex)
             {
-                TempData["Error"] = "No se encontró el usuario solicitado.";
+                TempData["Error"] = "Error al procesar la solicitud: " + ex.Message;
                 return RedirectToAction("Index");
             }
-
-            // Le enviamos a la vista los datos encontrados para que llene el formulario
-            return View(usuario);
         }
 
         // POST: Usuarios/Modificar
@@ -145,57 +196,108 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Modificar(DatosUsuario usuarioModificado)
         {
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
-            }
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-            if (ModelState.IsValid)
+                string rolUsuario = Session["Rol"].ToString();
+
+                if (rolUsuario == "Investigador")
+                {
+                    TempData["Error"] = "No tienes permisos para modificar usuarios.";
+                    return RedirectToAction("Index");
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+
+                    // Construimos el filtro base
+                    var filtro = Builders<DatosUsuario>.Filter.Eq(u => u.IdUsuario, usuarioModificado.IdUsuario);
+
+                    // Si es Líder, forzamos que conserve su ID de Semillero y actualizamos solo los de su grupo
+                    if (rolUsuario == "Líder")
+                    {
+                        int idSemilleroLider = (int)Session["IdSemillero"];
+                        usuarioModificado.IdSemillero = idSemilleroLider;
+
+                        // Filtro compuesto: Que coincida el ID de usuario Y el ID de Semillero
+                        filtro = Builders<DatosUsuario>.Filter.And(
+                            Builders<DatosUsuario>.Filter.Eq(u => u.IdUsuario, usuarioModificado.IdUsuario),
+                            Builders<DatosUsuario>.Filter.Eq(u => u.IdSemillero, idSemilleroLider)
+                        );
+                    }
+
+                    var resultado = coleccionUsuarios.ReplaceOne(filtro, usuarioModificado);
+
+                    if (resultado.MatchedCount > 0)
+                    {
+                        TempData["Exito"] = "La información del usuario se ha actualizado correctamente.";
+                    }
+                    else
+                    {
+                        TempData["Error"] = "No se pudo actualizar. Es posible que no tengas permisos sobre este usuario.";
+                    }
+
+                    return RedirectToAction("Index");
+                }
+
+                return View(usuarioModificado);
+            }
+            catch (Exception ex)
             {
-                // Por seguridad, aseguramos que mantenga el mismo ID de semillero del líder
-                usuarioModificado.IdSemillero = (int)Session["IdSemillero"];
-
-                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-
-                // Creamos el filtro para decirle a Mongo a quién debe actualizar
-                var filtro = Builders<DatosUsuario>.Filter.Eq(u => u.IdUsuario, usuarioModificado.IdUsuario);
-
-                // Reemplazamos toda la información vieja por la nueva
-                coleccionUsuarios.ReplaceOne(filtro, usuarioModificado);
-
-                TempData["Exito"] = "La información del usuario se ha actualizado correctamente.";
-                return RedirectToAction("Index");
+                TempData["Error"] = "Error inesperado al modificar: " + ex.Message;
+                return View(usuarioModificado);
             }
-
-            // Si hay un error, devolvemos a la vista con los datos que intentaba guardar
-            return View(usuarioModificado);
         }
 
         // GET: Usuarios/Eliminar
         public ActionResult Eliminar(int id)
         {
-            // Seguridad de sesión
-            if (Session["IdSemillero"] == null)
+            try
             {
-                return RedirectToAction("IniciarSesion", "Home");
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                string rolUsuario = Session["Rol"].ToString();
+
+                // Restricción para Investigador
+                if (rolUsuario == "Investigador")
+                {
+                    TempData["Error"] = "No tienes permisos para eliminar usuarios.";
+                    return RedirectToAction("Index");
+                }
+
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                DeleteResult resultado;
+
+                if (rolUsuario == "Administrador")
+                {
+                    // El administrador puede borrar cualquier usuario solo por su ID
+                    resultado = coleccionUsuarios.DeleteOne(u => u.IdUsuario == id);
+                }
+                else
+                {
+                    // El líder solo puede borrar si coincide el ID del usuario Y su semillero
+                    int idSemilleroLider = (int)Session["IdSemillero"];
+                    resultado = coleccionUsuarios.DeleteOne(u => u.IdUsuario == id && u.IdSemillero == idSemilleroLider);
+                }
+
+                if (resultado.DeletedCount > 0)
+                {
+                    TempData["Exito"] = "El usuario ha sido eliminado permanentemente del sistema.";
+                }
+                else
+                {
+                    TempData["Error"] = "No se pudo eliminar. Puede que el usuario ya no exista o pertenezca a otro semillero.";
+                }
+
+                return RedirectToAction("Index");
             }
-
-            int idSemillero = (int)Session["IdSemillero"];
-            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-
-            // Borramos el documento que coincida con el ID del usuario Y el ID del semillero
-            var resultado = coleccionUsuarios.DeleteOne(u => u.IdUsuario == id && u.IdSemillero == idSemillero);
-
-            if (resultado.DeletedCount > 0)
+            catch (Exception ex)
             {
-                TempData["Exito"] = "El usuario ha sido eliminado permanentemente del sistema.";
+                TempData["Error"] = "Ocurrió un error al intentar eliminar: " + ex.Message;
+                return RedirectToAction("Index");
             }
-            else
-            {
-                TempData["Error"] = "No se pudo eliminar el usuario. Es posible que ya no exista o no tengas permisos.";
-            }
-
-            return RedirectToAction("Index");
         }
     }
 }
