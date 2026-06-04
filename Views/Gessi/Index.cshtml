@@ -1,7 +1,57 @@
-﻿
-@{
-    ViewBag.Title = "Index";
+﻿@{
+    ViewBag.Title = "Inicio";
 }
 
-<h2>Index</h2>
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
 
+            <!-- Tarjeta Principal de Bienvenida -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="background: linear-gradient(120deg, #ffffff 0%, #f4f7f6 100%);">
+                <div class="row g-0">
+                    <div class="col-md-8 p-4 p-md-5 d-flex flex-column justify-content-center">
+                        <div class="mb-3">
+                            <span class="badge px-3 py-2 rounded-pill fs-6 mb-3 shadow-sm" style="background-color: var(--blue-primary); color: white;">
+                                <i class="bi bi-cpu me-1"></i> GesSi
+                            </span>
+                        </div>
+                        <h1 class="display-6 fw-bold text-dark mb-3">¡Bienvenido al sistema, Líder! 👋</h1>
+                        <p class="lead text-secondary mb-4" style="font-size: 1.1rem; line-height: 1.6;">
+                            Nos alegra tenerte aquí. Estás en el panel principal del <strong>Sistema de Gestión de Semilleros de Investigación</strong>.
+                            Este espacio está diseñado para facilitar tu trabajo, permitiéndote administrar de forma centralizada y eficiente todo tu entorno.
+                        </p>
+
+                        <div class="d-flex align-items-center p-3 rounded-3 mt-2" style="background-color: var(--blue-light); border: 1px dashed var(--blue-primary);">
+                            <i class="bi bi-arrow-left-circle-fill fs-3 me-3" style="color: var(--blue-primary);"></i>
+                            <p class="text-dark fw-medium mb-0">
+                                Para comenzar, selecciona el módulo que deseas gestionar (Usuarios, Proyectos, Actividades, etc.) en el <strong>menú lateral izquierdo</strong>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Ilustración decorativa -->
+                    <div class="col-md-4 d-none d-md-flex align-items-center justify-content-center p-5 border-start" style="background-color: rgba(2, 132, 199, 0.03);">
+                        <i class="bi bi-rocket-takeoff" style="font-size: 10rem; color: var(--blue-primary); opacity: 0.2;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta Informativa sobre el Asistente IA -->
+            <div class="card border-0 shadow-sm rounded-4" style="border-left: 5px solid #17a2b8 !important;">
+                <div class="card-body p-4 d-flex align-items-center">
+                    <div class="p-3 rounded-circle me-4 d-none d-sm-block" style="background-color: rgba(23, 162, 184, 0.1);">
+                        <i class="bi bi-robot fs-2 text-info"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">¿Necesitas ayuda u orientación?</h5>
+                        <p class="text-secondary mb-0">
+                            Recuerda que cuentas con el botón de <strong>Ayuda IA</strong> en la barra superior.
+                            Nuestro asistente inteligente está disponible en todo momento para resolver tus dudas sobre el uso de la plataforma.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

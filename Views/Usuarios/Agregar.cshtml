@@ -1,0 +1,52 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosUsuario
+
+@{
+    ViewBag.Title = "Agregar Usuario";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3 mt-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Usuarios")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-person-plus text-success me-2"></i> Nuevo Usuario</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Usuarios", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre Completo</label>
+                        @Html.TextBoxFor(m => m.NombreUsuario, new { @class = "form-control", required = "required", placeholder = "Ej. Juan Pérez" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Correo Electrónico</label>
+                        @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required", placeholder = "juan@semillero.edu" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Contraseña Temporal</label>
+                        @Html.TextBoxFor(m => m.ContrasenaUsuario, new { @class = "form-control", type = "password", required = "required", placeholder = "******" })
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Rol en el Semillero</label>
+                        @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success fw-bold py-2">
+                            <i class="bi bi-save me-1"></i> Guardar Usuario
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

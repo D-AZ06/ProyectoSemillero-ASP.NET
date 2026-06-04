@@ -1,0 +1,58 @@
+﻿
+@model ProyectoSemillero_ASP.NET.Models.DatosUsuario
+
+@{
+    ViewBag.Title = "Modificar Usuario";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3 mt-4" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Usuarios")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Modificar Usuario</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Modificar", "Usuarios", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted">Identificación (ID) - No modificable</label>
+                        @Html.TextBoxFor(m => m.IdUsuario, new { @class = "form-control bg-light", @readonly = "readonly" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre Completo</label>
+                        @Html.TextBoxFor(m => m.NombreUsuario, new { @class = "form-control", required = "required" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Correo Electrónico</label>
+                        @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Contraseña</label>
+                        @Html.TextBoxFor(m => m.ContrasenaUsuario, new { @class = "form-control", required = "required" })
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Rol en el Semillero</label>
+                        @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Estudiante", "Investigador", "Co-Líder" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn text-white fw-bold py-2" style="background-color: var(--blue-primary);">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Datos
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+

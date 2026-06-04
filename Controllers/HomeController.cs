@@ -43,6 +43,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     Session["Rol"] = usuarioEncontrado.RolUsuario;
                     Session["IdUsuario"] = usuarioEncontrado.IdUsuario;
 
+                    // ¡ESTA ES LA LÍNEA QUE FALTABA PARA QUE EL FILTRO FUNCIONE!
+                    Session["IdSemillero"] = usuarioEncontrado.IdSemillero;
+
                     // EN LUGAR DE REDIRIGIR AQUÍ, LE AVISAMOS A LA VISTA QUE FUE EXITOSO
                     ViewBag.LoginExitoso = true;
                     return View(model);
