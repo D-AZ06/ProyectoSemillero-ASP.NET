@@ -7,6 +7,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -174,9 +175,10 @@
             <button class="btn btn-outline-info">
                 <i class="bi bi-robot"></i> <span class="btn-text">Ayuda IA</span>
             </button>
-            <a href="@Url.Action("Logout", "Auth")" class="btn btn-outline-danger">
+
+            <button type="button" class="btn btn-outline-danger" onclick="confirmarSalida('@Url.Action("IniciarSesion", "Home")')">
                 <i class="bi bi-box-arrow-right"></i> <span class="btn-text">Salir</span>
-            </a>
+            </button>
         </div>
     </header>
 
@@ -244,5 +246,39 @@
     </script>
 
     @RenderSection("Scripts", required: false)
+
+<script>
+    function confirmarSalida(urlDestino) {
+        // Primera alerta: Pregunta si está seguro
+        Swal.fire({
+            title: '¿Deseas cerrar sesión?',
+            text: "Tendrás que volver a ingresar tus credenciales para acceder al sistema.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#0284c7',
+            cancelButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, salir',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                // Segunda alerta: Muestra el éxito AQUÍ MISMO en el layout
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Hasta pronto!',
+                    text: 'Tu sesión se ha cerrado correctamente.',
+                    confirmButtonColor: '#0284c7',
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: false, // Evita que se cierre haciendo clic por fuera
+                    allowEscapeKey: false
+                }).then(() => {
+                    // Cuando el usuario le da "OK", lo enviamos a destruir la sesión
+                    window.location.href = urlDestino;
+                });
+
+            }
+        });
+    }
+</script>
 </body>
 </html>
