@@ -1,0 +1,138 @@
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.Actividad>
+
+@{
+    ViewBag.Title = "Actividades del Proyecto";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+    int idProyecto = ViewBag.IdProyecto;
+    string tituloProyecto = ViewBag.TituloProyecto;
+}
+
+<style>
+    body > .container {
+        display: block !important; /* Mata el flex centrado del LayoutSimple */
+        padding-top: 2rem !important; /* Añade un espacio elegante debajo del menú */
+    }
+</style>
+
+<div class="w-100 text-start mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-folder-symlink-fill text-primary me-2"></i> Actividades del Proyecto
+        </h3>
+
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Index", "Proyectos")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver a Proyectos
+            </a>
+            @if (rolActual != "Investigador")
+            {
+                <a href="@Url.Action("Agregar", "Actividades", new { idProyecto = idProyecto })" class="btn btn-success fw-bold shadow-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Agregar Actividad
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="card border-start border-4 border-info shadow-sm mb-4 bg-white">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <span class="badge bg-info p-2 fs-6 text-white fw-bold" style="border-radius: 8px;">ID Proyecto: @idProyecto</span>
+                </div>
+                <div class="col">
+                    <h5 class="text-secondary mb-0 fw-bold">Título: <span class="text-dark">@tituloProyecto</span></h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-3 border bg-white">
+        <table class="table table-hover table-striped mb-0 align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="py-3 ps-4" style="width: 100px;">ID Act.</th>
+                    <th scope="col" class="py-3">Nombre de Actividad</th>
+                    <th scope="col" class="py-3" style="width: 150px;">Duración</th>
+                    <th scope="col" class="py-3" style="width: 200px;">Fecha Entrega</th>
+                    <th scope="col" class="py-3 text-center" style="width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var actividad in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold text-secondary">@actividad.IdActividad</td>
+                            <td>
+                                <span class="text-dark fw-bold">@actividad.NombreActividad</span>
+                            </td>
+                            <td>@actividad.DuracionActividad</td>
+                            <td>
+                                <span class="text-secondary"><i class="bi bi-calendar-event me-2"></i>@actividad.FechaEntregaActividad</span>
+                            </td>
+                            <td class="text-center">
+                                <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = idProyecto, idActividad = actividad.IdActividad })" class="btn btn-sm btn-outline-secondary me-1" title="Ver Fases">
+                                    <i class="bi bi-diagram-3"></i>
+                                </a>
+
+                                @if (rolActual != "Investigador")
+                                {
+                                    <a href="@Url.Action("Modificar", "Actividades", new { idProyecto = idProyecto, idActividad = actividad.IdActividad })" class="btn btn-sm btn-outline-primary me-1" title="Modificar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@idProyecto, @actividad.IdActividad)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                            Este proyecto no cuenta con actividades registradas actualmente.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        var mensajeExito = '@TempData["Exito"]';
+        if (mensajeExito && mensajeExito !== '') {
+            Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
+        }
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError && mensajeError !== '') {
+            Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        function confirmarEliminacion(idProyecto, idActividad) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción borrará la actividad de este proyecto y todas sus fases internas de manera permanente.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '@Url.Action("Eliminar", "Actividades")?idProyecto=' + idProyecto + '&idActividad=' + idActividad + '&desdeProyecto=true';
+                }
+            });
+        }
+    </script>
+}

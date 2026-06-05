@@ -1,38 +1,31 @@
-﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosProyecto>
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosActividade>
 
 @{
-    ViewBag.Title = "Gestionar Proyectos";
+    ViewBag.Title = "Gestionar Actividades";
 
-    // Creamos la variable vacía al inicio
     string rolActual = "";
-
-    // Validamos de forma tradicional si la sesión no es nula
     if (Session["Rol"] != null)
     {
         rolActual = Session["Rol"].ToString();
-    }
-    else
-    {
-        rolActual = ""; // Si es nula, se asegura de dejarla vacía
     }
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <h3 class="fw-bold text-dark mb-0">
-        <i class="bi bi-journal-bookmark-fill text-primary me-2"></i> Gestionar Proyectos
+        <i class="bi bi-list-check text-primary me-2"></i> Gestionar Actividades
     </h3>
 
     @if (rolActual != "Investigador")
     {
-        <a href="@Url.Action("Agregar", "Proyectos")" class="btn btn-success fw-bold shadow-sm">
-            <i class="bi bi-plus-circle me-1"></i> Agregar Proyecto
+        <a href="@Url.Action("Agregar", "Actividades")" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Agregar Actividad
         </a>
     }
 </div>
 
 <div class="card bg-light border-0 shadow-sm mb-4">
     <div class="card-body p-3">
-        <form action="@Url.Action("Index", "Proyectos")" method="get" id="formBusqueda">
+        <form action="@Url.Action("Index", "Actividades")" method="get" id="formBusqueda">
             <div class="row g-2 align-items-center">
                 <div class="col-12 col-md-auto">
                     <span class="fw-bold text-secondary mb-0"><i class="bi bi-funnel me-1"></i> Consultar por parámetros:</span>
@@ -41,16 +34,12 @@
                 <div class="col-12 col-md-3">
                     <select class="form-select border-info" id="selectFiltro" name="tipoFiltro">
                         <option value="">Seleccione filtro...</option>
+                        <option value="idActividad">ID Actividad</option>
+                        <option value="nombreActividad">Nombre de la Actividad</option>
                         <option value="idProyecto">ID Proyecto</option>
-                        <option value="tituloProyecto">Título</option>
-                        <option value="objetivoProyecto">Objetivo</option>
-                        <option value="descripcionProyecto">Descripción</option>
-                        <option value="fechaInicioProyecto">Fecha Exacta de Inicio</option>
-                        <option value="mesInicioProyecto">Mes de Inicio</option>
-                        <option value="fechaFinProyecto">Fecha Exacta de Fin</option>
-                        <option value="mesFinProyecto">Mes de Fin</option>
-                        <option value="idSemillero">ID Semillero</option>
-                        <option value="nombreSemillero">Nombre de Semillero</option>
+                        <option value="tituloProyecto">Título del Proyecto</option>
+                        <option value="fechaEntregaActividad">Fecha Exacta de Entrega</option>
+                        <option value="mesEntregaActividad">Mes de Entrega</option>
                     </select>
                 </div>
 
@@ -69,7 +58,7 @@
                 @if (Request.QueryString["tipoFiltro"] != null)
                 {
                     <div class="col-12 col-md-auto">
-                        <a href="@Url.Action("Index", "Proyectos")" class="btn btn-secondary fw-bold w-100">
+                        <a href="@Url.Action("Index", "Actividades")" class="btn btn-secondary fw-bold w-100">
                             <i class="bi bi-arrow-clockwise"></i> Limpiar
                         </a>
                     </div>
@@ -80,60 +69,49 @@
 </div>
 
 <div class="table-responsive shadow-sm rounded-3 border">
-    <table class="table table-hover table-striped mb-0 align-middle" id="tablaProyectos">
+    <table class="table table-hover table-striped mb-0 align-middle" id="tablaActividades">
         <thead class="table-dark">
             <tr>
-                <th scope="col" class="py-3 ps-3">ID</th>
-                <th scope="col" class="py-3">Título</th>
-                <th scope="col" class="py-3">Objetivo</th>
-                <th scope="col" class="py-3">Descripción</th>
-                <th scope="col" class="py-3">Inicio</th>
-                <th scope="col" class="py-3">Fin</th>
-                <th scope="col" class="py-3 text-center">Semillero</th>
+                <th scope="col" class="py-3 ps-3">ID Act.</th>
+                <th scope="col" class="py-3">Nombre de Actividad</th>
+                <th scope="col" class="py-3">Proyecto</th>
+                <th scope="col" class="py-3">Duración</th>
+                <th scope="col" class="py-3">Fecha Entrega</th>
                 <th scope="col" class="py-3 text-center" style="min-width: 160px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
             @if (Model != null && Model.Any())
             {
-                foreach (var proyecto in Model)
+                foreach (var actividad in Model)
                 {
                     <tr>
-                        <td class="ps-3 fw-medium data-idProyecto">@proyecto.IdProyecto</td>
-                        <td class="fw-bold text-primary data-tituloProyecto" style="max-width: 180px;">@proyecto.TituloProyecto</td>
-                        <td class="data-objetivoProyecto" style="max-width: 200px; white-space: normal; word-wrap: break-word;">
-                            <small class="text-muted">@proyecto.ObjetivoProyecto</small>
-                        </td>
-                        <td class="data-descripcionProyecto" style="max-width: 250px; white-space: normal; word-wrap: break-word;">
-                            <small class="text-dark">@proyecto.DescripcionProyecto</small>
-                        </td>
-                        <td class="data-fechaInicioProyecto">@proyecto.FechaInicioProyecto</td>
-                        <td class="data-fechaFinProyecto">@proyecto.FechaFinProyecto</td>
+                        <td class="ps-3 fw-medium data-idActividad">@actividad.IdActividad</td>
 
-                        <td class="text-center data-idSemillero">
-                            <span class="badge bg-secondary mb-1">ID: @proyecto.IdSemillero</span><br />
-                            @{
-                                var dicSemilleros = ViewBag.DiccionarioSemilleros as Dictionary<int, string>;
-                                string nombreSemillero = "Desconocido";
-                                if (dicSemilleros != null && dicSemilleros.ContainsKey(proyecto.IdSemillero))
-                                {
-                                    nombreSemillero = dicSemilleros[proyecto.IdSemillero];
-                                }
-                            }
-                            <small class="fw-bold text-dark">@nombreSemillero</small>
+                        <td class="data-nombreActividad" style="max-width: 220px; white-space: normal; word-wrap: break-word;">
+                            <span class="text-dark fw-bold">@actividad.NombreActividad</span>
                         </td>
+
+                        <td style="max-width: 220px; white-space: normal; word-wrap: break-word;">
+                            <span class="badge bg-secondary mb-1 data-idProyecto">ID: @actividad.IdProyecto</span><br />
+                            <small class="fw-bold text-primary data-tituloProyecto">@actividad.TituloProyecto</small>
+                        </td>
+
+                        <td>@actividad.DuracionActividad</td>
+
+                        <td class="data-fechaEntregaActividad">@actividad.FechaEntregaActividad</td>
 
                         <td class="text-center">
-                            <a href="@Url.Action("PorProyecto", "Actividades", new { idProyecto = proyecto.IdProyecto })" class="btn btn-sm btn-outline-secondary me-1" title="Ver Actividades">
-                                <i class="bi bi-list-task"></i>
-                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Ver Fases" onclick="alert('Próximamente Fases...');">
+                                <i class="bi bi-diagram-3"></i>
+                            </button>
 
                             @if (rolActual != "Investigador")
                             {
-                                <a href="@Url.Action("Modificar", "Proyectos", new { id = proyecto.IdProyecto })" class="btn btn-sm btn-outline-primary me-1">
+                                <a href="@Url.Action("Modificar", "Actividades", new { idProyecto = actividad.IdProyecto, idActividad = actividad.IdActividad })" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@proyecto.IdProyecto)">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@actividad.IdProyecto, @actividad.IdActividad)">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             }
@@ -144,9 +122,9 @@
             else
             {
                 <tr>
-                    <td colspan="8" class="text-center py-4 text-muted">
+                    <td colspan="6" class="text-center py-4 text-muted">
                         <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                        No se encontraron proyectos registrados o que coincidan con la búsqueda.
+                        No se encontraron actividades registradas o que coincidan con la búsqueda.
                     </td>
                 </tr>
             }
@@ -156,13 +134,12 @@
 
 @section Scripts {
     <script>
+        // El raspado de datos sigue funcionando perfectamente porque las clases están asignadas de forma idéntica
         const datosAutocompletado = {
-            idProyecto: [...new Set(Array.from(document.querySelectorAll('.data-idProyecto')).map(el => el.textContent.trim()))],
-            tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))],
-            objetivoProyecto: [...new Set(Array.from(document.querySelectorAll('.data-objetivoProyecto')).map(el => el.textContent.trim()))],
-            descripcionProyecto: [...new Set(Array.from(document.querySelectorAll('.data-descripcionProyecto')).map(el => el.textContent.trim()))],
-            idSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero span')).map(el => el.textContent.replace('ID: ', '').trim()))],
-            nombreSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero small')).map(el => el.textContent.trim()))]
+            idActividad: [...new Set(Array.from(document.querySelectorAll('.data-idActividad')).map(el => el.textContent.trim()))],
+            nombreActividad: [...new Set(Array.from(document.querySelectorAll('.data-nombreActividad')).map(el => el.textContent.trim()))],
+            idProyecto: [...new Set(Array.from(document.querySelectorAll('.data-idProyecto')).map(el => el.textContent.replace('ID: ', '').trim()))],
+            tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))]
         };
 
         const selectFiltro = document.getElementById('selectFiltro');
@@ -183,14 +160,14 @@
             btnConsultar.disabled = false;
             let nuevoInput = '';
 
-            if (filtroSeleccionado === 'fechaInicioProyecto' || filtroSeleccionado === 'fechaFinProyecto') {
+            if (filtroSeleccionado === 'fechaEntregaActividad') {
                 nuevoInput = `<input type="date" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
-            else if (filtroSeleccionado === 'mesInicioProyecto' || filtroSeleccionado === 'mesFinProyecto') {
+            else if (filtroSeleccionado === 'mesEntregaActividad') {
                 nuevoInput = `<input type="month" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
             else {
-                let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idSemillero');
+                let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idActividad');
                 let tipoInput = esNumero ? 'number' : 'text';
                 let placeholder = esNumero ? 'Seleccione o ingrese un ID...' : 'Escriba para buscar sugerencias...';
                 let extraAttr = esNumero ? 'min="1"' : '';
@@ -224,10 +201,10 @@
                     return;
                 }
 
-                if (['tituloProyecto', 'objetivoProyecto', 'descripcionProyecto', 'idProyecto', 'idSemillero', 'nombreSemillero'].includes(filtro)) {
+                if (['tituloProyecto', 'idProyecto', 'idActividad', 'nombreActividad'].includes(filtro)) {
                     if (!datosAutocompletado[filtro].includes(valor)) {
                         e.preventDefault();
-                        Swal.fire({ icon: 'error', title: 'Dato no válido', text: 'El valor ingresado no coincide con ningún registro existente.', confirmButtonColor: '#dc3545' });
+                        Swal.fire({ icon: 'error', title: 'Dato no válido', text: 'El valor ingresado no coincide con ningún registro existente en pantalla.', confirmButtonColor: '#dc3545' });
                     }
                 }
             });
@@ -242,10 +219,10 @@
             Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
         }
 
-        function confirmarEliminacion(id) {
+        function confirmarEliminacion(idProyecto, idActividad) {
             Swal.fire({
                 title: '¿Estás seguro?',
-                text: "Esta acción borrará el proyecto permanentemente, Se eliminaran las actividades y fases relacionadas.",
+                text: "Esta acción borrará la actividad y todas sus fases internas permanentemente.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
@@ -254,7 +231,7 @@
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = '@Url.Action("Eliminar", "Proyectos")?id=' + id;
+                    window.location.href = '@Url.Action("Eliminar", "Actividades")?idProyecto=' + idProyecto + '&idActividad=' + idActividad;
                 }
             });
         }

@@ -1,0 +1,109 @@
+﻿@{
+    ViewBag.Title = "Agregar Actividad";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    bool proyectoFijo = ViewBag.ProyectoFijo ?? false;
+    var proyectosCombobox = ViewBag.ProyectosMapeados as List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>;
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Nueva Actividad
+        </h3>
+
+        @if (proyectoFijo)
+        {
+            <a href="@Url.Action("PorProyecto", "Actividades", new { idProyecto = ViewBag.IdProyecto })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index", "Actividades")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Cancelar
+            </a>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+            <form action="@Url.Action("Agregar", "Actividades")" method="post" id="formAgregarActividad">
+
+                <input type="hidden" name="vinoDesdeProyecto" value="@(proyectoFijo ? "true" : "false")" />
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+
+                    @if (proyectoFijo)
+                    {
+                        <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
+                            <input type="text" class="form-control bg-light text-muted fw-semibold border-secondary-subtle" value="@ViewBag.TituloProyecto" readonly disabled />
+                        </div>
+                        <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i> Este campo está bloqueado porque estás añadiendo la actividad directamente desde este proyecto.</small>
+                    }
+                    else
+                    {
+                        <select class="form-select border-info fw-medium" name="idProyecto" id="selectProyectoForm" required>
+                            <option value="">-- Seleccione el proyecto de destino --</option>
+                            @if (proyectosCombobox != null)
+                            {
+                                foreach (var proj in proyectosCombobox)
+                                {
+                                    <option value="@proj.IdProyecto">ID: @proj.IdProyecto - @proj.TituloProyecto</option>
+                                }
+                            }
+                        </select>
+                    }
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="mb-3">
+                    <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
+                    <input type="text" class="form-control border-secondary-subtle focus-ring" id="nombreActividad" name="nombreActividad" placeholder="Ej. Diseño de la Base de Datos o Pruebas Unitarias" maxlength="150" required autocomplete="off" />
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-6 mb-3">
+                        <label for="duracionActividad" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
+                        <input type="text" class="form-control border-secondary-subtle" id="duracionActividad" name="duracionActividad" placeholder="Ej. 15 días, 3 semanas..." maxlength="50" required autocomplete="off" />
+                    </div>
+
+                    <div class="col-12 col-md-6 mb-3">
+                        <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha Máxima de Entrega</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaEntregaActividad" name="fechaEntregaActividad" required />
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarActividad">
+                        <i class="bi bi-check-circle me-1"></i> Guardar Actividad
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Feedback visual inmediato en el botón al procesar el guardado en la nube
+        document.getElementById('formAgregarActividad').addEventListener('submit', function () {
+            const btn = document.getElementById('btnGuardarActividad');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando en MongoDB Atlas...`;
+        });
+    </script>
+}

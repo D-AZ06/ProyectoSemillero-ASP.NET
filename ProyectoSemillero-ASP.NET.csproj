@@ -224,6 +224,7 @@
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="Controllers\ActividadesController.cs" />
     <Compile Include="Controllers\GessiController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ProyectosController.cs" />
@@ -232,6 +233,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\Conexion.cs" />
+    <Compile Include="Models\DatosActividade.cs" />
     <Compile Include="Models\DatosProyecto.cs" />
     <Compile Include="Models\DatosSemillero.cs" />
     <Compile Include="Models\DatosUsuario.cs" />
@@ -299,6 +301,9 @@
     <Content Include="Views\Proyectos\Index.cshtml" />
     <Content Include="Views\Proyectos\Agregar.cshtml" />
     <Content Include="Views\Proyectos\Modificar.cshtml" />
+    <Content Include="Views\Actividades\Index.cshtml" />
+    <Content Include="Views\Actividades\PorProyecto.cshtml" />
+    <Content Include="Views\Actividades\Agregar.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
