@@ -2,13 +2,16 @@
 
 @{
     ViewBag.Title = "Agregar Usuario";
+    // ¡Usamos tu layout simple como pediste!
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
 }
 
-<div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6">
-        <div class="card shadow-sm border-0 rounded-3 mt-4">
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-8 col-lg-6 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100">
+
             <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
-                <a href="@Url.Action("Index", "Usuarios")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                <a href="@Url.Action("Index", "Usuarios")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-person-plus text-success me-2"></i> Nuevo Usuario</h4>
@@ -18,7 +21,6 @@
                 @using (Html.BeginForm("Agregar", "Usuarios", FormMethod.Post))
                 {
                     @Html.AntiForgeryToken()
-
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre Completo</label>
@@ -47,6 +49,44 @@
                     </div>
                 }
             </div>
+
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // Capturamos el botón de volver
+            const btnVolver = document.getElementById('btn-volver');
+
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    // Pausamos la redirección
+                    e.preventDefault();
+
+                    // Guardamos la ruta
+                    const urlDestino = this.getAttribute('href');
+
+                    // Mostramos la alerta
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los datos que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+        });
+    </script>
+}
