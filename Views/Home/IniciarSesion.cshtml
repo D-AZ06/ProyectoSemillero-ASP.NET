@@ -101,15 +101,4 @@
                 });
             }
         });
-
-        // Este código borra el historial "hacia adelante" del navegador
-        // una vez que el usuario aterriza en la pantalla de Login.
-        function prevenirRetroceso() {
-            window.history.pushState(null, "", window.location.href);
-            window.onpopstate = function () {
-                window.history.pushState(null, "", window.location.href);
-            };
-        }
-
-        // Lo ejecutamos apenas cargue la página
 </script>
