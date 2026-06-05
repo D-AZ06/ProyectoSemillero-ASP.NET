@@ -6,7 +6,7 @@ using System.Web.Mvc;
 
 namespace ProyectoSemillero_ASP.NET.Controllers
 {
-    public class GessiController : Controller
+    public class GessiController : BaseController
     {
         // GET: Gessi
         [HttpGet]

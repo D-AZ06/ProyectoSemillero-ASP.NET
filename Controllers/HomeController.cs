@@ -82,11 +82,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // Así debe quedar tu método para cerrar sesión
         public ActionResult CerrarSesion()
         {
-            // Destruye todas las variables
+            // 1. Destruye las variables de sesión
             Session.Clear();
             Session.Abandon();
 
-            // Redirige silenciosamente a la vista de login
+            // 2. Mata la cookie de sesión del navegador
+            if (Request.Cookies["ASP.NET_SessionId"] != null)
+            {
+                var cookie = new HttpCookie("ASP.NET_SessionId");
+                cookie.Expires = DateTime.UtcNow.AddDays(-1);
+                Response.Cookies.Add(cookie);
+            }
+
+            // 3. Redirige al login
             return RedirectToAction("IniciarSesion", "Home");
         }
     }

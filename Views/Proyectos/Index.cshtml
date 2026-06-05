@@ -2,15 +2,32 @@
 
 @{
     ViewBag.Title = "Gestionar Proyectos";
+
+    // Creamos la variable vacía al inicio
+    string rolActual = "";
+
+    // Validamos de forma tradicional si la sesión no es nula
+    if (Session["Rol"] != null)
+    {
+        rolActual = Session["Rol"].ToString();
+    }
+    else
+    {
+        rolActual = ""; // Si es nula, se asegura de dejarla vacía
+    }
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <h3 class="fw-bold text-dark mb-0">
         <i class="bi bi-journal-bookmark-fill text-primary me-2"></i> Gestionar Proyectos
     </h3>
-    <a href="@Url.Action("Agregar", "Proyectos")" class="btn btn-success fw-bold shadow-sm">
-        <i class="bi bi-plus-circle me-1"></i> Agregar Proyecto
-    </a>
+
+    @if (rolActual != "Investigador")
+    {
+        <a href="@Url.Action("Agregar", "Proyectos")" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Agregar Proyecto
+        </a>
+    }
 </div>
 
 <div class="card bg-light border-0 shadow-sm mb-4">
@@ -110,12 +127,16 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Ver Actividades" onclick="alert('Próximamente...');">
                                 <i class="bi bi-list-task"></i>
                             </button>
-                            <a href="@Url.Action("Modificar", "Proyectos", new { id = proyecto.IdProyecto })" class="btn btn-sm btn-outline-primary me-1">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@proyecto.IdProyecto)">
-                                <i class="bi bi-trash"></i>
-                            </button>
+
+                            @if (rolActual != "Investigador")
+                            {
+                                <a href="@Url.Action("Modificar", "Proyectos", new { id = proyecto.IdProyecto })" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@proyecto.IdProyecto)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
                         </td>
                     </tr>
                 }
@@ -135,13 +156,11 @@
 
 @section Scripts {
     <script>
-        // Mapeamos los datos reales de la tabla para el autocompletado
         const datosAutocompletado = {
             idProyecto: [...new Set(Array.from(document.querySelectorAll('.data-idProyecto')).map(el => el.textContent.trim()))],
             tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))],
             objetivoProyecto: [...new Set(Array.from(document.querySelectorAll('.data-objetivoProyecto')).map(el => el.textContent.trim()))],
             descripcionProyecto: [...new Set(Array.from(document.querySelectorAll('.data-descripcionProyecto')).map(el => el.textContent.trim()))],
-            // Extrae el ID puro limpiando el "ID: "
             idSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero span')).map(el => el.textContent.replace('ID: ', '').trim()))],
             nombreSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero small')).map(el => el.textContent.trim()))]
         };
@@ -164,15 +183,12 @@
             btnConsultar.disabled = false;
             let nuevoInput = '';
 
-            // INPUT PARA FECHAS EXACTAS
             if (filtroSeleccionado === 'fechaInicioProyecto' || filtroSeleccionado === 'fechaFinProyecto') {
                 nuevoInput = `<input type="date" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
-            // INPUT PARA MESES
             else if (filtroSeleccionado === 'mesInicioProyecto' || filtroSeleccionado === 'mesFinProyecto') {
                 nuevoInput = `<input type="month" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
-            // INPUT PARA TEXTOS Y NÚMEROS (Con Autocompletado Integrado)
             else {
                 let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idSemillero');
                 let tipoInput = esNumero ? 'number' : 'text';
@@ -208,7 +224,6 @@
                     return;
                 }
 
-                // Validamos de forma estricta contra la lista de datos válidos
                 if (['tituloProyecto', 'objetivoProyecto', 'descripcionProyecto', 'idProyecto', 'idSemillero', 'nombreSemillero'].includes(filtro)) {
                     if (!datosAutocompletado[filtro].includes(valor)) {
                         e.preventDefault();
