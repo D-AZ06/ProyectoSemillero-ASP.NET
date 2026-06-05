@@ -1,0 +1,161 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosProyecto
+
+@{
+    ViewBag.Title = "Modificar Proyecto";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid #0284c7 !important;">
+
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Proyectos")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Modificar Proyecto</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Modificar", "Proyectos", FormMethod.Post, new { id = "form-proyecto" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Identificación (ID) - No modificable</label>
+                                @Html.TextBoxFor(m => m.IdProyecto, new { @class = "form-control bg-light", @readonly = "readonly" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Título del Proyecto</label>
+                                @Html.TextBoxFor(m => m.TituloProyecto, new { @class = "form-control", required = "required" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Objetivo del Proyecto</label>
+                                @Html.TextAreaFor(m => m.ObjetivoProyecto, new { @class = "form-control", rows = "4", required = "required" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Semillero Vinculado (No modificable)</label>
+                                <input type="text" class="form-control bg-light text-muted border-secondary" value="@ViewBag.NombreSemillero" readonly />
+                                @Html.HiddenFor(m => m.IdSemillero)
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Descripción del Proyecto</label>
+                                @Html.TextAreaFor(m => m.DescripcionProyecto, new { @class = "form-control", rows = "5", required = "required" })
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Inicio</label>
+                                    @Html.TextBoxFor(m => m.FechaInicioProyecto, new { @class = "form-control", type = "date", id = "fechaInicio", required = "required" })
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Fin</label>
+                                    @Html.TextBoxFor(m => m.FechaFinProyecto, new { @class = "form-control", type = "date", id = "fechaFin", required = "required" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted" />
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn text-white fw-bold py-2 px-4 shadow-sm" style="background-color: #0284c7;">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Proyecto
+                        </button>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+
+            // 1. Validaciones visuales automáticas para las fechas
+            if (fechaInicio && fechaFin) {
+                if (fechaInicio.value) {
+                    fechaFin.setAttribute('min', fechaInicio.value);
+                }
+
+                fechaInicio.addEventListener('change', function () {
+                    fechaFin.setAttribute('min', this.value);
+                    if (fechaFin.value && fechaFin.value < this.value) {
+                        fechaFin.value = ''; // Limpiamos el campo si quedó obsoleto
+                    }
+                });
+            }
+
+            // 2. Botón volver con advertencia
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los cambios que no hayas actualizado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            // 3. Interceptar formulario para validación extrema de fechas antes de guardar
+            const formProyecto = document.getElementById('form-proyecto');
+            if (formProyecto) {
+                formProyecto.addEventListener('submit', function (e) {
+
+                    const fInicioVal = new Date(fechaInicio.value);
+                    const fFinVal = new Date(fechaFin.value);
+
+                    // Si la fecha final es menor que la de inicio, bloqueamos todo
+                    if (fFinVal < fInicioVal) {
+                        e.preventDefault(); // Detenemos el envío del formulario
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Fechas Inválidas',
+                            text: 'La fecha de finalización no puede ser anterior a la fecha de inicio del proyecto.',
+                            confirmButtonColor: '#0284c7'
+                        });
+                        return; // Salimos de la función
+                    }
+
+                    // Si las fechas están bien, mostramos la alerta de guardado normal
+                    Swal.fire({
+                        title: 'Actualizando Proyecto...',
+                        text: 'Guardando los cambios en la base de datos.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
+            }
+
+        });
+    </script>
+}

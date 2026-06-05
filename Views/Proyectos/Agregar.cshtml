@@ -1,0 +1,154 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosProyecto
+
+@{
+    ViewBag.Title = "Agregar Proyecto";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100">
+
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Proyectos")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-folder-plus text-primary me-2"></i> Nuevo Proyecto</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Proyectos", FormMethod.Post, new { id = "form-proyecto" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Título del Proyecto</label>
+                                @Html.TextBoxFor(m => m.TituloProyecto, new { @class = "form-control", required = "required", placeholder = "Ej. Desarrollo de un Sistema Web" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Objetivo del Proyecto</label>
+                                @Html.TextAreaFor(m => m.ObjetivoProyecto, new { @class = "form-control", rows = "4", required = "required", placeholder = "Describe el objetivo principal..." })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Semillero Vinculado</label>
+
+                                @if (ViewBag.RolUsuario == "Líder")
+                                {
+                                    <input type="text" class="form-control bg-light text-dark fw-bold border-secondary" value="@ViewBag.NombreSemilleroLider" readonly />
+                                    <input type="hidden" name="IdSemillero" value="@ViewBag.IdSemilleroLider" />
+                                }
+                                else if (ViewBag.RolUsuario == "Admin" || ViewBag.RolUsuario == "Administrador")
+                                {
+                                    @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select", required = "required" })
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Descripción del Proyecto</label>
+                                @Html.TextAreaFor(m => m.DescripcionProyecto, new { @class = "form-control", rows = "4", required = "required", placeholder = "Detalla de qué trata el proyecto..." })
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Inicio</label>
+                                    @Html.TextBoxFor(m => m.FechaInicioProyecto, new { @class = "form-control", type = "date", id = "fechaInicio", required = "required" })
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Fin</label>
+                                    @Html.TextBoxFor(m => m.FechaFinProyecto, new { @class = "form-control", type = "date", id = "fechaFin", required = "required" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted" />
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary fw-bold py-2 px-4 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Guardar Proyecto
+                        </button>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // --- LÓGICA DE VALIDACIÓN DE FECHAS ---
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+
+            if (fechaInicio && fechaFin) {
+                // Obtener fecha actual en formato YYYY-MM-DD compensando la zona horaria local
+                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+                const hoy = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+                // Bloquear días anteriores a hoy en ambos campos
+                fechaInicio.setAttribute('min', hoy);
+                fechaFin.setAttribute('min', hoy);
+
+                // Evitar que la fecha fin sea anterior a la fecha de inicio seleccionada
+                fechaInicio.addEventListener('change', function () {
+                    fechaFin.setAttribute('min', this.value);
+
+                    // Si la fecha fin actual es menor que la nueva fecha de inicio, la limpiamos
+                    if (fechaFin.value && fechaFin.value < this.value) {
+                        fechaFin.value = '';
+                    }
+                });
+            }
+
+            // --- BOTÓN VOLVER CON CONFIRMACIÓN ---
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los datos del proyecto que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            // --- ALERTA DE CARGA AL ENVIAR EL FORMULARIO ---
+            const formProyecto = document.getElementById('form-proyecto');
+            if (formProyecto) {
+                formProyecto.addEventListener('submit', function () {
+                    Swal.fire({
+                        title: 'Guardando Proyecto...',
+                        text: 'Por favor espera mientras se registra en la base de datos.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
+            }
+
+        });
+    </script>
+}
