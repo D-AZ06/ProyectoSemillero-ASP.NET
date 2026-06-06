@@ -222,41 +222,75 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         // POST: Actividades/Agregar
         [HttpPost]
-        public ActionResult Agregar(int idProyecto, string nombreActividad, string duracionActividad, string fechaEntregaActividad, bool vinoDesdeProyecto)
+        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto)
         {
             try
             {
-                // Validación de sesión preventiva
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                // 1. Validación estricta de fecha en el Servidor (No hoy, no ayer, no pasado)
+                DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
+                DateTime limiteMinimoEnServidor = DateTime.Today.AddDays(1); // Mañana es el mínimo permitido
 
-                // 1. Buscar el proyecto padre para calcular el ID autoincrementable interno
+                if (fechaEntrega < limiteMinimoEnServidor)
+                {
+                    TempData["Error"] = "Operación rechazada: La fecha de entrega debe ser estrictamente posterior al día de hoy.";
+                    return RedirectToAction("Index");
+                }
+
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
                 var proyectoPadre = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+
                 if (proyectoPadre == null)
                 {
                     TempData["Error"] = "Error: El proyecto seleccionado ya no existe.";
                     return RedirectToAction("Index");
                 }
 
-                // 2. Calcular idActividad Autoincrementable localmente dentro del array del proyecto
-                int nuevoIdActividad = 1;
+
+                int nuevoIdActividad = 400; // Valor por defecto si es la primera actividad del proyecto
+
                 if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any())
                 {
-                    nuevoIdActividad = proyectoPadre.Actividades.Max(a => a.IdActividad) + 1;
+                    int maxSecuencia = 0;
+
+                    foreach (var act in proyectoPadre.Actividades)
+                    {
+                        string idStr = act.IdActividad.ToString();
+
+                        // Verificamos que empiece con "40" y tenga una secuencia válida
+                        if (idStr.StartsWith("40") && idStr.Length > 2)
+                        {
+                            // Extraemos todo lo que está después del "40" (la secuencia)
+                            if (int.TryParse(idStr.Substring(2), out int secuenciaActual))
+                            {
+                                if (secuenciaActual > maxSecuencia)
+                                {
+                                    maxSecuencia = secuenciaActual;
+                                }
+                            }
+                        }
+                    }
+
+                    // El siguiente número secuencial
+                    int siguienteSecuencia = maxSecuencia + 1;
+
+                    // Concatenamos el prefijo "40" con la nueva secuencia y lo convertimos a entero
+                    nuevoIdActividad = int.Parse("40" + siguienteSecuencia);
                 }
 
-                // 3. Construir la nueva instancia de Actividad basándose en tu modelo clase
+                // 2. Concatenación inteligente para mantener tu modelo string intacto en MongoDB
+                string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
+
                 Actividad nuevaActividad = new Actividad
                 {
                     IdActividad = nuevoIdActividad,
                     NombreActividad = nombreActividad.Trim(),
-                    DuracionActividad = duracionActividad.Trim(),
+                    DuracionActividad = duracionCompuesta, // Guarda ej: "15 semanas" o "2 meses"
                     FechaEntregaActividad = fechaEntregaActividad,
-                    Fases = new List<Fase>() // Inicializada vacía tal como se estructuró
+                    Fases = new List<Fase>()
                 };
 
-                // 4. Operación MongoDB: Hacer un $push (añadir) al array de actividades del proyecto
                 var filtro = Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, idProyecto);
                 var actualizacion = Builders<DatosProyecto>.Update.Push(p => p.Actividades, nuevaActividad);
 
@@ -264,7 +298,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 TempData["Exito"] = "Actividad registrada con éxito bajo el ID " + nuevoIdActividad + ".";
 
-                // 5. Redirección inteligente
                 if (vinoDesdeProyecto)
                 {
                     return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
@@ -275,6 +308,94 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "Ocurrió un error inesperado al guardar: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
+
+        // GET: Actividades/Modificar?idProyecto=X&idActividad=Y&desdeProyecto=true
+        [HttpGet]
+        public ActionResult Modificar(int idProyecto, int idActividad, bool desdeProyecto = false)
+        {
+            try
+            {
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                string rolUsuario = Session["Rol"].ToString();
+                if (rolUsuario == "Investigador")
+                {
+                    TempData["Error"] = "No tienes permisos para realizar esta acción.";
+                    return RedirectToAction("Index");
+                }
+
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+                var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+                if (proyecto == null)
+                {
+                    TempData["Error"] = "El proyecto especificado no existe.";
+                    return RedirectToAction("Index");
+                }
+
+                var actividad = proyecto.Actividades?.FirstOrDefault(a => a.IdActividad == idActividad);
+                if (actividad == null)
+                {
+                    TempData["Error"] = "La actividad especificada no existe en este proyecto.";
+                    return desdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                }
+
+                // Usamos el mismo nombre de ViewBag que usaste en Agregar
+                ViewBag.ProyectoFijo = desdeProyecto;
+                ViewBag.IdProyecto = proyecto.IdProyecto;
+                ViewBag.TituloProyecto = proyecto.TituloProyecto;
+
+                return View(actividad);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al abrir el formulario de modificación: " + ex.Message;
+                return RedirectToAction("Index");
+            }
+        }
+
+        // POST: Actividades/Modificar
+        [HttpPost]
+        public ActionResult Modificar(int idProyecto, int idActividad, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto) // <- ¡Aquí está la magia!
+        {
+            try
+            {
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
+
+                var filtro = Builders<DatosProyecto>.Filter.And(
+                    Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, idProyecto),
+                    Builders<DatosProyecto>.Filter.ElemMatch(p => p.Actividades, a => a.IdActividad == idActividad)
+                );
+
+                var actualizacion = Builders<DatosProyecto>.Update
+                    .Set("actividades.$.nombreActividad", nombreActividad.Trim())
+                    .Set("actividades.$.duracionActividad", duracionCompuesta)
+                    .Set("actividades.$.fechaEntregaActividad", fechaEntregaActividad);
+
+                coleccionProyectos.UpdateOne(filtro, actualizacion);
+
+                TempData["Exito"] = "Actividad modificada correctamente.";
+
+                // Redirección inteligente igual que en Agregar
+                if (vinoDesdeProyecto)
+                {
+                    return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al guardar las modificaciones: " + ex.Message;
+                if (vinoDesdeProyecto)
+                {
+                    return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
+                }
                 return RedirectToAction("Index");
             }
         }

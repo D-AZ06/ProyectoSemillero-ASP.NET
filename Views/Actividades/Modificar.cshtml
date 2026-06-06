@@ -1,0 +1,156 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.Actividad
+
+@{
+    ViewBag.Title = "Modificar Actividad";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    // Igual que en Agregar
+    bool proyectoFijo = ViewBag.ProyectoFijo != null && (bool)ViewBag.ProyectoFijo;
+    int idProyecto = ViewBag.IdProyecto;
+    string tituloProyecto = ViewBag.TituloProyecto;
+
+    int duracionValor = 1;
+    string duracionUnidad = "Días";
+
+    if (Model != null && !string.IsNullOrEmpty(Model.DuracionActividad))
+    {
+        var partes = Model.DuracionActividad.Split(' ');
+        if (partes.Length >= 2)
+        {
+            int.TryParse(partes[0], out duracionValor);
+            duracionUnidad = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(partes[1].ToLower());
+        }
+    }
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-pencil-square text-primary me-2"></i> Modificar Actividad
+        </h3>
+
+        @if (proyectoFijo)
+        {
+            <a href="@Url.Action("PorProyecto", "Actividades", new { idProyecto = idProyecto })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Proyecto
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index", "Actividades")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Listado
+            </a>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+
+            <form action="@Url.Action("Modificar", "Actividades")" method="post" id="formModificarActividad">
+
+                <input type="hidden" name="vinoDesdeProyecto" value="@(proyectoFijo ? "true" : "false")" />
+                <input type="hidden" name="idProyecto" value="@idProyecto" />
+                <input type="hidden" name="idActividad" value="@Model.IdActividad" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-dark fw-bold">ID: @idProyecto</span>
+                        <input type="text" class="form-control bg-light text-muted fw-semibold" value="@tituloProyecto" readonly disabled />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-key-fill me-1"></i> Identificador de Actividad</label>
+                    <input type="text" class="form-control bg-light text-muted fw-bold" value="Cód. Actividad: @Model.IdActividad" readonly disabled style="max-width: 200px;" />
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="mb-3">
+                    <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
+                    <input type="text" class="form-control border-secondary-subtle" id="nombreActividad" name="nombreActividad" value="@Model.NombreActividad" maxlength="150" required autocomplete="off" />
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-6 mb-3">
+                        <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" value="@duracionValor" required />
+                            <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                                <option value="Días" @(duracionUnidad == "Días" ? "selected" : "")>Días</option>
+                                <option value="Semanas" @(duracionUnidad == "Semanas" ? "selected" : "")>Semanas</option>
+                                <option value="Meses" @(duracionUnidad == "Meses" ? "selected" : "")>Meses</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 mb-3">
+                        <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha Máxima de Entrega</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaEntregaActividad" name="fechaEntregaActividad" value="@Model.FechaEntregaActividad" required />
+                        <small class="text-muted" id="ayudaFecha"><i class="bi bi-info-circle"></i> Puedes cambiar el tiempo para recalcular la fecha automáticamente.</small>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnGuardarCambios">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const txtValor = document.getElementById('duracionValor');
+        const cboUnidad = document.getElementById('duracionUnidad');
+        const txtFecha = document.getElementById('fechaEntregaActividad');
+        const ayudaFecha = document.getElementById('ayudaFecha');
+
+        function calcularFechaProyectada() {
+            const valor = parseInt(txtValor.value) || 0;
+            const unidad = cboUnidad.value;
+
+            if (valor <= 0) return;
+
+            let fechaCalculada = new Date();
+
+            if (unidad === 'Días') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + valor);
+            } else if (unidad === 'Semanas') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + (valor * 7));
+            } else if (unidad === 'Meses') {
+                fechaCalculada.setMonth(fechaCalculada.getMonth() + valor);
+            }
+
+            const yyyy = fechaCalculada.getFullYear();
+            const mm = String(fechaCalculada.getMonth() + 1).padStart(2, '0');
+            const dd = String(fechaCalculada.getDate()).padStart(2, '0');
+            const formatoFinal = `${yyyy}-${mm}-${dd}`;
+
+            txtFecha.value = formatoFinal;
+            txtFecha.min = formatoFinal;
+            ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Bloqueado: Fecha mínima recalculada según nueva duración.`;
+        }
+
+        txtValor.addEventListener('input', calcularFechaProyectada);
+        cboUnidad.addEventListener('change', calcularFechaProyectada);
+
+        document.getElementById('formModificarActividad').addEventListener('submit', function () {
+            const btn = document.getElementById('btnGuardarCambios');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sincronizando...`;
+        });
+    </script>
+}

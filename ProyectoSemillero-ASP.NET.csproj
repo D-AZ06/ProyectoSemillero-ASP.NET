@@ -304,6 +304,7 @@
     <Content Include="Views\Actividades\Index.cshtml" />
     <Content Include="Views\Actividades\PorProyecto.cshtml" />
     <Content Include="Views\Actividades\Agregar.cshtml" />
+    <Content Include="Views\Actividades\Modificar.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

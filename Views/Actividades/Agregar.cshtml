@@ -50,7 +50,6 @@
                             <span class="input-group-text bg-light text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
                             <input type="text" class="form-control bg-light text-muted fw-semibold border-secondary-subtle" value="@ViewBag.TituloProyecto" readonly disabled />
                         </div>
-                        <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i> Este campo está bloqueado porque estás añadiendo la actividad directamente desde este proyecto.</small>
                     }
                     else
                     {
@@ -71,18 +70,26 @@
 
                 <div class="mb-3">
                     <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
-                    <input type="text" class="form-control border-secondary-subtle focus-ring" id="nombreActividad" name="nombreActividad" placeholder="Ej. Diseño de la Base de Datos o Pruebas Unitarias" maxlength="150" required autocomplete="off" />
+                    <input type="text" class="form-control border-secondary-subtle" id="nombreActividad" name="nombreActividad" placeholder="Ej. Diseño de la Base de Datos" maxlength="150" required autocomplete="off" />
                 </div>
 
                 <div class="row">
                     <div class="col-12 col-md-6 mb-3">
-                        <label for="duracionActividad" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
-                        <input type="text" class="form-control border-secondary-subtle" id="duracionActividad" name="duracionActividad" placeholder="Ej. 15 días, 3 semanas..." maxlength="50" required autocomplete="off" />
+                        <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" placeholder="Cant." required />
+                            <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                                <option value="Días">Días</option>
+                                <option value="Semanas">Semanas</option>
+                                <option value="Meses">Meses</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="col-12 col-md-6 mb-3">
                         <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha Máxima de Entrega</label>
                         <input type="date" class="form-control border-secondary-subtle" id="fechaEntregaActividad" name="fechaEntregaActividad" required />
+                        <small class="text-muted" id="ayudaFecha"><i class="bi bi-info-circle"></i> Selecciona la duración para calcular la fecha recomendada.</small>
                     </div>
                 </div>
 
@@ -99,7 +106,65 @@
 
 @section Scripts {
     <script>
-        // Feedback visual inmediato en el botón al procesar el guardado en la nube
+        const txtValor = document.getElementById('duracionValor');
+        const cboUnidad = document.getElementById('duracionUnidad');
+        const txtFecha = document.getElementById('fechaEntregaActividad');
+        const ayudaFecha = document.getElementById('ayudaFecha');
+
+        // 1. Al cargar la página, la restricción base absoluta es que no se pueda elegir ni hoy ni ayer
+        function establecerMinimoAbsoluto() {
+            let mañana = new Date();
+            mañana.setDate(mañana.getDate() + 1); // Sumamos 1 día a hoy
+
+            const yyyy = mañana.getFullYear();
+            const mm = String(mañana.getMonth() + 1).padStart(2, '0');
+            const dd = String(mañana.getDate()).padStart(2, '0');
+
+            const fechaMinimaBase = `${yyyy}-${mm}-${dd}`;
+            txtFecha.min = fechaMinimaBase;
+        }
+
+        // 2. Función matemática para calcular y bloquear la fecha según el tiempo ingresado
+        function calcularFechaProyectada() {
+            const valor = parseInt(txtValor.value) || 0;
+            const unidad = cboUnidad.value;
+
+            if (valor <= 0) {
+                establecerMinimoAbsoluto();
+                ayudaFecha.innerHTML = `<i class="bi bi-info-circle text-muted"></i> Ingrese una duración válida numérica mayor a 0.`;
+                return;
+            }
+
+            let fechaCalculada = new Date(); // Partimos de hoy
+
+            if (unidad === 'Días') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + valor);
+            } else if (unidad === 'Semanas') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + (valor * 7));
+            } else if (unidad === 'Meses') {
+                fechaCalculada.setMonth(fechaCalculada.getMonth() + valor);
+            }
+
+            // Convertir objeto de fecha a formato estándar HTML5 (YYYY-MM-DD)
+            const yyyy = fechaCalculada.getFullYear();
+            const mm = String(fechaCalculada.getMonth() + 1).padStart(2, '0');
+            const dd = String(fechaCalculada.getDate()).padStart(2, '0');
+            const formatoFinal = `${yyyy}-${mm}-${dd}`;
+
+            // Actualizamos la vista dinámicamente
+            txtFecha.value = formatoFinal;
+            txtFecha.min = formatoFinal; // "automáticamente no se puede colocar una fecha anterior a esta"
+            ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Bloqueado: Fecha mínima calculada según duración del desarrollo.`;
+        }
+
+        // Escuchadores de eventos en tiempo real
+        txtValor.addEventListener('input', calcularFechaProyectada);
+        cboUnidad.addEventListener('change', calcularFechaProyectada);
+
+        // Inicializar restricciones nativas del HTML
+        document.addEventListener('DOMContentLoaded', establecerMinimoAbsoluto);
+
+        // Loader de envío
         document.getElementById('formAgregarActividad').addEventListener('submit', function () {
             const btn = document.getElementById('btnGuardarActividad');
             btn.disabled = true;

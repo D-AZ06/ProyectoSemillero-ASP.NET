@@ -81,7 +81,7 @@
 
                                 @if (rolActual != "Investigador")
                                 {
-                                    <a href="@Url.Action("Modificar", "Actividades", new { idProyecto = idProyecto, idActividad = actividad.IdActividad })" class="btn btn-sm btn-outline-primary me-1" title="Modificar">
+                                    <a href="@Url.Action("Modificar", "Actividades", new { idProyecto = idProyecto, idActividad = actividad.IdActividad, desdeProyecto = true })" class="btn btn-sm btn-outline-primary me-1" title="Modificar">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                     <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@idProyecto, @actividad.IdActividad)">
