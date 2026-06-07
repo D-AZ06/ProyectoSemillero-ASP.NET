@@ -248,20 +248,25 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
 
-                int nuevoIdActividad = 400; // Valor por defecto si es la primera actividad del proyecto
+                // 1. GENERACIÓN DE ID GLOBAL (Prefijo fijo "40")
+                int nuevoIdActividad = 401;
 
-                if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any())
+                // Extraemos TODAS las actividades de TODOS los proyectos en la base de datos
+                var todasLasActividades = coleccionProyectos.Find(_ => true).ToList()
+                    .Where(p => p.Actividades != null && p.Actividades.Any())
+                    .SelectMany(p => p.Actividades)
+                    .ToList();
+
+                if (todasLasActividades.Any())
                 {
                     int maxSecuencia = 0;
 
-                    foreach (var act in proyectoPadre.Actividades)
+                    foreach (var act in todasLasActividades)
                     {
                         string idStr = act.IdActividad.ToString();
 
-                        // Verificamos que empiece con "40" y tenga una secuencia válida
-                        if (idStr.StartsWith("40") && idStr.Length > 2)
+                        if (idStr.StartsWith("40") && idStr.Length >= 3)
                         {
-                            // Extraemos todo lo que está después del "40" (la secuencia)
                             if (int.TryParse(idStr.Substring(2), out int secuenciaActual))
                             {
                                 if (secuenciaActual > maxSecuencia)
@@ -272,10 +277,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         }
                     }
 
-                    // El siguiente número secuencial
                     int siguienteSecuencia = maxSecuencia + 1;
-
-                    // Concatenamos el prefijo "40" con la nueva secuencia y lo convertimos a entero
                     nuevoIdActividad = int.Parse("40" + siguienteSecuencia);
                 }
 

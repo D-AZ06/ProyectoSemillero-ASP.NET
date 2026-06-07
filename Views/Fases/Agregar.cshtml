@@ -1,0 +1,250 @@
+﻿@{
+    ViewBag.Title = "Agregar Fase";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    bool vinoDesdePorActividad = ViewBag.VinoDesdePorActividad ?? false;
+    bool desdeGlobal = ViewBag.DesdeGlobal ?? false;
+    var proyectosCombobox = ViewBag.ProyectosMapeados as List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>;
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Nueva Fase
+        </h3>
+
+        @if (vinoDesdePorActividad)
+        {
+            <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = ViewBag.IdProyecto, idActividad = ViewBag.IdActividad, desdeGlobal = desdeGlobal })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver a Fases de Actividad
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index", "Fases")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Cancelar y Volver
+            </a>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+            <form action="@Url.Action("Agregar", "Fases")" method="post" id="formAgregarFase">
+
+                <input type="hidden" name="vinoDesdePorActividad" value="@(vinoDesdePorActividad ? "true" : "false")" />
+                <input type="hidden" name="desdeGlobal" value="@(desdeGlobal ? "true" : "false")" />
+
+                <div class="mb-4 bg-light p-3 rounded-3 border">
+
+                    @if (vinoDesdePorActividad)
+                    {
+                        <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
+                        <input type="hidden" name="idActividad" value="@ViewBag.IdActividad" />
+
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-success mb-1"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
+                                <input type="text" class="form-control bg-white text-muted fw-semibold" value="@ViewBag.TituloProyecto" readonly disabled />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-bold text-primary mb-1"><i class="bi bi-list-check me-1"></i> Actividad Asociada</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white text-dark fw-bold">ID: @ViewBag.IdActividad</span>
+                                <input type="text" class="form-control bg-white text-muted fw-semibold" value="@ViewBag.NombreActividad" readonly disabled />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-success"><i class="bi bi-folder-fill me-1"></i> Seleccionar Proyecto</label>
+                            <select class="form-select border-success fw-medium" name="idProyecto" id="selectProyecto" required>
+                                <option value="">-- Elija un proyecto --</option>
+                                @if (proyectosCombobox != null)
+                                {
+                                    foreach (var proj in proyectosCombobox.Where(p => p.Actividades != null && p.Actividades.Any()))
+                                    {
+                                        <option value="@proj.IdProyecto">ID: @proj.IdProyecto - @proj.TituloProyecto</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-bold text-primary"><i class="bi bi-list-check me-1"></i> Seleccionar Actividad</label>
+                            <select class="form-select border-primary fw-medium" name="idActividad" id="selectActividad" required disabled>
+                                <option value="">-- Elija primero un proyecto --</option>
+                            </select>
+                        </div>
+                    }
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="mb-3">
+                    <label for="nombreFase" class="form-label fw-bold text-secondary">
+                        <i class="bi bi-diagram-3-fill me-1"></i> Nombre de la Fase
+                    </label>
+
+                    <input type="text" class="form-control border-secondary-subtle" id="nombreFase" name="nombreFase" value="@(Model != null ? Model.NombreFase : "")" maxlength="150" required autocomplete="off" list="listaFasesSugeridas" />
+
+                    <datalist id="listaFasesSugeridas">
+                        @if (ViewBag.FasesSugeridas != null)
+                        {
+                            foreach (var faseSugerida in ViewBag.FasesSugeridas)
+                            {
+                                <option value="@faseSugerida"></option>
+                            }
+                        }
+                    </datalist>
+
+                    <small class="text-muted"><i class="bi bi-lightbulb-fill text-warning"></i> Selecciona una fase existente o escribe una nueva.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada de la Fase</label>
+                    <div class="input-group w-75">
+                        <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" placeholder="Cant." required />
+                        <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                            <option value="Días">Días</option>
+                            <option value="Semanas">Semanas</option>
+                            <option value="Meses">Meses</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarFase">
+                        <i class="bi bi-check-circle me-1"></i> Guardar Fase
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Lógica de ComboBox en cascada solo si estamos en el contexto Global
+        @if (!vinoDesdePorActividad && proyectosCombobox != null)
+        {
+            <text>
+            const jerarquiaActividades = {
+                @foreach(var p in proyectosCombobox.Where(p => p.Actividades != null && p.Actividades.Any()))
+                {
+                    @Html.Raw($"\"{p.IdProyecto}\": [")
+                    foreach(var a in p.Actividades)
+                    {
+                        @Html.Raw($"{{ id: \"{a.IdActividad}\", nombre: \"{HttpUtility.JavaScriptStringEncode(a.NombreActividad)}\" }},")
+                    }
+                    @Html.Raw("],")
+                }
+            };
+
+            const selectProyecto = document.getElementById('selectProyecto');
+            const selectActividad = document.getElementById('selectActividad');
+
+            selectProyecto.addEventListener('change', function() {
+                const idSeleccionado = this.value;
+                selectActividad.innerHTML = '<option value="">-- Elija una actividad --</option>';
+
+                if (idSeleccionado && jerarquiaActividades[idSeleccionado]) {
+                    selectActividad.disabled = false;
+                    jerarquiaActividades[idSeleccionado].forEach(act => {
+                        let option = document.createElement('option');
+                        option.value = act.id;
+                        option.textContent = `ID: ${act.id} - ${act.nombre}`;
+                        selectActividad.appendChild(option);
+                    });
+                } else {
+                    selectActividad.disabled = true;
+                    if(idSeleccionado) {
+                        selectActividad.innerHTML = '<option value="">No hay actividades disponibles</option>';
+                    } else {
+                        selectActividad.innerHTML = '<option value="">-- Elija primero un proyecto --</option>';
+                    }
+                }
+            });
+            </text>
+        }
+
+        // Loader de envío modificado para evitar bloqueos del navegador
+        document.getElementById('formAgregarFase').addEventListener('submit', function () {
+
+            // Si el select dinámico está deshabilitado por algún error visual, lo forzamos a habilitarse antes de enviar
+            const selectAct = document.getElementById('selectActividad');
+            if (selectAct) selectAct.disabled = false;
+
+            const btn = document.getElementById('btnGuardarFase');
+
+            // Usamos un ligero retardo para dejar que el formulario ejecute su envío a C# sin interrupciones
+            setTimeout(() => {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando Fase...`;
+            }, 10);
+        });
+
+        // --- LÓGICA PLUS: ESTANDARIZACIÓN DE FASES ---
+
+        // Pasamos la lista de C# a un array de JavaScript de forma segura
+        const diccionarioFases = [
+            @if(ViewBag.FasesSugeridas != null) {
+                foreach(var f in ViewBag.FasesSugeridas) {
+                    @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(f)}\",")
+                }
+            }
+        ];
+
+        const inputNombreFase = document.getElementById('nombreFase');
+
+        // Función matemática/Regex para quitar tildes y convertir a minúsculas
+        function normalizarTexto(texto) {
+            if (!texto) return "";
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
+
+        inputNombreFase.addEventListener('blur', function() {
+            const valorIngresado = normalizarTexto(this.value);
+            if (!valorIngresado) return;
+
+            // Busca si existe una fase que, normalizada, sea idéntica a lo que ingresó el usuario
+            const coincidencia = diccionarioFases.find(f => normalizarTexto(f) === valorIngresado);
+
+            // Si hay coincidencia y el texto exacto es diferente (por tildes o mayúsculas)
+            if (coincidencia && coincidencia !== this.value.trim()) {
+
+                // Reemplaza silenciosamente por el formato correcto
+                this.value = coincidencia;
+
+                // Dispara una alerta tipo "Toast" (notificación pequeña arriba a la derecha)
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'info',
+                    title: 'Formato Unificado',
+                    text: `Se ha auto-corregido a "${coincidencia}" para evitar duplicados en el sistema.`
+                });
+            }
+        });
+        // ----------------------------------------------
+
+    </script>
+}

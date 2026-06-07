@@ -1,0 +1,196 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.Fase
+
+@{
+    ViewBag.Title = "Modificar Fase";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    bool vinoDesdePorActividad = ViewBag.VinoDesdePorActividad != null && (bool)ViewBag.VinoDesdePorActividad;
+    bool desdeGlobal = ViewBag.DesdeGlobal != null && (bool)ViewBag.DesdeGlobal;
+
+    int idProyecto = ViewBag.IdProyecto;
+    string tituloProyecto = ViewBag.TituloProyecto;
+    int idActividad = ViewBag.IdActividad;
+    string nombreActividad = ViewBag.NombreActividad;
+
+    int duracionValor = 1;
+    string duracionUnidad = "Días";
+
+    if (Model != null && !string.IsNullOrEmpty(Model.DuracionFase))
+    {
+        var partes = Model.DuracionFase.Split(' ');
+        if (partes.Length >= 2)
+        {
+            int.TryParse(partes[0], out duracionValor);
+            duracionUnidad = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(partes[1].ToLower());
+        }
+    }
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-pencil-square text-primary me-2"></i> Modificar Fase
+        </h3>
+
+        @if (vinoDesdePorActividad)
+        {
+            <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver a Fases de Actividad
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index", "Fases")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Listado General
+            </a>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+
+            <form action="@Url.Action("Modificar", "Fases")" method="post" id="formModificarFase">
+
+                <input type="hidden" name="vinoDesdePorActividad" value="@(vinoDesdePorActividad ? "true" : "false")" />
+                <input type="hidden" name="desdeGlobal" value="@(desdeGlobal ? "true" : "false")" />
+
+                <input type="hidden" name="idProyecto" value="@idProyecto" />
+                <input type="hidden" name="idActividad" value="@idActividad" />
+                <input type="hidden" name="idFase" value="@Model.IdFase" />
+
+                <div class="mb-4 bg-light p-3 rounded-3 border">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold text-success mb-1"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-dark fw-bold">ID: @idProyecto</span>
+                            <input type="text" class="form-control bg-white text-muted fw-semibold" value="@tituloProyecto" readonly disabled />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label fw-bold text-primary mb-1"><i class="bi bi-list-check me-1"></i> Actividad Asociada</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-dark fw-bold">ID: @idActividad</span>
+                            <input type="text" class="form-control bg-white text-muted fw-semibold" value="@nombreActividad" readonly disabled />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-key-fill me-1"></i> Identificador de Fase</label>
+                    <input type="text" class="form-control bg-light text-muted fw-bold" value="Cód. Fase: @Model.IdFase" readonly disabled style="max-width: 200px;" />
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="mb-3">
+                    <label for="nombreFase" class="form-label fw-bold text-secondary">
+                        <i class="bi bi-diagram-3-fill me-1"></i> Nombre de la Fase
+                    </label>
+
+                    <input type="text" class="form-control border-secondary-subtle" id="nombreFase" name="nombreFase" value="@(Model != null ? Model.NombreFase : "")" maxlength="150" required autocomplete="off" list="listaFasesSugeridas" />
+
+                    <datalist id="listaFasesSugeridas">
+                        @if (ViewBag.FasesSugeridas != null)
+                        {
+                            foreach (var faseSugerida in ViewBag.FasesSugeridas)
+                            {
+                                <option value="@faseSugerida"></option>
+                            }
+                        }
+                    </datalist>
+
+                    <small class="text-muted"><i class="bi bi-lightbulb-fill text-warning"></i> Selecciona una fase existente o escribe una nueva.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
+                    <div class="input-group w-75">
+                        <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" value="@duracionValor" required />
+                        <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                            <option value="Días" @(duracionUnidad == "Días" ? "selected" : "")>Días</option>
+                            <option value="Semanas" @(duracionUnidad == "Semanas" ? "selected" : "")>Semanas</option>
+                            <option value="Meses" @(duracionUnidad == "Meses" ? "selected" : "")>Meses</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnGuardarCambios">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('formModificarFase').addEventListener('submit', function () {
+            const btn = document.getElementById('btnGuardarCambios');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sincronizando...`;
+        });
+
+        // --- LÓGICA PLUS: ESTANDARIZACIÓN DE FASES ---
+
+        // Pasamos la lista de C# a un array de JavaScript de forma segura
+        const diccionarioFases = [
+            @if(ViewBag.FasesSugeridas != null) {
+                foreach(var f in ViewBag.FasesSugeridas) {
+                    @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(f)}\",")
+                }
+            }
+        ];
+
+        const inputNombreFase = document.getElementById('nombreFase');
+
+        // Función matemática/Regex para quitar tildes y convertir a minúsculas
+        function normalizarTexto(texto) {
+            if (!texto) return "";
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
+
+        inputNombreFase.addEventListener('blur', function() {
+            const valorIngresado = normalizarTexto(this.value);
+            if (!valorIngresado) return;
+
+            // Busca si existe una fase que, normalizada, sea idéntica a lo que ingresó el usuario
+            const coincidencia = diccionarioFases.find(f => normalizarTexto(f) === valorIngresado);
+
+            // Si hay coincidencia y el texto exacto es diferente (por tildes o mayúsculas)
+            if (coincidencia && coincidencia !== this.value.trim()) {
+
+                // Reemplaza silenciosamente por el formato correcto
+                this.value = coincidencia;
+
+                // Dispara una alerta tipo "Toast" (notificación pequeña arriba a la derecha)
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'info',
+                    title: 'Formato Unificado',
+                    text: `Se ha auto-corregido a "${coincidencia}" para evitar duplicados en el sistema.`
+                });
+            }
+        });
+        // ----------------------------------------------
+
+    </script>
+}
