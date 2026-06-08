@@ -7,12 +7,10 @@ using System.Web;
 
 namespace ProyectoSemillero_ASP.NET.Models
 {
+    [BsonIgnoreExtraElements]
     public class DatosSemillero
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } // ID interno de MongoDB (opcional, pero recomendado)
-
+        // Tu ID numérico limpio, sin las etiquetas BsonId ni ObjectId
         [BsonElement("idSemillero")]
         public int IdSemillero { get; set; }
 
@@ -20,9 +18,9 @@ namespace ProyectoSemillero_ASP.NET.Models
         public string nombreSemillero { get; set; }
 
         [BsonElement("lineaSemillero")]
-        public string lineaSemillero { get; set; }
+        public string LineaSemillero { get; set; }
 
         [BsonElement("enfoqueSemillero")]
-        public string enfoqueSemillero { get; set; }
+        public string EnfoqueSemillero { get; set; }
     }
 }

@@ -2,91 +2,92 @@
 
 @{
     ViewBag.Title = "Agregar Usuario";
-    // ¡Usamos tu layout simple como pediste!
-    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
 }
 
-<div class="row justify-content-center w-100 m-0">
-    <div class="col-12 col-md-8 col-lg-6 p-0">
-        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100">
-
+<div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3 mt-4" style="border-top: 4px solid var(--blue-primary) !important;">
             <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
-                <a href="@Url.Action("Index", "Usuarios")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                <a href="@Url.Action("Index", "Usuarios")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
                     <i class="bi bi-arrow-left"></i>
                 </a>
-                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-person-plus text-success me-2"></i> Nuevo Usuario</h4>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Agregar Usuario</h4>
             </div>
+
+
 
             <div class="card-body p-4">
                 @using (Html.BeginForm("Agregar", "Usuarios", FormMethod.Post))
                 {
                     @Html.AntiForgeryToken()
 
+                    <div class="row">
+                        <!-- AQUÍ AGREGAMOS EL CAMPO DEL ID VISIBLE -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold text-muted">ID Usuario (Generado Automáticamente)</label>
+                            @Html.TextBoxFor(m => m.IdUsuario, new { @class = "form-control bg-light", @readonly = "readonly" })
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Rol del Usuario</label>
+                            @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador"}), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre Completo</label>
-                        @Html.TextBoxFor(m => m.NombreUsuario, new { @class = "form-control", required = "required", placeholder = "Ej. Juan Pérez" })
+                        @Html.TextBoxFor(m => m.NombreUsuario, new { @class = "form-control", required = "required" })
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Correo Electrónico</label>
-                        @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required", placeholder = "juan@semillero.edu" })
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Correo Electrónico</label>
+                            @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required" })
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Contraseña</label>
+                            @Html.TextBoxFor(m => m.ContrasenaUsuario, new { @class = "form-control", required = "required" })
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Contraseña Temporal</label>
-                        @Html.TextBoxFor(m => m.ContrasenaUsuario, new { @class = "form-control", type = "password", required = "required", placeholder = "******" })
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Edad</label>
+                            @Html.TextBoxFor(m => m.EdadUsuario, new { @class = "form-control", type = "number", min = "15", required = "required" })
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "number", required = "required" })
+                        </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Rol en el Semillero</label>
-                        @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            @if (ViewBag.RolUsuario == "Administrador" || ViewBag.RolUsuario == "Admin")
+                            {
+                                <label class="form-label fw-semibold">Asignar Semillero</label>
+                                // El admin ve el Combobox con los nombres, pero guarda el IdSemillero
+                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select" })
+                                <small class="text-muted">Nota: Si estás creando otro Administrador, puedes dejar esto en blanco.</small>
+                            }
+                            else if (ViewBag.RolUsuario == "Líder")
+                            {
+                                <label class="form-label fw-semibold text-muted">Semillero Asignado (Automático)</label>
+                                // El líder ve el nombre, pero no puede editarlo
+                                <input type="text" class="form-control bg-light" value="@ViewBag.NombreSemilleroLider (ID: @ViewBag.IdSemilleroLider)" readonly />
+                            }
+                        </div>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success fw-bold py-2">
-                            <i class="bi bi-save me-1"></i> Guardar Usuario
+                        <button type="submit" class="btn text-white fw-bold py-2" style="background-color: var(--blue-primary);">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Agregar
                         </button>
                     </div>
                 }
             </div>
-
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-
-            // Capturamos el botón de volver
-            const btnVolver = document.getElementById('btn-volver');
-
-            if (btnVolver) {
-                btnVolver.addEventListener('click', function (e) {
-                    // Pausamos la redirección
-                    e.preventDefault();
-
-                    // Guardamos la ruta
-                    const urlDestino = this.getAttribute('href');
-
-                    // Mostramos la alerta
-                    Swal.fire({
-                        title: '¿Estás seguro de salir?',
-                        text: "Si regresas, perderás los datos que no hayas guardado.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#6c757d',
-                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
-                        cancelButtonText: 'Cancelar'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = urlDestino;
-                        }
-                    });
-                });
-            }
-
-        });
-    </script>
-}

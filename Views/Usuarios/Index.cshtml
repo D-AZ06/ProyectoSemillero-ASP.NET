@@ -2,40 +2,61 @@
 
 @{
     ViewBag.Title = "Gestionar Usuarios";
+    string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <h3 class="fw-bold text-dark mb-0">
         <i class="bi bi-people-fill text-primary me-2"></i> Gestionar Usuarios
     </h3>
-    <a href="@Url.Action("Agregar", "Usuarios")" class="btn btn-success fw-bold shadow-sm">
-        <i class="bi bi-plus-circle me-1"></i> Agregar Usuario
-    </a>
+
+    @if (rolActual != "Investigador")
+    {
+        <a href="@Url.Action("Agregar", "Usuarios")" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Agregar Usuario
+        </a>
+    }
 </div>
 
 <div class="card bg-light border-0 shadow-sm mb-4">
     <div class="card-body p-3">
-        <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-auto">
-                <span class="fw-bold text-secondary mb-0"><i class="bi bi-funnel me-1"></i> Consultar por parámetros:</span>
+        <form action="@Url.Action("Index", "Usuarios")" method="get" id="formBusqueda">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-auto">
+                    <span class="fw-bold text-secondary mb-0"><i class="bi bi-funnel me-1"></i> Consultar por parámetros:</span>
+                </div>
+                <div class="col-12 col-md-3">
+                    <select class="form-select border-info" id="selectFiltro" name="tipoFiltro">
+                        <option value="">Seleccione filtro...</option>
+                        <option value="idUsuario">ID Usuario</option>
+                        <option value="nombreUsuario">Nombre Completo</option>
+                        <option value="correoUsuario">Correo Electrónico</option>
+                        <option value="rolUsuario">Rol del Usuario</option>
+                        <option value="idSemillero">ID Semillero</option>
+                        <option value="nombreSemillero">Nombre de Semillero</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md" id="contenedorInput">
+                    <input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>
+                </div>
+                <datalist id="opcionesSugeridas"></datalist>
+
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-info text-white fw-bold px-4 w-100" id="btnConsultar" disabled>
+                        <i class="bi bi-search"></i> Consultar
+                    </button>
+                </div>
+
+                @if (Request.QueryString["tipoFiltro"] != null)
+                {
+                    <div class="col-12 col-md-auto">
+                        <a href="@Url.Action("Index", "Usuarios")" class="btn btn-secondary fw-bold w-100">
+                            <i class="bi bi-arrow-clockwise"></i> Limpiar
+                        </a>
+                    </div>
+                }
             </div>
-            <div class="col-12 col-md-3">
-                <select class="form-select border-info">
-                    <option value="">Seleccione filtro...</option>
-                    <option value="1">ID Usuario</option>
-                    <option value="2">Nombre</option>
-                    <option value="3">Rol</option>
-                </select>
-            </div>
-            <div class="col-12 col-md">
-                <input type="text" class="form-control border-info" placeholder="Ingrese el valor a buscar...">
-            </div>
-            <div class="col-12 col-md-auto">
-                <button class="btn btn-info text-white fw-bold px-4 w-100">
-                    <i class="bi bi-search"></i> Consultar
-                </button>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
@@ -47,22 +68,26 @@
                 <th scope="col" class="py-3">Nombre</th>
                 <th scope="col" class="py-3">Correo</th>
                 <th scope="col" class="py-3">Rol</th>
-                <th scope="col" class="py-3 text-center">ID Semillero</th>
-                <th scope="col" class="py-3 text-center">Acciones</th>
+                <th scope="col" class="py-3">Teléfono</th>
+                <th scope="col" class="py-3 text-center">Semillero</th>
+
+                @if (rolActual != "Investigador")
+                {
+                    <th scope="col" class="py-3 text-center">Acciones</th>
+                }
             </tr>
         </thead>
         <tbody>
             @if (Model != null && Model.Any())
             {
-                // Si la BD devuelve datos, creamos una fila por cada usuario
                 foreach (var usuario in Model)
                 {
                     <tr>
-                        <td class="ps-3 fw-medium">@usuario.IdUsuario</td>
-                        <td>@usuario.NombreUsuario</td>
-                        <td>@usuario.CorreoUsuario</td>
-                        <td>
-                            @if (usuario.RolUsuario == "Líder")
+                        <td class="ps-3 fw-medium data-idUsuario">@usuario.IdUsuario</td>
+                        <td class="data-nombreUsuario">@usuario.NombreUsuario</td>
+                        <td class="data-correoUsuario">@usuario.CorreoUsuario</td>
+                        <td class="data-rolUsuario">
+                            @if (usuario.RolUsuario == "Líder" || usuario.RolUsuario == "Administrador")
                             {
                                 <span class="badge bg-primary">@usuario.RolUsuario</span>
                             }
@@ -71,24 +96,43 @@
                                 <span class="badge bg-secondary">@usuario.RolUsuario</span>
                             }
                         </td>
-                        <td class="text-center">@usuario.IdSemillero</td>
-                        <td class="text-center">
-                            <a href="@Url.Action("Modificar", "Usuarios", new { id = usuario.IdUsuario })" class="btn btn-sm btn-outline-primary me-1" title="Modificar">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@usuario.IdUsuario)">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                        <td>@usuario.TelefonoUsuario</td>
+
+                        <td class="text-center data-idSemillero">
+                            @if (usuario.IdSemillero.HasValue)
+                            {
+                                <span class="badge bg-secondary mb-1">ID: @usuario.IdSemillero</span><br />
+                                var dicSemilleros = ViewBag.DiccionarioSemilleros as Dictionary<int, string>;
+                                string nombreSemillero = (dicSemilleros != null && dicSemilleros.ContainsKey(usuario.IdSemillero.Value))
+                                    ? dicSemilleros[usuario.IdSemillero.Value] : "Desconocido";
+                                <small class="fw-bold text-dark">@nombreSemillero</small>
+                            }
+                            else
+                            {
+                                <small class="text-muted fst-italic">Sin Semillero</small>
+                            }
                         </td>
+
+                        @if (rolActual != "Investigador")
+                        {
+                            <td class="text-center">
+                                <a href="@Url.Action("Modificar", "Usuarios", new { id = usuario.IdUsuario })" class="btn btn-sm btn-outline-primary me-1" title="Modificar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@usuario.IdUsuario)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        }
                     </tr>
                 }
             }
             else
             {
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
+                    <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                        No se encontraron usuarios registrados en la base de datos.
+                        No se encontraron usuarios registrados.
                     </td>
                 </tr>
             }
@@ -98,42 +142,85 @@
 
 @section Scripts {
     <script>
-        // 1. Mostrar mensaje de éxito si viene del controlador (Agregar, Modificar o Eliminar)
+        const datosAutocompletado = {
+            idUsuario: [...new Set(Array.from(document.querySelectorAll('.data-idUsuario')).map(el => el.textContent.trim()))],
+            nombreUsuario: [...new Set(Array.from(document.querySelectorAll('.data-nombreUsuario')).map(el => el.textContent.trim()))],
+            correoUsuario: [...new Set(Array.from(document.querySelectorAll('.data-correoUsuario')).map(el => el.textContent.trim()))],
+            idSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero span')).map(el => el.textContent.replace('ID: ', '').trim()))],
+            nombreSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero small')).map(el => el.textContent.trim()))]
+        };
+
+        const selectFiltro = document.getElementById('selectFiltro');
+        const contenedorInput = document.getElementById('contenedorInput');
+        const btnConsultar = document.getElementById('btnConsultar');
+        const datalist = document.getElementById('opcionesSugeridas');
+
+        selectFiltro.addEventListener('change', function () {
+            const filtroSeleccionado = this.value;
+            datalist.innerHTML = '';
+
+            if (!filtroSeleccionado) {
+                contenedorInput.innerHTML = '<input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>';
+                btnConsultar.disabled = true;
+                return;
+            }
+
+            btnConsultar.disabled = false;
+            let nuevoInput = '';
+
+            if (filtroSeleccionado === 'rolUsuario') {
+                nuevoInput = `
+                    <select class="form-select border-info" id="inputValor" name="valorFiltro" required>
+                        <option value="">Seleccione el rol...</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Líder">Líder</option>
+                        <option value="Investigador">Investigador</option>
+                        <option value="Estudiante">Estudiante</option>
+                    </select>`;
+            }
+            else {
+                let esNumero = (filtroSeleccionado === 'idUsuario' || filtroSeleccionado === 'idSemillero');
+                let tipoInput = esNumero ? 'number' : 'text';
+                let placeholder = esNumero ? 'Seleccione o ingrese un ID...' : 'Escriba para buscar sugerencias...';
+
+                nuevoInput = `<input type="${tipoInput}" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="${placeholder}" list="opcionesSugeridas" autocomplete="off" required>`;
+
+                if (datosAutocompletado[filtroSeleccionado]) {
+                    datosAutocompletado[filtroSeleccionado].forEach(valor => {
+                        if(valor) {
+                            let option = document.createElement('option');
+                            option.value = valor;
+                            datalist.appendChild(option);
+                        }
+                    });
+                }
+            }
+
+            contenedorInput.innerHTML = nuevoInput;
+        });
+
         var mensajeExito = '@TempData["Exito"]';
         if (mensajeExito && mensajeExito !== '') {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Operación Exitosa!',
-                text: mensajeExito,
-                confirmButtonColor: '#0284c7'
-            });
+            Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
         }
 
-        // 2. Mostrar mensaje de error si algo sale mal
         var mensajeError = '@TempData["Error"]';
         if (mensajeError && mensajeError !== '') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: mensajeError,
-                confirmButtonColor: '#dc3545'
-            });
+            Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
         }
 
-        // 3. Función para confirmar antes de eliminar
         function confirmarEliminacion(id) {
             Swal.fire({
-                title: '¿Estás completamente seguro?',
-                text: "Esta acción borrará al usuario de forma permanente y no se puede deshacer.",
+                title: '¿Estás seguro?',
+                text: "Esta acción borrará al usuario permanentemente.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#dc3545', /* Rojo para advertir peligro */
-                cancelButtonColor: '#6c757d', /* Gris para cancelar */
-                confirmButtonText: '<i class="bi bi-trash"></i> Sí, eliminar',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Si el usuario confirma, lo redirigimos a la acción Eliminar de tu Controlador
                     window.location.href = '@Url.Action("Eliminar", "Usuarios")?id=' + id;
                 }
             });

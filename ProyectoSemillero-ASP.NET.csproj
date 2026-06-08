@@ -229,6 +229,7 @@
     <Compile Include="Controllers\GessiController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ProyectosController.cs" />
+    <Compile Include="Controllers\SemilleroController.cs" />
     <Compile Include="Controllers\UsuariosController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -311,10 +312,14 @@
     <Content Include="Views\Fases\PorActividad.cshtml" />
     <Content Include="Views\Fases\Agregar.cshtml" />
     <Content Include="Views\Fases\Modificar.cshtml" />
+    <Content Include="Views\Semillero\Index.cshtml" />
+    <Content Include="Views\Semillero\Agregar.cshtml" />
+    <Content Include="Views\Semillero\Modificar.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Views\Base\" />
+    <Folder Include="Views\Reuniones\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />

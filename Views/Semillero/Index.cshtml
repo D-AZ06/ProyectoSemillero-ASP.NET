@@ -1,0 +1,191 @@
+﻿
+@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosSemillero>
+
+@{
+    ViewBag.Title = "Gestionar Semilleros";
+    string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <h3 class="fw-bold text-dark mb-0">
+        <i class="bi bi-tree-fill text-success me-2"></i> Gestión de Semilleros
+    </h3>
+
+    @if (rolActual == "Administrador" || rolActual == "Admin")
+    {
+        <a href="@Url.Action("Agregar", "Semillero")" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Crear Semillero
+        </a>
+    }
+</div>
+
+<div class="card bg-light border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form action="@Url.Action("Index", "Semillero")" method="get" id="formBusqueda">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-auto">
+                    <span class="fw-bold text-secondary mb-0"><i class="bi bi-funnel me-1"></i> Consultar por parámetros:</span>
+                </div>
+                <div class="col-12 col-md-3">
+                    <select class="form-select border-info" id="selectFiltro" name="tipoFiltro">
+                        <option value="">Seleccione filtro...</option>
+                        <option value="idSemillero">ID Semillero</option>
+                        <option value="nombreSemillero">Nombre</option>
+                        <option value="lineaSemillero">Línea de Investigación</option>
+                        <option value="enfoqueSemillero">Enfoque</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md" id="contenedorInput">
+                    <input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>
+                </div>
+                <datalist id="opcionesSugeridas"></datalist>
+
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-info text-white fw-bold px-4 w-100" id="btnConsultar" disabled>
+                        <i class="bi bi-search"></i> Consultar
+                    </button>
+                </div>
+
+                @if (Request.QueryString["tipoFiltro"] != null)
+                {
+                    <div class="col-12 col-md-auto">
+                        <a href="@Url.Action("Index", "Semillero")" class="btn btn-secondary fw-bold w-100">
+                            <i class="bi bi-arrow-clockwise"></i> Limpiar
+                        </a>
+                    </div>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive shadow-sm rounded-3 border">
+    <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col" class="py-3 ps-3">ID</th>
+                <th scope="col" class="py-3">Nombre del Semillero</th>
+                <th scope="col" class="py-3">Línea de Investigación</th>
+                <th scope="col" class="py-3">Enfoque Principal</th>
+                @if (rolActual == "Administrador" || rolActual == "Admin" || rolActual == "Líder")
+                {
+                    <th scope="col" class="py-3 text-center">Acciones</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var semillero in Model)
+                {
+                    <tr>
+                        <td class="ps-3 fw-medium data-idSemillero">@semillero.IdSemillero</td>
+                        <td class="fw-bold text-success data-nombreSemillero">@semillero.nombreSemillero</td>
+                        <td class="data-lineaSemillero">@semillero.LineaSemillero</td>
+                        <td class="data-enfoqueSemillero" style="max-width: 300px; white-space: normal; word-wrap: break-word;">
+                            <small class="text-muted">@semillero.EnfoqueSemillero</small>
+                        </td>
+
+                        @if (rolActual == "Administrador" || rolActual == "Admin" || rolActual == "Líder")
+                        {
+                            <td class="text-center">
+                                <a href="@Url.Action("Modificar", "Semillero", new { id = semillero.IdSemillero })" class="btn btn-sm btn-outline-primary me-1" title="Modificar Datos">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                @if (rolActual == "Administrador" || rolActual == "Admin")
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@semillero.IdSemillero)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No se encontraron semilleros registrados.
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        const datosAutocompletado = {
+            idSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero')).map(el => el.textContent.trim()))],
+            nombreSemillero: [...new Set(Array.from(document.querySelectorAll('.data-nombreSemillero')).map(el => el.textContent.trim()))],
+            lineaSemillero: [...new Set(Array.from(document.querySelectorAll('.data-lineaSemillero')).map(el => el.textContent.trim()))],
+            enfoqueSemillero: [...new Set(Array.from(document.querySelectorAll('.data-enfoqueSemillero')).map(el => el.textContent.trim()))]
+        };
+
+        const selectFiltro = document.getElementById('selectFiltro');
+        const contenedorInput = document.getElementById('contenedorInput');
+        const btnConsultar = document.getElementById('btnConsultar');
+        const datalist = document.getElementById('opcionesSugeridas');
+
+        selectFiltro.addEventListener('change', function () {
+            const filtroSeleccionado = this.value;
+            datalist.innerHTML = '';
+
+            if (!filtroSeleccionado) {
+                contenedorInput.innerHTML = '<input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>';
+                btnConsultar.disabled = true;
+                return;
+            }
+
+            btnConsultar.disabled = false;
+            let esNumero = (filtroSeleccionado === 'idSemillero');
+            let tipoInput = esNumero ? 'number' : 'text';
+            let placeholder = esNumero ? 'Seleccione o ingrese un ID...' : 'Escriba para buscar sugerencias...';
+
+            let nuevoInput = `<input type="${tipoInput}" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="${placeholder}" list="opcionesSugeridas" autocomplete="off" required>`;
+
+            if (datosAutocompletado[filtroSeleccionado]) {
+                datosAutocompletado[filtroSeleccionado].forEach(valor => {
+                    if(valor) {
+                        let option = document.createElement('option');
+                        option.value = valor;
+                        datalist.appendChild(option);
+                    }
+                });
+            }
+
+            contenedorInput.innerHTML = nuevoInput;
+        });
+
+        var mensajeExito = '@TempData["Exito"]';
+        if (mensajeExito && mensajeExito !== '') {
+            Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
+        }
+
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError && mensajeError !== '') {
+            Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        function confirmarEliminacion(id) {
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Borrar un semillero es una acción crítica. Podría dejar proyectos y usuarios huérfanos.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '@Url.Action("Eliminar", "Semillero")?id=' + id;
+                }
+            });
+        }
+    </script>
+}
+

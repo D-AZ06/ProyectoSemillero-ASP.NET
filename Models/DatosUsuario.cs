@@ -6,7 +6,6 @@ using System.Web;
 
 namespace ProyectoSemillero_ASP.NET.Models
 {
-    // Ignora campos extra si en el futuro agregas más cosas a la BD y no están aquí
     [BsonIgnoreExtraElements]
     public class DatosUsuario
     {
@@ -25,7 +24,14 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("rolUsuario")]
         public string RolUsuario { get; set; }
 
+        // --- CAMPOS NUEVOS ---
+        [BsonElement("edadUsuario")]
+        public int EdadUsuario { get; set; }
+
+        [BsonElement("telefonoUsuario")]
+        public long TelefonoUsuario { get; set; }
+
         [BsonElement("idSemillero")]
-        public int? IdSemillero { get; set; }
+        public int? IdSemillero { get; set; } // Puede ser null como en la imagen
     }
 }

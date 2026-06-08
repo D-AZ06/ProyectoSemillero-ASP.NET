@@ -1,0 +1,53 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosSemillero
+
+@{
+    ViewBag.Title = "Agregar Semillero";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3 mt-4" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Semillero")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Agregar Semillero</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Semillero", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold text-muted">ID Semillero</label>
+                            @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control bg-light", @readonly = "readonly" })
+                        </div>
+
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-semibold">Nombre del Semillero</label>
+                            @Html.TextBoxFor(m => m.nombreSemillero, new { @class = "form-control", required = "required", placeholder = "Ej: Investic" })
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Línea de Investigación Principal</label>
+                        @Html.TextBoxFor(m => m.LineaSemillero, new { @class = "form-control", required = "required", placeholder = "Ej: Investigación Aplicada" })
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Enfoque o Descripción</label>
+                        @Html.TextAreaFor(m => m.EnfoqueSemillero, new { @class = "form-control", rows = "4", required = "required", placeholder = "Describe la misión y el enfoque principal del semillero..." })
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn text-white fw-bold py-2" style="background-color: var(--blue-primary);">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Agregar Semillero
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
