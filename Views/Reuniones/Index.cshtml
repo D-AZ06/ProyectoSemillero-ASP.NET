@@ -1,0 +1,130 @@
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosReunion>
+
+@{
+    ViewBag.Title = "Gestionar Reuniones";
+    string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <h3 class="fw-bold text-dark mb-0">
+        <i class="bi bi-calendar-event text-primary me-2"></i> Gestión de Reuniones
+    </h3>
+
+    @if (rolActual == "Administrador" || rolActual == "Admin" || rolActual == "Líder")
+    {
+        <a href="@Url.Action("Agregar", "Reuniones")" class="btn btn-success fw-bold shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Agendar Reunión
+        </a>
+    }
+</div>
+
+<div class="table-responsive shadow-sm rounded-3 border">
+    <table class="table table-hover table-striped mb-0 align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col" class="py-3 ps-3">ID</th>
+                <th scope="col" class="py-3">Fecha y Horario</th>
+                <th scope="col" class="py-3">Lugar</th>
+                <th scope="col" class="py-3">Estado</th>
+                <th scope="col" class="py-3 text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var r in Model)
+                {
+                    bool estadoValido = (r.EstadoReunion == "Programada" || r.EstadoReunion == "Reprogramado");
+                    bool tieneAsistencias = r.InvestigadoresConvocados != null && r.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmado");
+
+                    bool faltanMenosDe2Horas = false;
+                    if (DateTime.TryParse(r.FechaReunion + " " + r.HoraInicio, out DateTime fechaHoraInicio))
+                    {
+                        double diffHoras = (fechaHoraInicio - DateTime.Now).TotalHours;
+                        if (diffHoras >= 0 && diffHoras < 2) 
+                        { 
+                            faltanMenosDe2Horas = true; 
+                        }
+                    }
+
+                    bool puedeModificar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas;
+                    bool puedeCancelar = estadoValido;
+
+                    <tr>
+                        <td class="ps-3 fw-medium">@r.IdReunion</td>
+                        <td class="fw-bold text-primary">
+                            <i class="bi bi-calendar3"></i> @r.FechaReunion <br />
+                            <small class="text-dark"><i class="bi bi-clock"></i> @r.HoraInicio - @r.HoraFin</small>
+                        </td>
+                        <td>@r.LugarReunion</td>
+                        <td>
+                            @if (r.EstadoReunion == "Cancelado")
+                            {<span class="badge bg-danger">@r.EstadoReunion</span> }
+                        else if (r.EstadoReunion == "Finalizada")
+                        { <span class="badge bg-success">@r.EstadoReunion</span> }
+                    else
+                    { <span class="badge bg-info text-dark">@r.EstadoReunion</span>}
+                        </td>
+
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm">
+                                @if (puedeModificar)
+                                {
+                                    <a href="@Url.Action("Modificar", "Reuniones", new { id = r.IdReunion })" class="btn btn-sm btn-outline-primary" title="Modificar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Bloqueado por reglas de negocio"><i class="bi bi-lock-fill"></i></button>
+                                }
+
+                                @if (puedeCancelar)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar" onclick="confirmarCancelacion(@r.IdReunion)">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-slash-circle"></i></button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i> No hay reuniones programadas.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+function confirmarCancelacion(id) {
+    Swal.fire({
+        title: '¿Cancelar Reunión?',
+        text: "Esta acción pasará el estado a 'Cancelado' y liberará el horario de los investigadores.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post('@Url.Action("CancelarReunion", "Reuniones")', { id: id }, function(res) {
+                if (res.success) {
+                    // Recargamos la página inmediatamente para que se aplique el cambio estético
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            });
+        }
+    });
+}
+    </script>
+}

@@ -2,27 +2,25 @@
 
 @{
     ViewBag.Title = "Agregar Usuario";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
 }
 
-<div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8">
-        <div class="card shadow-sm border-0 rounded-3 mt-4" style="border-top: 4px solid var(--blue-primary) !important;">
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
             <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
-                <a href="@Url.Action("Index", "Usuarios")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                <a href="@Url.Action("Index", "Usuarios")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Agregar Usuario</h4>
             </div>
 
-
-
             <div class="card-body p-4">
-                @using (Html.BeginForm("Agregar", "Usuarios", FormMethod.Post))
+                @using (Html.BeginForm("Agregar", "Usuarios", FormMethod.Post, new { id = "form-usuario" }))
                 {
                     @Html.AntiForgeryToken()
 
                     <div class="row">
-                        <!-- AQUÍ AGREGAMOS EL CAMPO DEL ID VISIBLE -->
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold text-muted">ID Usuario (Generado Automáticamente)</label>
                             @Html.TextBoxFor(m => m.IdUsuario, new { @class = "form-control bg-light", @readonly = "readonly" })
@@ -30,7 +28,7 @@
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Rol del Usuario</label>
-                            @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador"}), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                            @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
                         </div>
                     </div>
 
@@ -68,22 +66,20 @@
                             @if (ViewBag.RolUsuario == "Administrador" || ViewBag.RolUsuario == "Admin")
                             {
                                 <label class="form-label fw-semibold">Asignar Semillero</label>
-                                // El admin ve el Combobox con los nombres, pero guarda el IdSemillero
                                 @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select" })
                                 <small class="text-muted">Nota: Si estás creando otro Administrador, puedes dejar esto en blanco.</small>
                             }
                             else if (ViewBag.RolUsuario == "Líder")
                             {
                                 <label class="form-label fw-semibold text-muted">Semillero Asignado (Automático)</label>
-                                // El líder ve el nombre, pero no puede editarlo
                                 <input type="text" class="form-control bg-light" value="@ViewBag.NombreSemilleroLider (ID: @ViewBag.IdSemilleroLider)" readonly />
                             }
                         </div>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn text-white fw-bold py-2" style="background-color: var(--blue-primary);">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Agregar
+                        <button type="submit" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Agregar Usuario
                         </button>
                     </div>
                 }
@@ -91,3 +87,47 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Botón volver con advertencia
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los datos que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            // Alerta de carga al guardar
+            const formUsuario = document.getElementById('form-usuario');
+            if (formUsuario) {
+                formUsuario.addEventListener('submit', function () {
+                    Swal.fire({
+                        title: 'Guardando Usuario...',
+                        text: 'Por favor espera mientras se registra en la base de datos.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}

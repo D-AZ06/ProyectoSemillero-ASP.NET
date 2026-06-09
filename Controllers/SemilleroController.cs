@@ -228,5 +228,31 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             return RedirectToAction("Index");
         }
+
+        // GET: Semillero/Integrantes
+        [HttpGet]
+        public ActionResult Integrantes(int idSemillero)
+        {
+            if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+            // 1. Buscamos los datos del semillero para ponerlos en el banner azul
+            var coleccionSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
+            var semilleroActual = coleccionSemilleros.Find(s => s.IdSemillero == idSemillero).FirstOrDefault();
+
+            if (semilleroActual == null)
+            {
+                TempData["Error"] = "El semillero solicitado no existe.";
+                return RedirectToAction("Index");
+            }
+
+            // Pasamos el objeto del semillero por ViewBag para usarlo en el diseño
+            ViewBag.Semillero = semilleroActual;
+
+            // 2. Buscamos en la colección de Usuarios a los que pertenezcan a este semillero
+            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+            var listaIntegrantes = coleccionUsuarios.Find(u => u.IdSemillero == idSemillero).ToList();
+
+            return View(listaIntegrantes);
+        }
     }
 }

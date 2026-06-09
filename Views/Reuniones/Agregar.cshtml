@@ -1,0 +1,256 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosReunion
+
+@{
+    ViewBag.Title = "Agendar Reunión";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Reuniones")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-calendar-plus text-primary me-2"></i> Agendar Reunión</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Reuniones", FormMethod.Post, new { id = "form-reunion" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <label class="fw-semibold text-muted small">ID Reunión</label>
+                            <input type="text" class="form-control form-control-sm text-primary fw-bold" value="@ViewBag.SiguienteIdReunion" readonly />
+                        </div>
+                        <div class="col-md-5 mb-2 mb-md-0">
+                            <label class="fw-semibold text-muted small">Líder Responsable</label>
+                            <input type="text" class="form-control form-control-sm" value="@ViewBag.NombreLider" readonly />
+                        </div>
+                        <div class="col-md-2 mb-2 mb-md-0">
+                            <label class="fw-semibold text-muted small">ID Líder</label>
+                            @Html.TextBoxFor(m => m.IdLider, new { @class = "form-control form-control-sm", @readonly = "readonly" })
+                        </div>
+                        <div class="col-md-2">
+                            <label class="fw-semibold text-muted small">ID Semillero</label>
+                            @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control form-control-sm text-success fw-bold", @readonly = "readonly" })
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Fecha</label>
+                            @Html.TextBoxFor(m => m.FechaReunion, new { @class = "form-control", type = "date", id = "FechaReunion", required = "required" })
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Hora de Inicio</label>
+                            @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control", type = "time", id = "HoraInicio", required = "required" })
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Hora de Fin</label>
+                            @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control", type = "time", id = "HoraFin", required = "required" })
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-semibold">Lugar de la Reunión</label>
+                        @Html.TextBoxFor(m => m.LugarReunion, new { @class = "form-control", id = "LugarReunion", required = "required", placeholder = "Ej: Sala Bloque A" })
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-semibold">Investigadores (Disponibles)</label>
+                            <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
+                                @if (ViewBag.ListaInvestigadores != null)
+                                {
+                                   <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
+                                       @if (ViewBag.ListaInvestigadores != null)
+                                       {
+                                           foreach (var inv in ViewBag.ListaInvestigadores)
+                                           {
+                                               // Para Modificar: dejamos marcado si ya estaba convocado
+                                               bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
+                                                                  Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
+
+                                               // Aseguramos que el atributo data-id sea exactamente el número del ID del usuario
+                                               <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
+                                                   <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
+                                                   <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                       @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
+                                                   </label>
+                                               </div>
+                                           }
+                                       }
+                                   </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-semibold" id="lblMotivo">Motivo (Mín. 10 / Máx. 500 caract.)</label>
+                            @Html.TextAreaFor(m => m.MotivoReunion, new { @class = "form-control", id = "MotivoReunion", rows = "5", maxlength = "500", required = "required" })
+                            <div class="text-end text-muted small" id="contadorMotivo">0/500</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="button" id="btnGuardar" class="btn btn-primary text-white fw-bold py-2 shadow-sm" disabled>
+                            <i class="bi bi-save me-1"></i> Agendar Reunión
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const txtFecha = document.getElementById('FechaReunion');
+        const txtInicio = document.getElementById('HoraInicio');
+        const txtFin = document.getElementById('HoraFin');
+        const txtMotivo = document.getElementById('MotivoReunion');
+        const btnGuardar = document.getElementById('btnGuardar');
+        const formReunion = document.getElementById('form-reunion');
+
+        // ====== LA SOLUCIÓN AL FRACASO SILENCIOSO ======
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError && mensajeError !== '') {
+            Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+        // ===============================================
+
+        function initTiempos() {
+            if (txtFecha.value) return; // No sobreescribir si ya hay datos por un error previo
+
+            let hoy = new Date();
+            hoy.setHours(hoy.getHours() + 1);
+
+            if (hoy.getHours() < 6) hoy.setHours(6, 0, 0, 0);
+            if (hoy.getHours() >= 22) {
+                hoy.setDate(hoy.getDate() + 1);
+                hoy.setHours(6, 0, 0, 0);
+            }
+            if (hoy.getDay() === 0) hoy.setDate(hoy.getDate() + 1);
+
+            txtFecha.value = hoy.toISOString().split('T')[0];
+            txtFecha.min = new Date().toISOString().split('T')[0];
+            txtInicio.value = hoy.toTimeString().substring(0, 5);
+
+            let fin = new Date(hoy);
+            fin.setHours(fin.getHours() + 1);
+            txtFin.value = fin.toTimeString().substring(0, 5);
+        }
+        initTiempos();
+
+        txtFecha.addEventListener('change', function() {
+            let fechaSel = new Date(this.value + "T12:00:00");
+            if (fechaSel.getDay() === 0) {
+                Swal.fire('Atención', 'No se programan reuniones los domingos.', 'warning');
+                fechaSel.setDate(fechaSel.getDate() - 2);
+                this.value = fechaSel.toISOString().split('T')[0];
+            }
+            validarDisponibilidad();
+        });
+
+        function validarReglasHorario() {
+            if(!txtInicio.value || !txtFin.value) return;
+
+            let minIni = parseInt(txtInicio.value.split(':')[0]) * 60 + parseInt(txtInicio.value.split(':')[1]);
+            let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
+            let duracion = minFin - minIni;
+
+            if (minIni < 360) {
+                Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
+                txtInicio.value = "06:00"; return validarReglasHorario();
+            }
+            if (minFin > 1320) {
+                Swal.fire('Aviso', 'La reunión no puede extenderse más allá de las 10:00 p.m.', 'info');
+                txtFin.value = "22:00"; return validarReglasHorario();
+            }
+            if (duracion < 30) {
+                Swal.fire('Aviso', 'Duración mínima de 30 minutos.', 'info');
+                let newMin = minIni + 30;
+                txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
+            } else if (duracion > 300) {
+                Swal.fire('Aviso', 'Duración máxima de 5 horas.', 'info');
+                let newMin = minIni + 300;
+                txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
+            }
+            validarDisponibilidad();
+        }
+        txtInicio.addEventListener('change', validarReglasHorario);
+        txtFin.addEventListener('change', validarReglasHorario);
+
+        txtMotivo.addEventListener('input', function() {
+            let len = this.value.length;
+            document.getElementById('contadorMotivo').innerText = `${len}/500`;
+            if(len >= 10 && len <= 500) {
+                this.classList.remove('is-invalid');
+                btnGuardar.disabled = false;
+            } else {
+                this.classList.add('is-invalid');
+                btnGuardar.disabled = true;
+            }
+        });
+
+        function validarDisponibilidad() {
+            if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+
+            // Para el archivo Modificar.cshtml debes pasar el idIgnorar.
+            // Si estás en Agregar.cshtml, simplemente quita la línea de idIgnorar.
+            let parametros = {
+                fecha: txtFecha.value,
+                horaInicio: txtInicio.value,
+                horaFin: txtFin.value
+                // idIgnorar: @(Model != null && Model.IdReunion > 0 ? Model.IdReunion : 0) // <-- Activa esto en Modificar.cshtml
+            };
+
+            $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {
+                console.log("Respuesta del servidor (Ocupados):", res); // <-- Esto te sirve para ver qué IDs llegan
+
+                let txtLugar = document.getElementById('LugarReunion');
+                if (txtLugar.value && res.lugares.includes(txtLugar.value)) {
+                    Swal.fire('Cruce de Horarios', 'Este lugar ya está reservado en ese horario.', 'error');
+                    txtLugar.value = '';
+                }
+
+                document.querySelectorAll('.item-investigador').forEach(div => {
+                    let id = parseInt(div.getAttribute('data-id'));
+                    let chk = div.querySelector('input');
+
+                    if (res.investigadores.includes(id)) {
+                        // Forzamos la desaparición con estilo en línea
+                        div.style.display = 'none';
+                        if(chk) chk.checked = false;
+                    } else {
+                        // Lo volvemos a mostrar si se libera el horario
+                        div.style.display = 'block';
+                    }
+                });
+            }).fail(function(err) {
+                console.error("Error consultando la base de datos:", err);
+            });
+        }
+
+        document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
+
+        btnGuardar.addEventListener('click', function() {
+            let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
+            if (checks === 0) {
+                Swal.fire('Error', 'Debes convocar al menos a un investigador.', 'error');
+                return;
+            }
+            Swal.fire({
+                title: '¿Guardar Reunión?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, agendar'
+            }).then((r) => { if (r.isConfirmed) formReunion.submit(); });
+        });
+
+        document.getElementById('btn-volver').addEventListener('click', function(e) {
+            e.preventDefault();
+            Swal.fire({ title: '¿Salir?', text: "Perderás los datos.", icon: 'warning', showCancelButton: true }).then((r) => {
+                if (r.isConfirmed) window.location.href = this.href;
+            });
+        });
+    </script>
+}

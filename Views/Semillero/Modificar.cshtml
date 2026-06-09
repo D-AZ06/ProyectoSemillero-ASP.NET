@@ -2,20 +2,21 @@
 
 @{
     ViewBag.Title = "Modificar Semillero";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
 }
 
-<div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8">
-        <div class="card shadow-sm border-0 rounded-3 mt-4" style="border-top: 4px solid var(--blue-primary) !important;">
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
             <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
-                <a href="@Url.Action("Index", "Semillero")" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                <a href="@Url.Action("Index", "Semillero")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Modificar Semillero</h4>
             </div>
 
             <div class="card-body p-4">
-                @using (Html.BeginForm("Modificar", "Semillero", FormMethod.Post))
+                @using (Html.BeginForm("Modificar", "Semillero", FormMethod.Post, new { id = "form-semillero" }))
                 {
                     @Html.AntiForgeryToken()
 
@@ -42,7 +43,7 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn text-white fw-bold py-2" style="background-color: var(--blue-primary);">
+                        <button type="submit" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
                             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Semillero
                         </button>
                     </div>
@@ -51,3 +52,47 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Botón volver con advertencia
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los cambios que no hayas actualizado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            // Alerta de carga al guardar
+            const formSemillero = document.getElementById('form-semillero');
+            if (formSemillero) {
+                formSemillero.addEventListener('submit', function () {
+                    Swal.fire({
+                        title: 'Actualizando Semillero...',
+                        text: 'Guardando los cambios en la base de datos.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}

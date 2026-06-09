@@ -225,6 +225,7 @@
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\ActividadesController.cs" />
+    <Compile Include="Controllers\ReunionesController.cs" />
     <Compile Include="Controllers\FasesController.cs" />
     <Compile Include="Controllers\GessiController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
@@ -238,6 +239,7 @@
     <Compile Include="Models\DatosActividade.cs" />
     <Compile Include="Models\DatosFase.cs" />
     <Compile Include="Models\DatosProyecto.cs" />
+    <Compile Include="Models\DatosReunion.cs" />
     <Compile Include="Models\DatosSemillero.cs" />
     <Compile Include="Models\DatosUsuario.cs" />
     <Compile Include="Models\ValidarInicioSesion.cs" />
@@ -315,11 +317,15 @@
     <Content Include="Views\Semillero\Index.cshtml" />
     <Content Include="Views\Semillero\Agregar.cshtml" />
     <Content Include="Views\Semillero\Modificar.cshtml" />
+    <Content Include="Views\Semillero\Integrantes.cshtml" />
+    <Content Include="Views\Reuniones\Index.cshtml" />
+    <Content Include="Views\Reuniones\Agregar.cshtml" />
+    <Content Include="Views\Reuniones\Modificar.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Views\Agregar\" />
     <Folder Include="Views\Base\" />
-    <Folder Include="Views\Reuniones\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />

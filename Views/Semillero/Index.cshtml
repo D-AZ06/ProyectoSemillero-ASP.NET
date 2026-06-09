@@ -1,5 +1,4 @@
-﻿
-@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosSemillero>
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosSemillero>
 
 @{
     ViewBag.Title = "Gestionar Semilleros";
@@ -67,10 +66,7 @@
                 <th scope="col" class="py-3">Nombre del Semillero</th>
                 <th scope="col" class="py-3">Línea de Investigación</th>
                 <th scope="col" class="py-3">Enfoque Principal</th>
-                @if (rolActual == "Administrador" || rolActual == "Admin" || rolActual == "Líder")
-                {
-                    <th scope="col" class="py-3 text-center">Acciones</th>
-                }
+                <th scope="col" class="py-3 text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -86,20 +82,30 @@
                             <small class="text-muted">@semillero.EnfoqueSemillero</small>
                         </td>
 
-                        @if (rolActual == "Administrador" || rolActual == "Admin" || rolActual == "Líder")
-                        {
-                            <td class="text-center">
-                                <a href="@Url.Action("Modificar", "Semillero", new { id = semillero.IdSemillero })" class="btn btn-sm btn-outline-primary me-1" title="Modificar Datos">
-                                    <i class="bi bi-pencil-square"></i>
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm">
+
+                                <a href="@Url.Action("Integrantes", "Semillero", new { idSemillero = semillero.IdSemillero })" class="btn btn-sm btn-outline-secondary" title="Ver Integrantes">
+                                    <i class="bi bi-list-ul"></i>
                                 </a>
+
                                 @if (rolActual == "Administrador" || rolActual == "Admin")
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminacion(@semillero.IdSemillero)">
+                                    <a href="@Url.Action("Modificar", "Semillero", new { id = semillero.IdSemillero })" class="btn btn-sm btn-outline-primary" title="Modificar Semillero">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar Semillero" onclick="confirmarEliminacion(@semillero.IdSemillero)">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 }
-                            </td>
-                        }
+                                else if (rolActual == "Líder")
+                                {
+                                    <a href="@Url.Action("Modificar", "Semillero", new { id = semillero.IdSemillero })" class="btn btn-sm btn-outline-primary" title="Modificar Mi Semillero">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                }
+                            </div>
+                        </td>
                     </tr>
                 }
             }
@@ -188,4 +194,3 @@
         }
     </script>
 }
-
