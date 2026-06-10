@@ -225,6 +225,8 @@
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\ActividadesController.cs" />
+    <Compile Include="Controllers\EventosController.cs" />
+    <Compile Include="Controllers\PatrocinadoresController.cs" />
     <Compile Include="Controllers\ReunionesController.cs" />
     <Compile Include="Controllers\FasesController.cs" />
     <Compile Include="Controllers\GessiController.cs" />
@@ -237,7 +239,9 @@
     </Compile>
     <Compile Include="Models\Conexion.cs" />
     <Compile Include="Models\DatosActividade.cs" />
+    <Compile Include="Models\DatosEvento.cs" />
     <Compile Include="Models\DatosFase.cs" />
+    <Compile Include="Models\DatosPatrocinador.cs" />
     <Compile Include="Models\DatosProyecto.cs" />
     <Compile Include="Models\DatosReunion.cs" />
     <Compile Include="Models\DatosSemillero.cs" />
@@ -321,6 +325,13 @@
     <Content Include="Views\Reuniones\Index.cshtml" />
     <Content Include="Views\Reuniones\Agregar.cshtml" />
     <Content Include="Views\Reuniones\Modificar.cshtml" />
+    <Content Include="Views\Eventos\Index.cshtml" />
+    <Content Include="Views\Eventos\Detalle.cshtml" />
+    <Content Include="Views\Eventos\Agregar.cshtml" />
+    <Content Include="Views\Eventos\Modificar.cshtml" />
+    <Content Include="Views\Patrocinadores\Index.cshtml" />
+    <Content Include="Views\Patrocinadores\Agregar.cshtml" />
+    <Content Include="Views\Patrocinadores\Modificar.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

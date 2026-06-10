@@ -1,0 +1,99 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosEvento
+
+@{
+    ViewBag.Title = "Crear Evento ";
+}
+
+<div class="container-fluid max-width-800 py-4">
+    <div class="d-flex align-items-center mb-3">
+        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary btn-sm me-3">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-plus-fill text-success me-2"></i> Programar Nuevo Evento</h3>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4">
+            @using (Html.BeginForm("Agregar", "Eventos", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold text-secondary">ID Evento</label>
+                        @Html.TextBoxFor(m => m.IdEvento, new { @class = "form-control border-info", @type = "number", @min = "1", @required = "required" })
+                    </div>
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Nombre del Evento Académico</label>
+                        @Html.TextBoxFor(m => m.NombreEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: I Simposio de Desarrollo Tecnológico" })
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Tipo de Evento</label>
+                        @Html.TextBoxFor(m => m.TipoEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: Congreso, Seminario, Ponencia" })
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Fecha de Celebración</label>
+                        @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-info", @type = "date", @required = "required" })
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Lugar / Ubicación</label>
+                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: Auditorio Principal o Virtual" })
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Organizador Principal</label>
+                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-info", @required = "required" })
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Semillero Vinculado (ID)</label>
+                    @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control border-info", @type = "number", @required = "required" })
+                </div>
+
+                <hr class="my-4 text-muted" />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark"><i class="bi bi-journal-code text-primary me-1"></i> Vincular Proyectos Participantes</label>
+                        <p class="text-muted small mb-2">Mantén presionado Ctrl (o arrastra) para seleccionar varios proyectos.</p>
+                        <select name="ProyectosSeleccionadosIds" class="form-select border-primary" style="height: 140px;" multiple>
+                            @if (ViewBag.ListaProyectos != null)
+                            {
+                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.ListaProyectos)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark"><i class="bi bi-award text-success me-1"></i> Asignar Patrocinadores Unificados</label>
+                        <p class="text-muted small mb-2">Selecciona las entidades que respaldarán económicamente este evento.</p>
+                        <select name="PatrocinadoresSeleccionadosIds" class="form-select border-success" style="height: 140px;" multiple>
+                            @if (ViewBag.ListaPatrocinadores != null)
+                            {
+                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.ListaPatrocinadores)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-success fw-bold py-2 shadow-sm">
+                        <i class="bi bi-check-circle me-1"></i> Publicar y Programar Evento
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>

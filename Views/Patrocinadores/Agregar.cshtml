@@ -1,0 +1,65 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosPatrocinador
+
+@{
+    ViewBag.Title = "Agregar Patrocinador";
+}
+
+<div class="container-fluid max-width-700 py-4">
+    <div class="d-flex align-items-center mb-3">
+        <a href="@Url.Action("Index", "Patrocinadores")" class="btn btn-outline-secondary btn-sm me-3">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Nuevo Patrocinador
+        </h3>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4">
+            @using (Html.BeginForm("Agregar", "Patrocinadores", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">ID Patrocinador (Numérico)</label>
+                    @Html.TextBoxFor(m => m.IdPatrocinador, new { @class = "form-control border-info", @type = "number", @required = "required", @placeholder = "Ej: 101" })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Nombre de la Empresa / Organización</label>
+                    @Html.TextBoxFor(m => m.NombrePatrocinador, new { @class = "form-control border-info", @required = "required", @placeholder = "Nombre del aliado..." })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Correo Electrónico</label>
+                    @Html.TextBoxFor(m => m.CorreoPatrocinador, new { @class = "form-control border-info", @type = "email", @required = "required", @placeholder = "ejemplo@dominio.com" })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Contacto Telefónico</label>
+                    @Html.TextBoxFor(m => m.TelefonoPatrocinador, new { @class = "form-control border-info", @type = "number", @required = "required", @placeholder = "Ej: 3001234567" })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Tipo de Soporte / Patrocinio</label>
+                    @Html.TextBoxFor(m => m.TipoPatrocinador, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: Económico, Tecnológico, Logístico" })
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-success fw-bold py-2">
+                        <i class="bi bi-save me-1"></i> Guardar Patrocinador
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+    </script>
+}

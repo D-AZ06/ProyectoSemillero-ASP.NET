@@ -1,0 +1,56 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosPatrocinador
+
+@{
+    ViewBag.Title = "Modificar Patrocinador";
+}
+
+<div class="container-fluid max-width-700 py-4">
+    <div class="d-flex align-items-center mb-3">
+        <a href="@Url.Action("Index", "Patrocinadores")" class="btn btn-outline-secondary btn-sm me-3">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square text-primary me-2"></i> Editar Patrocinador</h3>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4">
+            @using (Html.BeginForm("Modificar", "Patrocinadores", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.IdPatrocinador) @* ID interno de MongoDB *@
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">ID Patrocinador (No editable)</label>
+                    @Html.TextBoxFor(m => m.IdPatrocinador, new { @class = "form-control bg-light border-secondary text-muted", @readonly = "readonly" })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Nombre de la Empresa / Organización</label>
+                    @Html.TextBoxFor(m => m.NombrePatrocinador, new { @class = "form-control border-info", @required = "required" })
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Tipo de Patrocinio</label>
+                    @Html.TextBoxFor(m => m.TipoPatrocinador, new { @class = "form-control border-info", @required = "required" })
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Teléfono de Contacto</label>
+                        @Html.TextBoxFor(m => m.TelefonoPatrocinador, new { @class = "form-control border-info", @type = "tel", @required = "required" })
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Correo Electrónico</label>
+                        @Html.TextBoxFor(m => m.CorreoPatrocinador, new { @class = "form-control border-info", @type = "email", @required = "required" })
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>

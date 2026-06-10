@@ -1,0 +1,99 @@
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosPatrocinador>
+
+@{
+    ViewBag.Title = "Gestión de Patrocinadores";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-award-fill text-success me-2"></i> Aliados y Patrocinadores</h3>
+    <a href="@Url.Action("Agregar", "Patrocinadores")" class="btn btn-success fw-bold shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Agregar Patrocinador
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">ID</th>
+                        <th>Nombre / Entidad</th>
+                        <th>Tipo de Soporte</th>
+                        <th>Contacto Tel.</th>
+                        <th>Correo Electrónico</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@item.IdPatrocinador</td>
+                                <td class="fw-semibold text-dark">@item.NombrePatrocinador</td>
+                                <td><span class="badge bg-light text-dark border border-secondary">@item.TipoPatrocinador</span></td>
+                                <td>@item.TelefonoPatrocinador</td>
+                                <td><a href="mailto:@item.CorreoPatrocinador" class="text-decoration-none">@item.CorreoPatrocinador</a></td>
+                                <td class="text-center">
+                                    @* Enlace para Modificar *@
+                                    <a href="@Url.Action("Modificar", "Patrocinadores", new { id = item.Id })" class="btn btn-sm btn-outline-primary me-1">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    @* Botón para Eliminar *@
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarPatrocinador('@item.Id')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No se encontraron patrocinadores registrados.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* El bloque faltante que le da vida al botón eliminar e interactúa con SweetAlert *@
+@section Scripts {
+    <script>
+        // Capturar mensajes del controlador
+        var mensajeExito = '@TempData["Exito"]';
+        if (mensajeExito) {
+            Swal.fire({ icon: 'success', title: '¡Completado!', text: mensajeExito, confirmButtonColor: '#198754' });
+        }
+
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        // Función de eliminación corregida sin romper las llaves de Razor
+        function eliminarPatrocinador(idRecibido) {
+            Swal.fire({
+                title: '¿Eliminar este patrocinador?',
+                text: "Esta acción borrará de forma permanente el registro del aliado.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    // Definimos la base de la URL usando Razor fuera del String dinámico
+                    var urlBase = '@Url.Action("Eliminar", "Patrocinadores")';
+                    window.location.href = urlBase + '?id=' + idRecibido;
+                }
+            });
+        }
+    </script>
+}
