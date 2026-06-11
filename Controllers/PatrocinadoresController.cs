@@ -1,33 +1,61 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Web.Mvc;
 using MongoDB.Driver;
-using ProyectoSemillero_ASP.NET.Models; // Asegúrate de que coincida con tu espacio de nombres
+using ProyectoSemillero_ASP.NET.Models;
 
 namespace ProyectoSemillero_ASP.NET.Controllers
 {
     public class PatrocinadoresController : Controller
     {
-        // Instancias de MongoDB (Ajusta con tu clase Conexión si la manejas global)
-        private readonly IMongoDatabase _baseDatos;
+        // Instancia global utilizando tu clase de conexión centralizada
+        private Conexion conexionDB = new Conexion();
 
-        public PatrocinadoresController()
-        {
-            // Reemplaza esto por tu cadena de conexión o invocación a tu clase Conexion
-            var cliente = new MongoClient("mongodb://localhost:27017");
-            _baseDatos = cliente.GetDatabase("SemitecDB"); // Nombre de tu base de datos
-        }
-
-        // GET: Patrocinadores
-        // Renderiza la tabla con todo el directorio global
-        public ActionResult Index()
+        // ==========================================
+        // GET: Patrocinadores (Index con Filtros)
+        // ==========================================
+        public ActionResult Index(string tipoFiltro, string valorFiltro)
         {
             try
             {
-                var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
-                var listaPatrocinadores = coleccion.Find(_ => true).ToList();
+                var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
+
+                // Obtenemos TODOS los patrocinadores para alimentar el autocompletado del buscador en la vista
+                ViewBag.TodosLosPatrocinadores = coleccion.Find(_ => true).ToList();
+
+                // Iniciamos el constructor de filtros
+                var builder = Builders<DatosPatrocinador>.Filter;
+                FilterDefinition<DatosPatrocinador> filtroBusqueda = builder.Empty;
+
+                if (!string.IsNullOrEmpty(tipoFiltro) && !string.IsNullOrEmpty(valorFiltro))
+                {
+                    valorFiltro = valorFiltro.Trim();
+
+                    switch (tipoFiltro)
+                    {
+                        case "idPatrocinador":
+                            if (int.TryParse(valorFiltro, out int idBusqueda))
+                                filtroBusqueda = builder.Eq(p => p.IdPatrocinador, idBusqueda);
+                            break;
+                        case "nombre":
+                            filtroBusqueda = builder.Regex(p => p.NombrePatrocinador, new MongoDB.Bson.BsonRegularExpression(valorFiltro, "i"));
+                            break;
+                        case "tipoSoporte":
+                            filtroBusqueda = builder.Regex(p => p.TipoPatrocinador, new MongoDB.Bson.BsonRegularExpression(valorFiltro, "i"));
+                            break;
+                        case "correo":
+                            filtroBusqueda = builder.Regex(p => p.CorreoPatrocinador, new MongoDB.Bson.BsonRegularExpression(valorFiltro, "i"));
+                            break;
+                    }
+                }
+
+                // Ejecutar la consulta en MongoDB
+                var listaPatrocinadores = coleccion.Find(filtroBusqueda).ToList();
+
+                // Guardar los datos en el ViewBag para mantener el estado del filtro en pantalla
+                ViewBag.TipoFiltroActual = tipoFiltro;
+                ViewBag.ValorFiltroActual = valorFiltro;
 
                 return View(listaPatrocinadores);
             }
@@ -38,10 +66,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-
+        // ==========================================
+        // GET: Patrocinadores/Eliminar
+        // ==========================================
         public ActionResult Eliminar(string id)
         {
-            // 1. Limpiamos espacios en blanco accidentales que puedan venir desde la vista
             if (id != null) id = id.Trim();
 
             if (string.IsNullOrEmpty(id))
@@ -52,32 +81,27 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             try
             {
-                var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
+                var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
                 DeleteResult resultado = null;
 
-                // INTENTO 1: Convertir la cadena de texto a un ObjectId nativo de MongoDB (El método más seguro)
                 if (id.Length == 24 && MongoDB.Bson.ObjectId.TryParse(id, out MongoDB.Bson.ObjectId objectIdMongo))
                 {
-                    // Usamos un filtro genérico de BsonDocument para obligar al Driver a buscar por el ObjectId real
                     var filtroObjectId = Builders<DatosPatrocinador>.Filter.Eq("_id", objectIdMongo);
                     resultado = coleccion.DeleteOne(filtroObjectId);
                 }
 
-                // INTENTO 2: Si no borró, intentamos buscarlo como string plano por si se guardó diferente
                 if (resultado == null || resultado.DeletedCount == 0)
                 {
                     var filtroIdString = Builders<DatosPatrocinador>.Filter.Eq(p => p.Id, id);
                     resultado = coleccion.DeleteOne(filtroIdString);
                 }
 
-                // INTENTO 3: Si sigue sin borrar, usamos el ID numérico consecutivo (Ej: 800, 801)
-                if (resultado.DeletedCount == 0 && int.TryParse(id, out int idNumerico))
+                if (resultado?.DeletedCount == 0 && int.TryParse(id, out int idNumerico))
                 {
                     var filtroIdNumerico = Builders<DatosPatrocinador>.Filter.Eq(p => p.IdPatrocinador, idNumerico);
                     resultado = coleccion.DeleteOne(filtroIdNumerico);
                 }
 
-                // Veredicto final de la operación
                 if (resultado != null && resultado.DeletedCount > 0)
                 {
                     TempData["Exito"] = "Patrocinador eliminado correctamente de la base de datos.";
@@ -92,11 +116,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 TempData["Error"] = "Error crítico en el servidor al intentar eliminar: " + ex.Message;
             }
 
-            // Redirecciona para refrescar la tabla del Index de inmediato
             return RedirectToAction("Index");
         }
 
+        // ==========================================
         // GET: Patrocinadores/Agregar
+        // ==========================================
         [HttpGet]
         public ActionResult Agregar()
         {
@@ -104,36 +129,42 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             try
             {
-                var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
+                var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
 
-                // Buscamos el patrocinador con el idPatrocinador más alto registrado en la BD
                 var ultimoPatrocinador = coleccion.Find(Builders<DatosPatrocinador>.Filter.Empty)
                                                  .SortByDescending(p => p.IdPatrocinador)
                                                  .FirstOrDefault();
 
-                // Si ya existen patrocinadores, sumamos 1 al último ID
-                // SI NO EXISTE NINGUNO (colección vacía), obligamos a que empiece en 800
                 if (ultimoPatrocinador != null)
                 {
                     nuevoPatrocinador.IdPatrocinador = ultimoPatrocinador.IdPatrocinador + 1;
                 }
                 else
                 {
-                    nuevoPatrocinador.IdPatrocinador = 800; // Valor inicial personalizado
+                    nuevoPatrocinador.IdPatrocinador = 800;
                 }
+
+                // Obtener Tipos de Soporte únicos para el Autocompletado de la vista
+                var tiposSoporteSugeridos = coleccion.Find(_ => true).ToList()
+                    .Where(p => !string.IsNullOrWhiteSpace(p.TipoPatrocinador))
+                    .Select(p => p.TipoPatrocinador.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(t => t)
+                    .ToList();
+
+                ViewBag.TiposSugeridos = tiposSoporteSugeridos;
             }
             catch (Exception)
             {
-                // En caso de un fallo temporal de conexión a Mongo, dejamos el valor inicial
                 nuevoPatrocinador.IdPatrocinador = 800;
             }
 
-            // Retorna la vista con el ID ya calculado y bloqueado en pantalla
             return View(nuevoPatrocinador);
         }
 
-
+        // ==========================================
         // POST: Patrocinadores/Agregar
+        // ==========================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Agregar(DatosPatrocinador nuevoPatrocinador)
@@ -142,9 +173,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
+                    var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
 
-                    // Doble verificación antibucle o duplicados en el servidor
                     var existeDuplicado = coleccion.Find(p => p.IdPatrocinador == nuevoPatrocinador.IdPatrocinador).Any();
 
                     if (existeDuplicado)
@@ -170,7 +200,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return View(nuevoPatrocinador);
         }
 
+        // ==========================================
         // GET: Patrocinadores/Modificar/5
+        // ==========================================
         [HttpGet]
         public ActionResult Modificar(string id)
         {
@@ -181,9 +213,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             try
             {
-                var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
-
-                // Buscamos el patrocinador por su campo _id único de MongoDB
+                var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
                 var patrocinador = coleccion.Find(p => p.Id == id).FirstOrDefault();
 
                 if (patrocinador == null)
@@ -191,6 +221,16 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     TempData["Error"] = "No se encontró el patrocinador especificado.";
                     return RedirectToAction("Index");
                 }
+
+                // Obtener Tipos de Soporte únicos para el Autocompletado de la vista
+                var tiposSoporteSugeridos = coleccion.Find(_ => true).ToList()
+                    .Where(p => !string.IsNullOrWhiteSpace(p.TipoPatrocinador))
+                    .Select(p => p.TipoPatrocinador.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(t => t)
+                    .ToList();
+
+                ViewBag.TiposSugeridos = tiposSoporteSugeridos;
 
                 return View(patrocinador);
             }
@@ -201,7 +241,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
+        // ==========================================
         // POST: Patrocinadores/Modificar
+        // ==========================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Modificar(DatosPatrocinador patrocinadorActualizado)
@@ -210,12 +252,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    var coleccion = _baseDatos.GetCollection<DatosPatrocinador>("Patrocinadores");
-
-                    // Definimos el filtro usando el Id de MongoDB
+                    var coleccion = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
                     var filtro = Builders<DatosPatrocinador>.Filter.Eq(p => p.Id, patrocinadorActualizado.Id);
-
-                    // Reemplazamos el documento completo en la base de datos con los nuevos valores
                     var resultado = coleccion.ReplaceOne(filtro, patrocinadorActualizado);
 
                     if (resultado.ModifiedCount > 0)
@@ -235,7 +273,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 TempData["Error"] = "Error al actualizar el patrocinador: " + ex.Message;
             }
 
-            // Si el modelo no es válido o hay un error, regresa a la vista con los datos actuales
             return View(patrocinadorActualizado);
         }
     }

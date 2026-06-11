@@ -6,12 +6,52 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-award-fill text-success me-2"></i> Aliados y Patrocinadores</h3>
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-award-fill text-primary me-2"></i> Aliados y Patrocinadores</h3>
     <a href="@Url.Action("Agregar", "Patrocinadores")" class="btn btn-success fw-bold shadow-sm">
         <i class="bi bi-plus-circle me-1"></i> Agregar Patrocinador
     </a>
 </div>
 
+<div class="card shadow-sm border-0 mb-4 bg-light">
+    <div class="card-body py-3">
+        <form action="@Url.Action("Index", "Patrocinadores")" method="get" class="row g-2 align-items-center">
+
+            <div class="col-auto">
+                <label class="col-form-label fw-semibold text-secondary">
+                    <i class="bi bi-funnel text-info me-1"></i> Consultar por parámetros:
+                </label>
+            </div>
+
+            <div class="col-md-3">
+                <select name="tipoFiltro" id="tipoFiltro" class="form-select border-info text-secondary fw-medium">
+                    <option value="">Seleccione filtro...</option>
+                    <option value="idPatrocinador" @(ViewBag.TipoFiltroActual == "idPatrocinador" ? "selected" : "")>ID del Patrocinador</option>
+                    <option value="nombre" @(ViewBag.TipoFiltroActual == "nombre" ? "selected" : "")>Nombre / Entidad</option>
+                    <option value="tipoSoporte" @(ViewBag.TipoFiltroActual == "tipoSoporte" ? "selected" : "")>Tipo de Soporte</option>
+                    <option value="correo" @(ViewBag.TipoFiltroActual == "correo" ? "selected" : "")>Correo Electrónico</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <input type="text" name="valorFiltro" id="valorFiltro" class="form-control border-info" placeholder="Seleccione un filtro primero..." value="@ViewBag.ValorFiltroActual" list="sugerenciasFiltro" autocomplete="off" disabled />
+                <datalist id="sugerenciasFiltro"></datalist>
+            </div>
+
+            <div class="col-auto d-flex gap-2">
+                <button type="submit" class="btn btn-info text-white fw-bold shadow-sm" id="btnConsultar" disabled>
+                    <i class="bi bi-search me-1"></i> Consultar
+                </button>
+
+                @if (!string.IsNullOrEmpty(ViewBag.TipoFiltroActual))
+                {
+                    <a href="@Url.Action("Index", "Patrocinadores")" class="btn btn-outline-secondary shadow-sm" title="Limpiar Filtros">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -38,11 +78,9 @@
                                 <td>@item.TelefonoPatrocinador</td>
                                 <td><a href="mailto:@item.CorreoPatrocinador" class="text-decoration-none">@item.CorreoPatrocinador</a></td>
                                 <td class="text-center">
-                                    @* Enlace para Modificar *@
                                     <a href="@Url.Action("Modificar", "Patrocinadores", new { id = item.Id })" class="btn btn-sm btn-outline-primary me-1">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    @* Botón para Eliminar *@
                                     <button class="btn btn-sm btn-outline-danger" onclick="eliminarPatrocinador('@item.Id')">
                                         <i class="bi bi-trash-fill"></i>
                                     </button>
@@ -53,7 +91,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">No se encontraron patrocinadores registrados.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">No se encontraron patrocinadores registrados o que coincidan con la búsqueda.</td>
                         </tr>
                     }
                 </tbody>
@@ -62,10 +100,86 @@
     </div>
 </div>
 
-@* El bloque faltante que le da vida al botón eliminar e interactúa con SweetAlert *@
 @section Scripts {
     <script>
-        // Capturar mensajes del controlador
+        // 1. DICCIONARIO DE SUGERENCIAS DESDE EL BACKEND
+        const datosSugerencias = {
+            idPatrocinador: [],
+            nombre: [],
+            tipoSoporte: [],
+            correo: []
+        };
+
+        // Pasamos los datos de C# a JavaScript para llenar el autocompletado
+        @if(ViewBag.TodosLosPatrocinadores != null)
+        {
+            var listaTodos = (List<ProyectoSemillero_ASP.NET.Models.DatosPatrocinador>)ViewBag.TodosLosPatrocinadores;
+            foreach(var p in listaTodos)
+            {
+                <text>
+                datosSugerencias.idPatrocinador.push('@p.IdPatrocinador');
+
+                if(!datosSugerencias.nombre.includes('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.NombrePatrocinador ?? ""))'))
+                    datosSugerencias.nombre.push('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.NombrePatrocinador ?? ""))');
+
+                if(!datosSugerencias.tipoSoporte.includes('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.TipoPatrocinador ?? ""))'))
+                    datosSugerencias.tipoSoporte.push('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.TipoPatrocinador ?? ""))');
+
+                if(!datosSugerencias.correo.includes('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.CorreoPatrocinador ?? ""))'))
+                    datosSugerencias.correo.push('@Html.Raw(HttpUtility.JavaScriptStringEncode(p.CorreoPatrocinador ?? ""))');
+                </text>
+            }
+        }
+
+        // 2. Lógica interactiva para la barra de búsqueda y el datalist
+        document.addEventListener('DOMContentLoaded', function () {
+            const selectFiltro = document.getElementById('tipoFiltro');
+            const inputValor = document.getElementById('valorFiltro');
+            const btnConsultar = document.getElementById('btnConsultar');
+            const datalist = document.getElementById('sugerenciasFiltro');
+
+            function actualizarEstadoInput() {
+                // Limpiar sugerencias anteriores
+                datalist.innerHTML = '';
+
+                if (selectFiltro.value !== "") {
+                    inputValor.disabled = false;
+                    btnConsultar.disabled = false;
+
+                    // Llenar el datalist dinámicamente según lo que seleccionó
+                    const opciones = datosSugerencias[selectFiltro.value] || [];
+                    opciones.forEach(opt => {
+                        if(opt) {
+                            let optionElement = document.createElement('option');
+                            optionElement.value = opt;
+                            datalist.appendChild(optionElement);
+                        }
+                    });
+
+                    // Cambiar placeholder y tipo dinámicamente
+                    if(selectFiltro.value === "idPatrocinador"){
+                        inputValor.placeholder = "Ingrese o seleccione un ID...";
+                        inputValor.type = "number";
+                    } else {
+                        inputValor.placeholder = "Escriba o seleccione una opción...";
+                        inputValor.type = "text";
+                    }
+                } else {
+                    inputValor.disabled = true;
+                    btnConsultar.disabled = true;
+                    inputValor.value = "";
+                    inputValor.placeholder = "Seleccione un filtro primero...";
+                }
+            }
+
+            // Ejecutar al cargar la página (por si ya hay filtros aplicados)
+            actualizarEstadoInput();
+
+            // Ejecutar cada vez que el usuario cambie el combo desplegable
+            selectFiltro.addEventListener('change', actualizarEstadoInput);
+        });
+
+        // 3. Capturar mensajes del controlador
         var mensajeExito = '@TempData["Exito"]';
         if (mensajeExito) {
             Swal.fire({ icon: 'success', title: '¡Completado!', text: mensajeExito, confirmButtonColor: '#198754' });
@@ -76,7 +190,7 @@
             Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
         }
 
-        // Función de eliminación corregida sin romper las llaves de Razor
+        // 4. Función de eliminación
         function eliminarPatrocinador(idRecibido) {
             Swal.fire({
                 title: '¿Eliminar este patrocinador?',
@@ -89,7 +203,6 @@
                 cancelButtonText: 'Cancelar'
             }).then(function (result) {
                 if (result.isConfirmed) {
-                    // Definimos la base de la URL usando Razor fuera del String dinámico
                     var urlBase = '@Url.Action("Eliminar", "Patrocinadores")';
                     window.location.href = urlBase + '?id=' + idRecibido;
                 }

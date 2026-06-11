@@ -1,56 +1,213 @@
 ﻿@model ProyectoSemillero_ASP.NET.Models.DatosPatrocinador
 
 @{
-    ViewBag.Title = "Modificar Patrocinador";
+    ViewBag.Title = "Editar Patrocinador";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
 }
 
-<div class="container-fluid max-width-700 py-4">
-    <div class="d-flex align-items-center mb-3">
-        <a href="@Url.Action("Index", "Patrocinadores")" class="btn btn-outline-secondary btn-sm me-3">
-            <i class="bi bi-arrow-left"></i> Volver
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-pencil-square text-primary me-2"></i> Editar Patrocinador
+        </h3>
+
+        <a href="@Url.Action("Index", "Patrocinadores")" class="btn btn-outline-secondary fw-bold shadow-sm">
+            <i class="bi bi-arrow-left"></i> Cancelar y Volver
         </a>
-        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square text-primary me-2"></i> Editar Patrocinador</h3>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-3">
+    <div class="card shadow-sm border-0 bg-white">
         <div class="card-body p-4">
-            @using (Html.BeginForm("Modificar", "Patrocinadores", FormMethod.Post))
+
+            @using (Html.BeginForm("Modificar", "Patrocinadores", FormMethod.Post, new { id = "formModificarPatrocinador" }))
             {
                 @Html.AntiForgeryToken()
-                @Html.HiddenFor(m => m.IdPatrocinador) @* ID interno de MongoDB *@
+
+                @Html.HiddenFor(m => m.Id)
+
+                <div class="mb-3 bg-light p-3 rounded-3 border border-primary-subtle">
+                    <label class="form-label fw-bold text-primary mb-1">
+                        <i class="bi bi-hash me-1"></i> ID Patrocinador
+                    </label>
+                    @Html.TextBoxFor(m => m.IdPatrocinador, new { @class = "form-control bg-white text-muted fw-semibold", @type = "number", @readonly = "readonly" })
+                    <small class="text-muted"><i class="bi bi-info-circle-fill text-info mt-2"></i> Este identificador único no se puede modificar.</small>
+                </div>
+
+                <hr class="text-muted my-3" />
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold text-muted">ID Patrocinador (No editable)</label>
-                    @Html.TextBoxFor(m => m.IdPatrocinador, new { @class = "form-control bg-light border-secondary text-muted", @readonly = "readonly" })
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="bi bi-building me-1"></i> Nombre de la Empresa / Organización
+                    </label>
+                    @Html.TextBoxFor(m => m.NombrePatrocinador, new { @class = "form-control border-secondary-subtle", @required = "required", @placeholder = "Nombre del aliado..." })
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary">Nombre de la Empresa / Organización</label>
-                    @Html.TextBoxFor(m => m.NombrePatrocinador, new { @class = "form-control border-info", @required = "required" })
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="bi bi-envelope-fill me-1"></i> Correo Electrónico
+                    </label>
+                    @Html.TextBoxFor(m => m.CorreoPatrocinador, new { @class = "form-control border-secondary-subtle", @type = "email", @required = "required", @placeholder = "ejemplo@dominio.com" })
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary">Tipo de Patrocinio</label>
-                    @Html.TextBoxFor(m => m.TipoPatrocinador, new { @class = "form-control border-info", @required = "required" })
+                    <label class="form-label fw-bold text-secondary" for="inputTelefono">
+                        <i class="bi bi-telephone-fill me-1"></i> Contacto Telefónico
+                    </label>
+                    @Html.TextBoxFor(m => m.TelefonoPatrocinador, new { @class = "form-control border-secondary-subtle", @type = "tel", @required = "required", id = "inputTelefono" })
+                    <small class="text-danger fw-semibold d-none" id="errorTelefono">
+                        <i class="bi bi-exclamation-triangle-fill"></i> El teléfono debe tener entre 7 y 10 dígitos numéricos.
+                    </small>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Teléfono de Contacto</label>
-                        @Html.TextBoxFor(m => m.TelefonoPatrocinador, new { @class = "form-control border-info", @type = "tel", @required = "required" })
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Correo Electrónico</label>
-                        @Html.TextBoxFor(m => m.CorreoPatrocinador, new { @class = "form-control border-info", @type = "email", @required = "required" })
-                    </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary" for="inputTipoPatrocinador">
+                        <i class="bi bi-briefcase-fill me-1"></i> Tipo de patrocinio
+                    </label>
+                    @Html.TextBoxFor(m => m.TipoPatrocinador, new { @class = "form-control border-secondary-subtle", @required = "required", @placeholder = "Ej: Económico, Tecnológico", @list = "listaTiposSugeridos", @autocomplete = "off", id = "inputTipoPatrocinador" })
+
+                    <datalist id="listaTiposSugeridos">
+                        @if (ViewBag.TiposSugeridos != null)
+                        {
+                            foreach (var tipo in ViewBag.TiposSugeridos)
+                            {
+                                <option value="@tipo"></option>
+                            }
+                        }
+                    </datalist>
+                    <small class="text-muted" id="hintTipoPatrocinador">
+                        <i class="bi bi-lightbulb-fill text-warning mt-2"></i> Selecciona un tipo existente o escribe uno nuevo.
+                    </small>
                 </div>
 
-                <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Guardar Cambios
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarPatrocinador">
+                        <i class="bi bi-arrow-repeat me-1"></i> Guardar Cambios
                     </button>
                 </div>
             }
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // 1. Mostrar errores del servidor si existen
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        // 2. Elementos del DOM
+        const form = document.getElementById('formModificarPatrocinador');
+        const btnSubmit = document.getElementById('btnGuardarPatrocinador');
+        const inputTelefono = document.getElementById('inputTelefono');
+        const errorTelefono = document.getElementById('errorTelefono');
+        const inputTipoSoporte = document.getElementById('inputTipoPatrocinador');
+        const hintTipoSoporte = document.getElementById('hintTipoPatrocinador');
+
+        // 3. Validación Realista del Teléfono en Tiempo Real
+        inputTelefono.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, ''); // Elimina letras
+
+            if (this.value.length > 10) {
+                this.value = this.value.slice(0, 10);
+            }
+
+            if (this.value.length > 0 && this.value.length < 7) {
+                errorTelefono.classList.remove('d-none');
+                inputTelefono.classList.add('border-danger');
+            } else {
+                errorTelefono.classList.add('d-none');
+                inputTelefono.classList.remove('border-danger');
+            }
+        });
+
+        // 4. Validación: Solo letras en "Tipo de Patrocinio"
+        inputTipoSoporte.addEventListener('input', function() {
+            // Si el usuario ingresa un número, se elimina instantáneamente
+            if (/[0-9]/.test(this.value)) {
+                this.value = this.value.replace(/[0-9]/g, '');
+
+                // Efecto visual rápido para que el usuario note que no se permiten números
+                hintTipoSoporte.classList.remove('text-muted');
+                hintTipoSoporte.classList.add('text-danger', 'fw-bold');
+                setTimeout(() => {
+                    hintTipoSoporte.classList.add('text-muted');
+                    hintTipoSoporte.classList.remove('text-danger', 'fw-bold');
+                }, 1500);
+            }
+        });
+
+        // 5. Lógica de Estandarización de Tipos de Patrocinio (Autocompletado blur)
+        const diccionarioTipos = [
+            @if(ViewBag.TiposSugeridos != null) {
+                foreach(var t in ViewBag.TiposSugeridos) {
+                    @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(t)}\",")
+                }
+            }
+        ];
+
+        function normalizarTexto(texto) {
+            if (!texto) return "";
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
+
+        inputTipoSoporte.addEventListener('blur', function() {
+            const valorIngresado = normalizarTexto(this.value);
+            if (!valorIngresado) return;
+
+            const coincidencia = diccionarioTipos.find(t => normalizarTexto(t) === valorIngresado);
+
+            if (coincidencia && coincidencia !== this.value.trim()) {
+                this.value = coincidencia;
+
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'info',
+                    title: 'Formato Unificado',
+                    text: `Se ha auto-corregido a "${coincidencia}" para mantener el orden en el sistema.`
+                });
+            }
+        });
+
+        // 6. Validación final antes de enviar + Loader
+        form.addEventListener('submit', function (e) {
+            if (inputTelefono.value.length < 7) {
+                e.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Teléfono Inválido',
+                    text: 'Asegúrate de ingresar un número telefónico real de entre 7 y 10 dígitos antes de guardar.',
+                    confirmButtonColor: '#ffc107'
+                });
+
+                inputTelefono.focus();
+                return;
+            }
+
+            setTimeout(() => {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Actualizando...`;
+            }, 10);
+        });
+
+        // Disparar la validación del teléfono al cargar la página por si el dato viene incorrecto de la BD
+        inputTelefono.dispatchEvent(new Event('input'));
+    </script>
+}

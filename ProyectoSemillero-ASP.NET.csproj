@@ -326,7 +326,6 @@
     <Content Include="Views\Reuniones\Agregar.cshtml" />
     <Content Include="Views\Reuniones\Modificar.cshtml" />
     <Content Include="Views\Eventos\Index.cshtml" />
-    <Content Include="Views\Eventos\Detalle.cshtml" />
     <Content Include="Views\Eventos\Agregar.cshtml" />
     <Content Include="Views\Eventos\Modificar.cshtml" />
     <Content Include="Views\Patrocinadores\Index.cshtml" />

@@ -1,95 +1,185 @@
 ﻿@model ProyectoSemillero_ASP.NET.Models.DatosEvento
 
 @{
-    ViewBag.Title = "Crear Evento ";
+    ViewBag.Title = "Crear Evento";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+    string rolUsuario = ViewBag.RolUsuario as string;
 }
 
-<div class="container-fluid max-width-800 py-4">
-    <div class="d-flex align-items-center mb-3">
-        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary btn-sm me-3">
-            <i class="bi bi-arrow-left"></i> Volver
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+
+    .caja-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .caja-scroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-calendar-plus-fill text-primary me-2"></i> Programar Nuevo Evento
+        </h3>
+
+        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary fw-bold shadow-sm">
+            <i class="bi bi-arrow-left"></i> Cancelar y Volver
         </a>
-        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-calendar-plus-fill text-success me-2"></i> Programar Nuevo Evento</h3>
     </div>
 
-    <div class="card shadow-sm border-0 rounded-3">
+    <div class="card shadow-sm border-0 bg-white">
         <div class="card-body p-4">
-            @using (Html.BeginForm("Agregar", "Eventos", FormMethod.Post))
+            @using (Html.BeginForm("Agregar", "Eventos", FormMethod.Post, new { id = "formAgregarEvento" }))
             {
                 @Html.AntiForgeryToken()
 
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold text-secondary">ID Evento</label>
-                        @Html.TextBoxFor(m => m.IdEvento, new { @class = "form-control border-info", @type = "number", @min = "1", @required = "required" })
-                    </div>
-                    <div class="col-md-8 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Nombre del Evento Académico</label>
-                        @Html.TextBoxFor(m => m.NombreEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: I Simposio de Desarrollo Tecnológico" })
-                    </div>
+                <div class="mb-4 bg-light p-3 rounded-3 border border-primary-subtle">
+                    <label class="form-label fw-bold text-primary mb-1">
+                        <i class="bi bi-hash me-1"></i> ID Evento
+                    </label>
+                    @Html.TextBoxFor(m => m.IdEvento, new { @class = "form-control bg-white text-muted fw-semibold", @type = "number", @readonly = "readonly" })
+                    <small class="text-muted"><i class="bi bi-info-circle-fill text-info mt-2"></i> Este identificador se calcula automáticamente en el sistema.</small>
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Tipo de Evento</label>
-                        @Html.TextBoxFor(m => m.TipoEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: Congreso, Seminario, Ponencia" })
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Fecha de Celebración</label>
-                        @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-info", @type = "date", @required = "required" })
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Lugar / Ubicación</label>
-                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-info", @required = "required", @placeholder = "Ej: Auditorio Principal o Virtual" })
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold text-secondary">Organizador Principal</label>
-                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-info", @required = "required" })
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-secondary">Semillero Vinculado (ID)</label>
-                    @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control border-info", @type = "number", @required = "required" })
-                </div>
-
-                <hr class="my-4 text-muted" />
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-dark"><i class="bi bi-journal-code text-primary me-1"></i> Vincular Proyectos Participantes</label>
-                        <p class="text-muted small mb-2">Mantén presionado Ctrl (o arrastra) para seleccionar varios proyectos.</p>
-                        <select name="ProyectosSeleccionadosIds" class="form-select border-primary" style="height: 140px;" multiple>
-                            @if (ViewBag.ListaProyectos != null)
+                    <div class="col-md-7 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-card-text me-1"></i> Nombre del Evento
+                        </label>
+                        @Html.TextBoxFor(m => m.NombreEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: I Simposio de Desarrollo Tecnológico", @list = "listaNombres", autocomplete = "off", data_tipo = "nombres" })
+                        <datalist id="listaNombres">
+                            @if (ViewBag.NombresSugeridos != null)
                             {
-                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.ListaProyectos)
+                                foreach (var item in ViewBag.NombresSugeridos)
                                 {
-                                    <option value="@item.Value">@item.Text</option>
+                                    <option value="@item"></option>
                                 }
                             }
-                        </select>
+                        </datalist>
                     </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-dark"><i class="bi bi-award text-success me-1"></i> Asignar Patrocinadores Unificados</label>
-                        <p class="text-muted small mb-2">Selecciona las entidades que respaldarán económicamente este evento.</p>
-                        <select name="PatrocinadoresSeleccionadosIds" class="form-select border-success" style="height: 140px;" multiple>
-                            @if (ViewBag.ListaPatrocinadores != null)
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-tags-fill me-1"></i> Tipo de Evento
+                        </label>
+                        @Html.TextBoxFor(m => m.TipoEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: Congreso, Seminario", @list = "listaTipos", autocomplete = "off", data_tipo = "tipos" })
+                        <datalist id="listaTipos">
+                            @if (ViewBag.TiposSugeridos != null)
                             {
-                                foreach (var item in (IEnumerable<SelectListItem>)ViewBag.ListaPatrocinadores)
+                                foreach (var item in ViewBag.TiposSugeridos)
                                 {
-                                    <option value="@item.Value">@item.Text</option>
+                                    <option value="@item"></option>
                                 }
                             }
-                        </select>
+                        </datalist>
                     </div>
                 </div>
 
-                <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-success fw-bold py-2 shadow-sm">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-calendar-event-fill me-1"></i> Fecha de Celebración
+                        </label>
+                        @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-secondary-subtle", @type = "date", @required = "required", id = "FechaEvento" })
+                        <small class="text-danger fw-semibold d-none" id="errorFecha">La fecha no puede ser en el pasado.</small>
+                    </div>
+                    <div class="col-md-7 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación
+                        </label>
+                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: Auditorio Principal o Virtual", @list = "listaLugares", autocomplete = "off", data_tipo = "lugares" })
+                        <datalist id="listaLugares">
+                            @if (ViewBag.LugaresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.LugaresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-person-badge-fill me-1"></i> Organizador Principal
+                        </label>
+                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaOrganizadores", autocomplete = "off", data_tipo = "organizadores" })
+                        <datalist id="listaOrganizadores">
+                            @if (ViewBag.OrganizadoresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.OrganizadoresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-diagram-3-fill me-1"></i> Semillero Vinculado
+                        </label>
+                        @if (rolUsuario == "Líder")
+                        {
+                            <input type="text" class="form-control bg-light border-secondary-subtle text-muted" value="@ViewBag.NombreSemilleroFijo" readonly />
+                            <input type="hidden" name="IdSemillero" id="IdSemillero" value="@ViewBag.IdSemilleroFijo" />
+                        }
+                        else
+                        {
+                            @Html.DropDownListFor(m => m.IdSemillero, ViewBag.ListaSemilleros as SelectList, "-- Seleccione un Semillero --", new { @class = "form-select border-secondary-subtle fw-medium", @required = "required", id = "IdSemillero" })
+                        }
+                    </div>
+                </div>
+
+                <hr class="text-muted my-4" />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark">
+                            <i class="bi bi-journal-code text-primary me-1"></i> Vincular Proyectos Participantes <span class="text-danger">*</span>
+                        </label>
+                        <p class="text-muted small mb-2">Marca las casillas de los proyectos a vincular.</p>
+
+                        <div id="contenedorProyectos" class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark">
+                            <i class="bi bi-award text-info me-1"></i> Asignar Patrocinadores Unificados
+                        </label>
+                        <p class="text-muted small mb-2">Marca las entidades que respaldarán económicamente este evento.</p>
+
+                        <div class="caja-scroll border border-info-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
+                            @if (ViewBag.CatalogoPatrocinadores != null)
+                            {
+                                foreach (var pat in (List<ProyectoSemillero_ASP.NET.Models.DatosPatrocinador>)ViewBag.CatalogoPatrocinadores)
+                                {
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input border-info" type="checkbox" name="patrocinadoresSeleccionados" value="@pat.IdPatrocinador" id="pat_@pat.IdPatrocinador">
+                                        <label class="form-check-label text-dark fw-medium" for="pat_@pat.IdPatrocinador" style="cursor: pointer;">
+                                            @pat.NombrePatrocinador <span class="text-muted small">(@pat.TipoPatrocinador)</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-muted small">No hay patrocinadores registrados.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnGuardarEvento">
                         <i class="bi bi-check-circle me-1"></i> Publicar y Programar Evento
                     </button>
                 </div>
@@ -97,3 +187,140 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        const inputFecha = document.getElementById('FechaEvento');
+        const errorFecha = document.getElementById('errorFecha');
+
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        const fechaMinima = `${yyyy}-${mm}-${dd}`;
+
+        inputFecha.setAttribute('min', fechaMinima);
+
+        inputFecha.addEventListener('change', function() {
+            if(this.value && this.value < fechaMinima) {
+                this.classList.add('border-danger');
+                errorFecha.classList.remove('d-none');
+                this.value = '';
+            } else {
+                this.classList.remove('border-danger');
+                errorFecha.classList.add('d-none');
+            }
+        });
+
+        const selectSemillero = document.getElementById('IdSemillero');
+        const contenedorProyectos = document.getElementById('contenedorProyectos');
+
+        const proyectosDisponibles = [
+            @if(ViewBag.ListaProyectos != null) {
+                foreach(var p in (List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>)ViewBag.ListaProyectos) {
+                    @Html.Raw($"{{ id: '{p.IdProyecto}', titulo: '{HttpUtility.JavaScriptStringEncode(p.TituloProyecto)}', semillero: '{p.IdSemillero}' }},")
+                }
+            }
+        ];
+
+        function actualizarProyectos() {
+            if(!selectSemillero) return;
+            const semilleroSeleccionado = selectSemillero.value;
+            contenedorProyectos.innerHTML = '';
+
+            if(!semilleroSeleccionado) {
+                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">-- Seleccione un semillero primero --</div>';
+                return;
+            }
+
+            const filtrados = proyectosDisponibles.filter(p => p.semillero === semilleroSeleccionado);
+
+            if(filtrados.length === 0) {
+                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">No hay proyectos registrados en este semillero.</div>';
+            } else {
+                filtrados.forEach(p => {
+                    const chkHTML = `
+                        <div class="form-check mb-1">
+                            <input class="form-check-input border-primary" type="checkbox" name="proyectosSeleccionados" value="${p.id}" id="proy_${p.id}">
+                            <label class="form-check-label text-dark fw-medium" for="proy_${p.id}" style="cursor: pointer;">
+                                ID: ${p.id} - ${p.titulo}
+                            </label>
+                        </div>
+                    `;
+                    contenedorProyectos.insertAdjacentHTML('beforeend', chkHTML);
+                });
+            }
+        }
+
+        if(selectSemillero) {
+            selectSemillero.addEventListener('change', actualizarProyectos);
+            actualizarProyectos();
+        }
+
+        const diccionarios = {
+            nombres: [ @if(ViewBag.NombresSugeridos != null) { foreach(var n in ViewBag.NombresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(n)}\",") } } ],
+            tipos: [ @if(ViewBag.TiposSugeridos != null) { foreach(var t in ViewBag.TiposSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(t)}\",") } } ],
+            lugares: [ @if(ViewBag.LugaresSugeridos != null) { foreach(var l in ViewBag.LugaresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(l)}\",") } } ],
+            organizadores: [ @if(ViewBag.OrganizadoresSugeridos != null) { foreach(var o in ViewBag.OrganizadoresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(o)}\",") } } ]
+        };
+
+        function normalizar(texto) {
+            return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+        }
+
+        document.querySelectorAll('.autocompletar').forEach(input => {
+            input.addEventListener('blur', function() {
+                const valorIngresado = normalizar(this.value);
+                if (!valorIngresado) return;
+
+                const tipoDiccionario = this.getAttribute('data-tipo');
+                const lista = diccionarios[tipoDiccionario];
+
+                const coincidencia = lista.find(item => normalizar(item) === valorIngresado);
+
+                if (coincidencia && coincidencia !== this.value.trim()) {
+                    this.value = coincidencia;
+                    Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 }).fire({
+                        icon: 'info', title: 'Estandarizado', text: `Auto-corregido a "${coincidencia}"`
+                    });
+                }
+            });
+        });
+
+        // Validación final y Loader
+        document.getElementById('formAgregarEvento').addEventListener('submit', function (e) {
+            // Validar que la fecha sea correcta
+            if(!inputFecha.value || inputFecha.value < fechaMinima) {
+                e.preventDefault();
+                inputFecha.focus();
+                return;
+            }
+
+            // Validar que haya al menos un proyecto seleccionado (OBLIGATORIO)
+            const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
+            if (proyectosSeleccionados.length === 0) {
+                e.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Proyectos Requeridos',
+                    text: 'Es obligatorio vincular al menos un proyecto participante para poder programar este evento.',
+                    confirmButtonColor: '#ffc107'
+                });
+                return;
+            }
+
+            // Mostrar loader si todo está perfecto
+            const btn = document.getElementById('btnGuardarEvento');
+            setTimeout(() => {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando Evento...`;
+            }, 10);
+        });
+    </script>
+}

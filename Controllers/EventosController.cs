@@ -124,7 +124,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // NUEVO: Cargamos el catálogo global de patrocinadores para pasarlo al modal modalPatrocinador
                 var coleccionPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
                 ViewBag.CatalogoPatrocinadores = coleccionPatrocinadores.Find(_ => true).ToList();
 
@@ -155,47 +154,55 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Calcular próximo ID (prefijo 60)
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
-                var ultimoEvento = coleccionEventos.Find(new BsonDocument())
+                var colSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
+                var colProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                var colPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
+
+                // =======================================================
+                // NUEVO: Lógica simplificada de IDs a partir de 700
+                // =======================================================
+                var ultimoEvento = coleccionEventos.Find(Builders<DatosEvento>.Filter.Empty)
                                                    .SortByDescending(e => e.IdEvento)
                                                    .FirstOrDefault();
-                int correlativo = 1;
-                if (ultimoEvento != null)
+
+                var nuevoEvento = new DatosEvento();
+
+                if (ultimoEvento != null && ultimoEvento.IdEvento >= 700)
                 {
-                    string ultimoIdStr = ultimoEvento.IdEvento.ToString();
-                    if (ultimoIdStr.StartsWith("60"))
-                    {
-                        if (int.TryParse(ultimoIdStr.Substring(2), out int numero))
-                            correlativo = numero + 1;
-                    }
+                    nuevoEvento.IdEvento = ultimoEvento.IdEvento + 1;
                 }
-                ViewBag.SiguienteId = int.Parse("60" + correlativo);
+                else
+                {
+                    nuevoEvento.IdEvento = 700; // Valor inicial
+                }
+                // =======================================================
 
-                // Proyectos disponibles según rol
-                ViewBag.ProyectosDisponibles = ObtenerProyectosSegunRol();
-
-                // Para el Líder: mostrar su semillero fijo
                 if (rolUsuario == "Líder")
                 {
                     int idSemillero = (int)Session["IdSemillero"];
                     ViewBag.IdSemilleroFijo = idSemillero;
-
-                    var colSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
                     var semillero = colSemilleros.Find(s => s.IdSemillero == idSemillero).FirstOrDefault();
                     ViewBag.NombreSemilleroFijo = semillero?.nombreSemillero ?? "Tu semillero";
+                    ViewBag.ListaProyectos = colProyectos.Find(p => p.IdSemillero == idSemillero).ToList();
                 }
                 else
                 {
-                    var colSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
-                    var semilleros = colSemilleros.Find(_ => true).ToList()
-                        .Select(s => new { IdSemillero = s.IdSemillero, NombreSemillero = s.nombreSemillero })
-                        .ToList();
-                    ViewBag.ListaSemilleros = new SelectList(semilleros, "IdSemillero", "NombreSemillero");
+                    var semilleros = colSemilleros.Find(_ => true).ToList();
+                    ViewBag.ListaSemilleros = new SelectList(semilleros, "IdSemillero", "nombreSemillero");
+                    ViewBag.ListaProyectos = colProyectos.Find(_ => true).ToList();
                 }
 
+                ViewBag.CatalogoPatrocinadores = colPatrocinadores.Find(_ => true).ToList();
+
+                var todosEventos = coleccionEventos.Find(_ => true).ToList();
+                ViewBag.NombresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.NombreEvento)).Select(e => e.NombreEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
+                ViewBag.TiposSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.TipoEvento)).Select(e => e.TipoEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
+                ViewBag.LugaresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.LugarEvento)).Select(e => e.LugarEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(l => l).ToList();
+                ViewBag.OrganizadoresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+
                 ViewBag.RolUsuario = rolUsuario;
-                return View();
+                return View(nuevoEvento);
             }
             catch (Exception ex)
             {
@@ -209,7 +216,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // =============================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Agregar(DatosEvento nuevoEvento, int[] proyectosSeleccionados)
+        public ActionResult Agregar(DatosEvento nuevoEvento, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados)
         {
             try
             {
@@ -224,23 +231,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
 
-                // Generar ID con prefijo 60
-                var ultimoEvento = coleccionEventos.Find(new BsonDocument())
-                                                   .SortByDescending(e => e.IdEvento)
-                                                   .FirstOrDefault();
-                int correlativo = 1;
-                if (ultimoEvento != null)
-                {
-                    string ultimoIdStr = ultimoEvento.IdEvento.ToString();
-                    if (ultimoIdStr.StartsWith("60"))
-                    {
-                        if (int.TryParse(ultimoIdStr.Substring(2), out int numero))
-                            correlativo = numero + 1;
-                    }
-                }
-                nuevoEvento.IdEvento = int.Parse("60" + correlativo);
-
-                // Forzar semillero al Líder
+                // Forzar semillero al Líder por seguridad
                 if (rolUsuario == "Líder")
                     nuevoEvento.IdSemillero = (int)Session["IdSemillero"];
 
@@ -263,8 +254,34 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                // NUEVO: Instancia la nueva lista apuntando a DatosPatrocinador vacía
+                // Vincular patrocinadores seleccionados desde la creación
                 nuevoEvento.Patrocinadores = new List<DatosPatrocinador>();
+                if (patrocinadoresSeleccionados != null && patrocinadoresSeleccionados.Length > 0)
+                {
+                    var colPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
+                    foreach (int idPat in patrocinadoresSeleccionados)
+                    {
+                        var pat = colPatrocinadores.Find(p => p.IdPatrocinador == idPat).FirstOrDefault();
+                        if (pat != null)
+                        {
+                            nuevoEvento.Patrocinadores.Add(pat);
+                        }
+                    }
+                }
+
+                // =======================================================
+                // NUEVO: Verificación antibucle/duplicados al guardar
+                // =======================================================
+                var existeDuplicado = coleccionEventos.Find(e => e.IdEvento == nuevoEvento.IdEvento).Any();
+                if (existeDuplicado)
+                {
+                    var ultimo = coleccionEventos.Find(Builders<DatosEvento>.Filter.Empty)
+                                                 .SortByDescending(e => e.IdEvento)
+                                                 .FirstOrDefault();
+
+                    nuevoEvento.IdEvento = (ultimo != null && ultimo.IdEvento >= 700) ? ultimo.IdEvento + 1 : 700;
+                }
+                // =======================================================
 
                 coleccionEventos.InsertOne(nuevoEvento);
                 TempData["Exito"] = $"Evento '{nuevoEvento.NombreEvento}' registrado con ID: {nuevoEvento.IdEvento}";
@@ -295,6 +312,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
+                var colSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
+                var colProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                var colPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
+
                 var evento = coleccionEventos.Find(e => e.IdEvento == id).FirstOrDefault();
 
                 if (evento == null)
@@ -303,7 +324,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Validar que el Líder solo modifique sus eventos
                 if (rolUsuario == "Líder")
                 {
                     int idSemilleroLider = (int)Session["IdSemillero"];
@@ -312,11 +332,27 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         TempData["Error"] = "Acceso denegado: Este evento pertenece a otro semillero.";
                         return RedirectToAction("Index");
                     }
+                    ViewBag.IdSemilleroFijo = idSemilleroLider;
+                    var semillero = colSemilleros.Find(s => s.IdSemillero == idSemilleroLider).FirstOrDefault();
+                    ViewBag.NombreSemilleroFijo = semillero?.nombreSemillero ?? "Tu semillero";
+                    ViewBag.ListaProyectos = colProyectos.Find(p => p.IdSemillero == idSemilleroLider).ToList();
+                }
+                else
+                {
+                    var semilleros = colSemilleros.Find(_ => true).ToList();
+                    ViewBag.ListaSemilleros = new SelectList(semilleros, "IdSemillero", "nombreSemillero");
+                    ViewBag.ListaProyectos = colProyectos.Find(_ => true).ToList();
                 }
 
-                ViewBag.ProyectosDisponibles = ObtenerProyectosSegunRol();
-                ViewBag.RolUsuario = rolUsuario;
+                ViewBag.CatalogoPatrocinadores = colPatrocinadores.Find(_ => true).ToList();
 
+                var todosEventos = coleccionEventos.Find(_ => true).ToList();
+                ViewBag.NombresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.NombreEvento)).Select(e => e.NombreEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
+                ViewBag.TiposSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.TipoEvento)).Select(e => e.TipoEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
+                ViewBag.LugaresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.LugarEvento)).Select(e => e.LugarEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(l => l).ToList();
+                ViewBag.OrganizadoresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+
+                ViewBag.RolUsuario = rolUsuario;
                 return View(evento);
             }
             catch (Exception ex)
@@ -331,7 +367,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // =============================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Modificar(DatosEvento eventoModificado, int[] proyectosSeleccionados)
+        public ActionResult Modificar(DatosEvento eventoModificado, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados)
         {
             try
             {
@@ -347,7 +383,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
                 var filtro = Builders<DatosEvento>.Filter.Eq(e => e.IdEvento, eventoModificado.IdEvento);
 
-                // Candado para Líder
                 if (rolUsuario == "Líder")
                 {
                     int idSemilleroLider = (int)Session["IdSemillero"];
@@ -365,12 +400,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Preservar datos vitales
                 eventoModificado.Id = eventoOriginal.Id;
                 eventoModificado.IdSemillero = eventoOriginal.IdSemillero;
-                eventoModificado.Patrocinadores = eventoOriginal.Patrocinadores ?? new List<DatosPatrocinador>();
 
-                // Actualizar proyectos participantes
                 eventoModificado.ProyectosParticipantes = new List<ProyectoParticipante>();
                 if (proyectosSeleccionados != null && proyectosSeleccionados.Length > 0)
                 {
@@ -385,6 +417,20 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                                 IdProyecto = proy.IdProyecto,
                                 TituloProyecto = proy.TituloProyecto
                             });
+                        }
+                    }
+                }
+
+                eventoModificado.Patrocinadores = new List<DatosPatrocinador>();
+                if (patrocinadoresSeleccionados != null && patrocinadoresSeleccionados.Length > 0)
+                {
+                    var colPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
+                    foreach (int idPat in patrocinadoresSeleccionados)
+                    {
+                        var pat = colPatrocinadores.Find(p => p.IdPatrocinador == idPat).FirstOrDefault();
+                        if (pat != null)
+                        {
+                            eventoModificado.Patrocinadores.Add(pat);
                         }
                     }
                 }
@@ -445,7 +491,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         }
 
         // =============================================
-        // NUEVO POST AJAX: VincularPatrocinadorExistente
+        // POST AJAX: VincularPatrocinadorExistente
         // =============================================
         [HttpPost]
         public JsonResult VincularPatrocinadorExistente(int idEvento, int idPatrocinador)
@@ -460,26 +506,17 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
                 var coleccionPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
 
-                // 1. Ir al catálogo global y traer los datos limpios de la organización
                 var patrocinadorGlobal = coleccionPatrocinadores.Find(p => p.IdPatrocinador == idPatrocinador).FirstOrDefault();
                 if (patrocinadorGlobal == null)
-                {
                     return Json(new { success = false, message = "El patrocinador seleccionado no existe en el catálogo global." });
-                }
 
-                // 2. Comprobar la existencia del evento y que no esté ya asociado para evitar duplicación
                 var eventoActual = coleccionEventos.Find(e => e.IdEvento == idEvento).FirstOrDefault();
                 if (eventoActual == null)
-                {
                     return Json(new { success = false, message = "El evento especificado no existe." });
-                }
 
                 if (eventoActual.Patrocinadores != null && eventoActual.Patrocinadores.Any(p => p.IdPatrocinador == idPatrocinador))
-                {
                     return Json(new { success = false, message = "Esta organización ya está vinculada a este evento." });
-                }
 
-                // 3. Empujar el objeto completo al sub-array en el documento del Evento
                 var filtro = Builders<DatosEvento>.Filter.Eq(e => e.IdEvento, idEvento);
                 var actualizacion = Builders<DatosEvento>.Update.Push(e => e.Patrocinadores, patrocinadorGlobal);
 
@@ -494,7 +531,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         }
 
         // =============================================
-        // MODIFICADO GET AJAX: EliminarPatrocinador (Desvincular)
+        // GET AJAX: EliminarPatrocinador (Desvincular)
         // =============================================
         public ActionResult EliminarPatrocinador(int idEvento, int idPatrocinador)
         {
@@ -510,8 +547,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
-
-                // Usamos el operador Pull de MongoDB para remover del sub-array por ID directamente
                 var filtro = Builders<DatosEvento>.Filter.Eq(e => e.IdEvento, idEvento);
                 var actualizacion = Builders<DatosEvento>.Update.PullFilter(e => e.Patrocinadores, p => p.IdPatrocinador == idPatrocinador);
 
