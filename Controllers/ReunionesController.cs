@@ -14,7 +14,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         private Conexion conexionDB = new Conexion();
 
         // ==========================================
-        // 1. LISTADO Y FILTROS
+        // 1. LISTADO Y FILTROS (ACTUALIZADO PARA FILTRAR POR TODO)
         // ==========================================
         public ActionResult Index(string tipoFiltro, string valorFiltro)
         {
@@ -44,10 +44,17 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     case "idReunion":
                         if (int.TryParse(valorFiltro, out int idReu)) filtroBusqueda = builder.Eq(r => r.IdReunion, idReu);
                         break;
+                    
                     case "fechaReunion":
                     case "estadoReunion":
                     case "lugarReunion":
+                    case "motivoReunion":
+                    case "horaInicio":
+                    case "horaFin": 
                         filtroBusqueda = builder.Regex(tipoFiltro, new BsonRegularExpression(valorFiltro, "i"));
+                        break;
+                    case "mesReunion":
+                        filtroBusqueda = builder.Regex("fechaReunion", new BsonRegularExpression("^" + valorFiltro, "i"));
                         break;
                 }
             }
@@ -64,11 +71,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
             ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.RolUsuario == "Investigador").ToList();
 
-            // Lógica de ID infalible: Busca el mayor y le suma 1.
             var colReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
             var ultimo = colReuniones.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
 
-            ViewBag.SiguienteIdReunion = (ultimo != null && ultimo.IdReunion >= 300) ? ultimo.IdReunion + 1 : 301;
+            // AQUÍ APLICAMOS LA SECUENCIA: Si hay registros >= 600, suma 1. Si no hay, arranca en 600.
+            ViewBag.SiguienteIdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
             int idLiderActual = (int)Session["IdUsuario"];
             var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
@@ -157,7 +164,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 // Asignamos el ID directamente sumando 1 al último encontrado
                 var ultimo = coleccion.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
-                model.IdReunion = (ultimo != null && ultimo.IdReunion >= 300) ? ultimo.IdReunion + 1 : 301;
+                model.IdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
                 model.EstadoReunion = "Programada";
                 model.IdLider = (int)Session["IdUsuario"];
