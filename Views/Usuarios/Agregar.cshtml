@@ -38,7 +38,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-4">
                             <label class="form-label fw-semibold">Correo Electrónico</label>
                             @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required" })
                         </div>
@@ -57,7 +57,7 @@
 
                         <div class="col-md-6 mb-4">
                             <label class="form-label fw-semibold">Teléfono</label>
-                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "number", required = "required" })
+                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", required = "required", id = "TelefonoUsuario" })
                         </div>
                     </div>
 
@@ -129,5 +129,29 @@
                 });
             }
         });
+
+    </script>
+    <script>
+        
+        const txtNombre = document.getElementById('NombreUsuario');
+
+        if (txtNombre) {
+            txtNombre.addEventListener('input', function () {
+                // Esta línea detecta al instante si ingresan un número o símbolo y lo elimina en tiempo real
+                this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+            });
+        }
+    </script>
+
+    <script>
+       
+        const txtNumerotelefonico = document.getElementById('TelefonoUsuario');
+
+        if (txtNumerotelefonico) {
+            txtNumerotelefonico.addEventListener('input', function () {
+                // Esta línea detecta al instante si ingresan un número o símbolo y lo elimina en tiempo real
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        }
     </script>
 }

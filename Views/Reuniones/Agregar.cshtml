@@ -54,34 +54,38 @@
 
                     <div class="mb-3">
                         <label class="fw-semibold">Lugar de la Reunión</label>
-                        @Html.TextBoxFor(m => m.LugarReunion, new { @class = "form-control", id = "LugarReunion", required = "required", placeholder = "Ej: Sala Bloque A" })
+                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones o escriba uno nuevo..." value="@(Model != null ? Model.LugarReunion : "")" />
+
+                        <datalist id="listaLugares">
+                            @if (ViewBag.ListaLugaresExistentes != null)
+                            {
+                                foreach (var lugar in ViewBag.ListaLugaresExistentes)
+                                {
+                                    <option value="@lugar"></option>
+                                }
+                            }
+                        </datalist>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="fw-semibold">Investigadores (Disponibles)</label>
+
                             <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
                                 @if (ViewBag.ListaInvestigadores != null)
                                 {
-                                   <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
-                                       @if (ViewBag.ListaInvestigadores != null)
-                                       {
-                                           foreach (var inv in ViewBag.ListaInvestigadores)
-                                           {
-                                               // Para Modificar: dejamos marcado si ya estaba convocado
-                                               bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
-                                                                  Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
+                                    foreach (var inv in ViewBag.ListaInvestigadores)
+                                    {
+                                        bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
+                                                           Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
 
-                                               // Aseguramos que el atributo data-id sea exactamente el número del ID del usuario
-                                               <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
-                                                   <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
-                                                   <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
-                                                       @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
-                                                   </label>
-                                               </div>
-                                           }
-                                       }
-                                   </div>
+                                        <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
+                                            <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
+                                            <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
+                                            </label>
+                                        </div>
+                                    }
                                 }
                             </div>
                         </div>
@@ -236,6 +240,13 @@
         document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
 
         btnGuardar.addEventListener('click', function() {
+            let txtLugar = document.getElementById('LugarReunion').value.trim();
+            if (txtLugar === "") {
+                Swal.fire('Campo Incompleto', 'Debes escribir o seleccionar un lugar para la reunión obligatoriamente.', 'warning');
+                document.getElementById('LugarReunion').focus(); // Manda el cursor al campo
+                return; // Frena el guardado en seco
+            }
+
             let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
             if (checks === 0) {
                 Swal.fire('Error', 'Debes convocar al menos a un investigador.', 'error');

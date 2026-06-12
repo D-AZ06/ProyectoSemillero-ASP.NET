@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Mvc;
+using System.Text.RegularExpressions;
 
 namespace ProyectoSemillero_ASP.NET.Controllers
 {
@@ -125,7 +126,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             if (ultimoUsuario != null)
             {
                 string ultimoIdStr = ultimoUsuario.IdUsuario.ToString();
-                if (ultimoIdStr.StartsWith("20"))
+                if (ultimoIdStr.StartsWith("10"))
                 {
                     if (int.TryParse(ultimoIdStr.Substring(2), out int numero)) correlativo = numero + 1;
                 }
@@ -134,7 +135,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             // Creamos un modelo vacío y le asignamos el ID calculado
             var nuevoUsuario = new DatosUsuario();
             nuevoUsuario.IdUsuario = int.Parse("20" + correlativo.ToString());
-            // ==============================================================
+           
 
             // Lógica para cargar Semilleros dependiendo del Rol
             if (rolUsuario == "Administrador" || rolUsuario == "Admin")
@@ -206,6 +207,24 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     nuevoUsuario.IdSemillero = null;
                 }
 
+                if (!Regex.IsMatch(nuevoUsuario.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+                {
+                    TempData["Error"] = "Operación rechazada: El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.";
+                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
+                    return View(nuevoUsuario);
+                }
+                else if (!Regex.IsMatch(nuevoUsuario.TelefonoUsuario.ToString(), "1,10"))
+                {
+                    TempData["Error"] = "Operación rechazada: El número telefónico solo puede contener hasta 10 dígitos. No se permiten letras ni caracteres especiales.";
+                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
+                    return View(nuevoUsuario);
+                }
+
+                else if (!Regex.IsMatch(nuevoUsuario.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+                {
+                    TempData["Error"] = "Operación rechazada: El formato del correo no es válido (ejemplo: usuario@dominio.com).";
+                    return View(nuevoUsuario);
+                }
                 coleccionUsuarios.InsertOne(nuevoUsuario);
                 TempData["Exito"] = $"Usuario registrado correctamente con el ID: {nuevoUsuario.IdUsuario}";
                 return RedirectToAction("Index");
@@ -296,6 +315,25 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (usuarioModificado.RolUsuario == "Administrador" || usuarioModificado.RolUsuario == "Admin")
                 {
                     usuarioModificado.IdSemillero = null;
+                }
+                // Validación estricta: Solo letras y espacios para el nombre
+                if (!Regex.IsMatch(usuarioModificado.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+                {
+                    TempData["Error"] = "Operación rechazada: El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.";
+                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
+                    return View(usuarioModificado);
+                }
+                else if (!Regex.IsMatch(usuarioModificado.TelefonoUsuario.ToString(), "1,10"))
+                {
+                    TempData["Error"] = "Operación rechazada: El numero telefonico no puede contener letras. No se permiten letras ni caracteres especiales.";
+                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
+                    return View(usuarioModificado);
+                }
+
+                else if (!Regex.IsMatch(usuarioModificado.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+                {
+                    TempData["Error"] = "Operación rechazada: El formato del correo no es válido (ejemplo: usuario@dominio.com).";
+                    return View(usuarioModificado);
                 }
 
                 var resultado = coleccionUsuarios.ReplaceOne(filtro, usuarioModificado);

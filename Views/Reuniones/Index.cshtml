@@ -3,6 +3,7 @@
 @{
     ViewBag.Title = "Gestionar Reuniones";
     string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+    int idUsuarioLogueado = Session["IdUsuario"] != null ? (int)Session["IdUsuario"] : 0;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
@@ -85,60 +86,99 @@
                     bool tieneAsistencias = r.InvestigadoresConvocados != null && r.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmado");
 
                     bool faltanMenosDe2Horas = false;
+                    bool yaPasoOEmpezo = false;
+
                     if (DateTime.TryParse(r.FechaReunion + " " + r.HoraInicio, out DateTime fechaHoraInicio))
                     {
                         double diffHoras = (fechaHoraInicio - DateTime.Now).TotalHours;
-                        if (diffHoras >= 0 && diffHoras < 2)
+                        if (diffHoras >= 0 && diffHoras < 2) { faltanMenosDe2Horas = true; }
+                        if (diffHoras < 0) { yaPasoOEmpezo = true; }
+                    }
+
+                    // APLICAMOS LA REGLA A AMBOS: Si faltan menos de 2h, o ya pasó, se bloquean tanto Modificar como Cancelar
+                    bool puedeModificar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas && !yaPasoOEmpezo;
+                    bool puedeCancelar = estadoValido && !faltanMenosDe2Horas && !yaPasoOEmpezo;
+
+                    // Extraer la asistencia particular de este usuario si es investigador
+                    string miAsistencia = "Pendiente";
+                    if (rolActual == "Investigador" || rolActual == "Estudiante")
+                    {
+                        var miRegistro = r.InvestigadoresConvocados.FirstOrDefault(i => i.IdReal == (int)Session["IdUsuario"]);
+                        if (miRegistro != null && !string.IsNullOrEmpty(miRegistro.EstadoAsistencia))
                         {
-                            faltanMenosDe2Horas = true;
+                            miAsistencia = miRegistro.EstadoAsistencia;
                         }
                     }
 
-                    bool puedeModificar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas;
-                    bool puedeCancelar = estadoValido;
-
                     <tr>
-                        <td class="ps-3 fw-medium">
-                            <span class="data-idReunion">@r.IdReunion</span>
-                            <span class="data-motivoReunion d-none">@r.MotivoReunion</span>
-                            <span class="data-idLider d-none">@r.IdLider</span>
-                        </td>
+                        <td class="ps-3 fw-medium data-idReunion">@r.IdReunion</td>
                         <td class="fw-bold text-primary">
                             <i class="bi bi-calendar3"></i> <span class="data-fechaReunion">@r.FechaReunion</span> <br />
-                            <small class="text-dark"><i class="bi bi-clock"></i> <span class="data-horaInicio">@r.HoraInicio</span> - @r.HoraFin</small>
+                            <small class="text-dark"><i class="bi bi-clock"></i> @r.HoraInicio - @r.HoraFin</small>
                         </td>
                         <td class="data-lugarReunion">@r.LugarReunion</td>
-                        <td>
+                        <td class="data-estadoReunion">
                             @if (r.EstadoReunion == "Cancelado")
-                            {<span class="badge bg-danger data-estadoReunion">@r.EstadoReunion</span> }
+                            {<span class="badge bg-danger">@r.EstadoReunion</span> }
                         else if (r.EstadoReunion == "Finalizada")
-                        { <span class="badge bg-success data-estadoReunion">@r.EstadoReunion</span> }
+                        { <span class="badge bg-success">@r.EstadoReunion</span> }
                     else
-                    { <span class="badge bg-info text-dark data-estadoReunion">@r.EstadoReunion</span>}
+                    { <span class="badge bg-info text-dark">@r.EstadoReunion</span>}
                         </td>
 
-                        <td class="text-center">
-                            <div class="btn-group shadow-sm">
-                                @if (puedeModificar)
-                                {
-                                    <a href="@Url.Action("Modificar", "Reuniones", new { id = r.IdReunion })" class="btn btn-sm btn-outline-primary" title="Modificar">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </a>
-                                }
+                        @if (rolActual == "Investigador" || rolActual == "Estudiante")
+                        {
+                            <td class="text-center">
+                                @if (miAsistencia == "Confirmado")
+                                {<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Asistiré</span> }
+                                else if (miAsistencia == "Conflicto")
+                                { <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Conflicto</span> }
                                 else
-                                {
-                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Bloqueado por reglas de negocio"><i class="bi bi-lock-fill"></i></button>
-                                }
+                                { <span class="badge bg-secondary"><i class="bi bi-hourglass-split me-1"></i> Pendiente</span>}
+                            </td>
+                        }
 
-                                @if (puedeCancelar)
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-2 shadow-sm rounded p-1">
+                                @if (rolActual == "Investigador" || rolActual == "Estudiante")
                                 {
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar" onclick="confirmarCancelacion(@r.IdReunion)">
-                                        <i class="bi bi-x-circle"></i>
-                                    </button>
+                                    if (estadoValido && !yaPasoOEmpezo && !faltanMenosDe2Horas)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar Asistencia" onclick="responderAsistencia(@r.IdReunion, 'Confirmado')"><i class="bi bi-check-lg"></i></button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Reportar Conflicto de Horario" onclick="responderAsistencia(@r.IdReunion, 'Conflicto')"><i class="bi bi-calendar-x"></i></button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" disabled title="Reunión cerrada o muy próxima"><i class="bi bi-lock-fill"></i></button>
+                                    }
                                 }
                                 else
                                 {
-                                    <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-slash-circle"></i></button>
+                                    // BOTÓN MODIFICAR
+                                    if (puedeModificar)
+                                    {
+                                        <a href="@Url.Action("Modificar", "Reuniones", new { id = r.IdReunion })" class="btn btn-sm btn-outline-primary" title="Modificar"><i class="bi bi-pencil-square"></i></a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary border-0" disabled title="No editable"><i class="bi bi-lock-fill fs-5"></i></button>
+                                    }
+
+                                    // BOTÓN CANCELAR (Ahora es ROJO: btn-outline-danger)
+                                    if (puedeCancelar)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar Reunión" onclick="confirmarCancelacion(@r.IdReunion)"><i class="bi bi-x-circle"></i></button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary border-0" disabled title="No cancelable"><i class="bi bi-lock-fill fs-5"></i></button>
+                                    }
+
+                                    // BOTÓN ELIMINAR (Admin)
+                                    if (rolActual == "Administrador" || rolActual == "Admin")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" title="Borrar de la BD" onclick="confirmarEliminacion(@r.IdReunion)"><i class="bi bi-trash"></i></button>
+                                    }
                                 }
                             </div>
                         </td>
@@ -261,17 +301,50 @@
                 text: "Esta acción pasará el estado a 'Cancelado' y liberará el horario de los investigadores.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ffc107',
+                confirmButtonColor: '#dc3545',
                 cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Sí, cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    $.post('@Url.Action("CancelarReunion", "Reuniones")', { id: id }, function(res) {
+
+                    Swal.fire({ title: 'Procesando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                    // Usamos FETCH nativo, así nos libramos del problema de "$" (jQuery)
+                    fetch('@Url.Action("CancelarReunion", "Reuniones")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({ id: id }) // Empaquetamos el ID de forma segura
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Error HTTP: " + response.status);
+                        return response.json();
+                    })
+                    .then(res => {
                         if (res.success) {
-                            window.location.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Cancelada!',
+                                text: 'El estado de la reunión ha sido actualizado.',
+                                confirmButtonColor: '#0284c7'
+                            }).then(() => {
+                                window.location.reload();
+                            });
                         } else {
-                            Swal.fire('Error', res.message, 'error');
+                            // C# manda un rechazo lógico
+                            Swal.fire('Atención', res.message || 'Error desconocido del servidor.', 'warning');
                         }
+                    })
+                    .catch(error => {
+                        // Atrapa si el servidor se cae
+                        console.error("Fallo de red o servidor:", error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            text: 'Hubo un problema comunicándose con el servidor.',
+                            confirmButtonColor: '#dc3545'
+                        });
                     });
                 }
             });

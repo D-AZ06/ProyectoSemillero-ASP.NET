@@ -72,9 +72,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.RolUsuario == "Investigador").ToList();
 
             var colReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+
+           
+            var lugaresUnicos = colReuniones.Distinct<string>("lugarReunion", Builders<DatosReunion>.Filter.Empty).ToList();
+            ViewBag.ListaLugaresExistentes = lugaresUnicos;
+            
+
             var ultimo = colReuniones.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
 
-            // AQUÍ APLICAMOS LA SECUENCIA: Si hay registros >= 600, suma 1. Si no hay, arranca en 600.
+            // Mantiene tu secuencia de la serie 600
             ViewBag.SiguienteIdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
             int idLiderActual = (int)Session["IdUsuario"];
@@ -160,6 +166,13 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return View(model);
                 }
 
+                if (string.IsNullOrWhiteSpace(model.LugarReunion))
+                {
+                    TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
+                    CargarDatosFormulario();
+                    return View(model);
+                }
+
                 var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
 
                 // Asignamos el ID directamente sumando 1 al último encontrado
@@ -202,21 +215,95 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Modificar(DatosReunion model)
+        public ActionResult Modificar(DatosReunion model, int[] investigadoresSeleccionados)
         {
-            string analisisMotivo = ValidarMotivoEstricto(model.MotivoReunion);
-            if (analisisMotivo != "OK")
+            try
             {
-                TempData["Error"] = analisisMotivo;
+                // 1. CANDADO DEL LUGAR (Estrictamente obligatorio)
+                if (string.IsNullOrWhiteSpace(model.LugarReunion))
+                {
+                    TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
+                    CargarDatosFormulario();
+                    return View(model);
+                }
+
+                // 2. REGLA DE LOS DOMINGOS
+                if (DateTime.TryParse(model.FechaReunion, out DateTime fecha) && fecha.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    TempData["Error"] = "Operación rechazada: No se permiten reuniones en domingo.";
+                    CargarDatosFormulario();
+                    return View(model);
+                }
+
+                // 3. CANDADO DEL MOTIVO
+                string analisisMotivo = ValidarMotivoEstricto(model.MotivoReunion);
+                if (analisisMotivo != "OK")
+                {
+                    TempData["Error"] = analisisMotivo;
+                    CargarDatosFormulario();
+                    return View(model);
+                }
+
+                // 4. ACTUALIZAR INVESTIGADORES CONVOCADOS
+                model.InvestigadoresConvocados = new List<InvestigadorConvocado>();
+                if (investigadoresSeleccionados != null && investigadoresSeleccionados.Length > 0)
+                {
+                    var colUsr = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                    foreach (int idInv in investigadoresSeleccionados)
+                    {
+                        var usr = colUsr.Find(u => u.IdUsuario == idInv).FirstOrDefault();
+                        if (usr != null)
+                        {
+                            model.InvestigadoresConvocados.Add(new InvestigadorConvocado { IdInvestigador = usr.IdUsuario, Nombre = usr.NombreUsuario, EstadoAsistencia = "Pendiente" });
+                        }
+                    }
+                }
+                else
+                {
+                    TempData["Error"] = "Debe convocar al menos a un investigador.";
+                    CargarDatosFormulario();
+                    return View(model);
+                }
+
+                // =================================================================
+                // 5. GUARDAR EN LA BASE DE DATOS (DETECTAR REPROGRAMACIÓN)
+                // =================================================================
+                var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+
+                // Rescatamos el registro original antes de sobreescribirlo
+                var original = coleccion.Find(r => r.IdReunion == model.IdReunion).FirstOrDefault();
+                if (original != null)
+                {
+                    // Si cambió la fecha, la hora de inicio o la hora de fin, cambia a "Reprogramado"
+                    if (original.FechaReunion != model.FechaReunion ||
+                        original.HoraInicio != model.HoraInicio ||
+                        original.HoraFin != model.HoraFin)
+                    {
+                        model.EstadoReunion = "Reprogramado";
+                    }
+                    else
+                    {
+                        // Si solo editó el lugar o el motivo, conserva su estado original
+                        model.EstadoReunion = original.EstadoReunion;
+                    }
+                }
+
+                model.IdLider = (int)Session["IdUsuario"];
+
+                // Reemplazamos el documento en MongoDB
+                coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
+
+                coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
+
+                TempData["Exito"] = "Reunión actualizada exitosamente.";
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error crítico de base de datos: " + ex.Message;
                 CargarDatosFormulario();
                 return View(model);
             }
-
-            var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-            coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
-
-            TempData["Exito"] = "Reunión actualizada exitosamente.";
-            return RedirectToAction("Index");
         }
 
         // ==========================================
@@ -225,23 +312,41 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         [HttpPost]
         public JsonResult CancelarReunion(int id)
         {
-            var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-            var reunion = coleccion.Find(r => r.IdReunion == id).FirstOrDefault();
-
-            if (reunion == null) return Json(new { success = false, message = "No encontrada." });
-            if (reunion.EstadoReunion == "Por iniciar" || reunion.EstadoReunion == "En ejecución" || reunion.EstadoReunion == "Finalizada")
+            try
             {
-                return Json(new { success = false, message = "No se puede cancelar una reunión en curso o terminada." });
-            }
+                var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+                var reunion = coleccion.Find(r => r.IdReunion == id).FirstOrDefault();
 
-            reunion.EstadoReunion = "Cancelado";
-            if (reunion.InvestigadoresConvocados != null)
+                if (reunion == null) return Json(new { success = false, message = "La reunión no existe en la BD." });
+
+                // Evaluamos la fecha en tiempo real contra el reloj del servidor
+                if (DateTime.TryParse(reunion.FechaReunion + " " + reunion.HoraInicio, out DateTime inicioReunion))
+                {
+                    if (inicioReunion < DateTime.Now)
+                    {
+                        return Json(new { success = false, message = "No se puede cancelar: La reunión ya comenzó o ya pasó." });
+                    }
+                }
+
+                if (reunion.EstadoReunion == "Por iniciar" || reunion.EstadoReunion == "En ejecución" || reunion.EstadoReunion == "Finalizada")
+                {
+                    return Json(new { success = false, message = "No se puede cancelar una reunión en curso o terminada." });
+                }
+
+                reunion.EstadoReunion = "Cancelado";
+                if (reunion.InvestigadoresConvocados != null)
+                {
+                    foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Conflicto";
+                }
+
+                coleccion.ReplaceOne(r => r.IdReunion == id, reunion);
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
             {
-                foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Conflicto";
+                // Si algo se rompe en C#, le mandamos el chisme completo a la vista
+                return Json(new { success = false, message = "Error del servidor: " + ex.Message });
             }
-
-            coleccion.ReplaceOne(r => r.IdReunion == id, reunion);
-            return Json(new { success = true });
         }
 
         [HttpGet]
