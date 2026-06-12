@@ -1,0 +1,129 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosEvento
+
+@{
+    ViewBag.Title = "Detalle del Evento";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="w-100" style="max-width: 950px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">@Model.NombreEvento</h3>
+            <span class="text-muted"><i class="bi bi-hash"></i> ID Evento: @Model.IdEvento</span>
+        </div>
+        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-left"></i> Volver al listado
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
+                    <h5 class="text-primary fw-bold mb-3"><i class="bi bi-info-circle me-2"></i> Información General</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small d-block">Tipo de Evento</label>
+                            <span class="fw-bold text-dark">@Model.TipoEvento</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small d-block">Modalidad</label>
+                            <span class="badge bg-dark">@Model.Modalidad</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small d-block">Fecha</label>
+                            <span class="fw-bold"><i class="bi bi-calendar-event me-1"></i> @String.Format("{0:dd/MM/yyyy}", Model.FechaEvento)</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small d-block">Horario</label>
+                            <span class="fw-bold"><i class="bi bi-clock me-1"></i> @Model.HoraInicio - @Model.HoraFin</span>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="text-muted small d-block">Lugar</label>
+                        <span class="text-dark"><i class="bi bi-geo-alt-fill text-danger me-1"></i> @Model.LugarEvento</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.EnlaceReunion))
+                    {
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <label class="text-muted small d-block">Enlace de acceso:</label>
+                            <a href="@Model.EnlaceReunion" target="_blank" class="text-primary fw-bold text-decoration-none">
+                                <i class="bi bi-link-45deg"></i> Ir a la reunión
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="text-primary fw-bold mb-3"><i class="bi bi-list-check me-2"></i> Cronograma de Actividades</h5>
+                    <table class="table table-hover border">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Actividad</th>
+                                <th>Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Agenda != null && Model.Agenda.Any())
+                            {
+                                foreach (var act in Model.Agenda)
+                                {
+                                    <tr>
+                                        <td class="fw-bold text-info">@act.Hora</td>
+                                        <td>@act.Actividad</td>
+                                        <td>@act.Ponente</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="3" class="text-muted text-center">No hay actividades registradas.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                    <h6 class="text-secondary fw-bold mb-3"><i class="bi bi-file-earmark-text text-primary me-2"></i> Proyectos Vinculados</h6>
+                    @if (Model.ProyectosParticipantes != null)
+                    {
+                        foreach (var p in Model.ProyectosParticipantes)
+                        {
+                            <div class="d-flex align-items-center mb-2 p-2 border-bottom">
+                                <i class="bi bi-chevron-right text-primary me-2"></i>
+                                <span>@p.TituloProyecto</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-secondary fw-bold mb-3"><i class="bi bi-cash-coin text-success me-2"></i> Patrocinadores</h6>
+                    @if (Model.Patrocinadores != null)
+                    {
+                        foreach (var pat in Model.Patrocinadores)
+                        {
+                            <div class="badge bg-light text-dark border mb-1 d-block text-start p-2">
+                                @pat.NombrePatrocinador <small class="text-muted">(@pat.TipoPatrocinador)</small>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted small">Sin patrocinadores</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

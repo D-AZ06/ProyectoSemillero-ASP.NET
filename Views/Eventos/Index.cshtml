@@ -77,11 +77,11 @@
             <tr>
                 <th scope="col" class="py-3 ps-3">ID</th>
                 <th scope="col" class="py-3">Nombre del Evento</th>
-                <th scope="col" class="py-3">Tipo / Ubicación</th>
-                <th scope="col" class="py-3">Fecha</th>
+                <th scope="col" class="py-3">Tipo / Modalidad</th>
+                <th scope="col" class="py-3">Fecha y Hora</th>
                 <th scope="col" class="py-3">Proyectos Vinculados</th>
                 <th scope="col" class="py-3">Patrocinadores</th>
-                <th scope="col" class="py-3 text-center" style="min-width: 130px;">Acciones</th>
+                <th scope="col" class="py-3 text-center" style="min-width: 140px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -92,16 +92,44 @@
                     <tr>
                         <td class="ps-3 fw-medium data-idEvento">@evento.IdEvento</td>
                         <td>
-                            <span class="fw-bold text-primary data-nombreEvento">@evento.NombreEvento</span><br />
+                            <span class="fw-bold text-primary data-nombreEvento">@evento.NombreEvento</span>
+
+                            @{
+                                string colorEstado = "bg-primary";
+                                if (evento.Estado == "En curso") { colorEstado = "bg-success"; }
+                                else if (evento.Estado == "Borrador") { colorEstado = "bg-secondary"; }
+                                else if (evento.Estado == "Cancelado") { colorEstado = "bg-danger"; }
+                            }
+                            <span class="badge @colorEstado ms-1" style="font-size: 0.7rem;">@(string.IsNullOrEmpty(evento.Estado) ? "Programado" : evento.Estado)</span>
+                            <br />
+
                             <small class="text-muted"><i class="bi bi-person border-end pe-1 me-1"></i>Org: <span class="data-organizadorEvento">@evento.OrganizadorEvento</span></small>
                         </td>
                         <td>
-                            <span class="badge bg-info text-white mb-1 data-tipoEvento">@evento.TipoEvento</span><br />
+                            <span class="badge bg-info text-white mb-1 data-tipoEvento">@evento.TipoEvento</span>
+
+                            @if (evento.Modalidad == "Virtual")
+                            {
+                                <span class="badge bg-dark text-white mb-1 ms-1"><i class="bi bi-laptop"></i> Virtual</span>
+                            }
+                            else if (evento.Modalidad == "Híbrido")
+                            {
+                                <span class="badge bg-dark text-white mb-1 ms-1"><i class="bi bi-building"></i>+<i class="bi bi-laptop"></i> Híbrido</span>
+                            }
+                            <br />
+
                             <small class="text-dark fw-semibold data-lugarEvento"><i class="bi bi-geo-alt-fill text-danger"></i> @evento.LugarEvento</small>
                         </td>
                         <td class="fw-medium text-secondary">
-                            <i class="bi bi-calendar3 text-primary"></i>
-                            @String.Format("{0:dd/MM/yyyy}", evento.FechaEvento)
+                            <div class="mb-1">
+                                <i class="bi bi-calendar3 text-primary"></i>
+                                @String.Format("{0:dd/MM/yyyy}", evento.FechaEvento)
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(evento.HoraInicio) && !string.IsNullOrEmpty(evento.HoraFin))
+                            {
+                                <small class="text-muted fw-normal"><i class="bi bi-clock text-info"></i> @evento.HoraInicio - @evento.HoraFin</small>
+                            }
                         </td>
 
                         <td>
@@ -141,18 +169,18 @@
                         </td>
 
                         <td class="text-center">
+                            <a href="@Url.Action("Detalle", "Eventos", new { id = evento.IdEvento })" class="btn btn-sm btn-outline-info me-1" title="Ver Detalles y Agenda">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+
                             @if (rolActual != "Investigador")
                             {
-                                <a href="@Url.Action("Modificar", "Eventos", new { id = evento.IdEvento })" class="btn btn-sm btn-outline-primary me-1">
+                                <a href="@Url.Action("Modificar", "Eventos", new { id = evento.IdEvento })" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@evento.IdEvento)">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion(@evento.IdEvento)" title="Eliminar">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            }
-                            else
-                            {
-                                <span class="badge bg-light text-muted">Lectura</span>
                             }
                         </td>
                     </tr>
@@ -224,10 +252,13 @@
             }
         });
 
-        var mensajeExito = '@TempData["Exito"]';
+        // ======= CORRECCIÓN DE MENSAJES (COMILLAS) =======
+        var mensajeExito = '@Html.Raw(TempData["Exito"] != null ? HttpUtility.JavaScriptStringEncode(TempData["Exito"].ToString()) : "")';
         if (mensajeExito) { Swal.fire({ icon: 'success', title: '¡Completado!', text: mensajeExito, confirmButtonColor: '#0284c7' }); }
-        var mensajeError = '@TempData["Error"]';
+
+        var mensajeError = '@Html.Raw(TempData["Error"] != null ? HttpUtility.JavaScriptStringEncode(TempData["Error"].ToString()) : "")';
         if (mensajeError) { Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' }); }
+        // =================================================
 
         function confirmarEliminacion(id) {
             Swal.fire({

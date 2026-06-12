@@ -331,6 +331,7 @@
     <Content Include="Views\Patrocinadores\Index.cshtml" />
     <Content Include="Views\Patrocinadores\Agregar.cshtml" />
     <Content Include="Views\Patrocinadores\Modificar.cshtml" />
+    <Content Include="Views\Eventos\Detalle.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

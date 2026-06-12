@@ -159,9 +159,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 var colProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
                 var colPatrocinadores = conexionDB.Database.GetCollection<DatosPatrocinador>("Patrocinadores");
 
-                // =======================================================
-                // NUEVO: Lógica simplificada de IDs a partir de 700
-                // =======================================================
                 var ultimoEvento = coleccionEventos.Find(Builders<DatosEvento>.Filter.Empty)
                                                    .SortByDescending(e => e.IdEvento)
                                                    .FirstOrDefault();
@@ -174,9 +171,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
                 else
                 {
-                    nuevoEvento.IdEvento = 700; // Valor inicial
+                    nuevoEvento.IdEvento = 700;
                 }
-                // =======================================================
+
+                nuevoEvento.Estado = "Programado";
+                nuevoEvento.Modalidad = "Presencial";
+                nuevoEvento.RequiereInscripcion = false;
+                nuevoEvento.CapacidadMaxima = 0;
+                nuevoEvento.Agenda = new List<ItemAgenda>();
 
                 if (rolUsuario == "Líder")
                 {
@@ -229,13 +231,16 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
+                if (nuevoEvento.Agenda == null)
+                {
+                    nuevoEvento.Agenda = new List<ItemAgenda>();
+                }
+
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
 
-                // Forzar semillero al Líder por seguridad
                 if (rolUsuario == "Líder")
                     nuevoEvento.IdSemillero = (int)Session["IdSemillero"];
 
-                // Vincular proyectos seleccionados
                 nuevoEvento.ProyectosParticipantes = new List<ProyectoParticipante>();
                 if (proyectosSeleccionados != null && proyectosSeleccionados.Length > 0)
                 {
@@ -254,7 +259,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                // Vincular patrocinadores seleccionados desde la creación
                 nuevoEvento.Patrocinadores = new List<DatosPatrocinador>();
                 if (patrocinadoresSeleccionados != null && patrocinadoresSeleccionados.Length > 0)
                 {
@@ -269,9 +273,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                // =======================================================
-                // NUEVO: Verificación antibucle/duplicados al guardar
-                // =======================================================
                 var existeDuplicado = coleccionEventos.Find(e => e.IdEvento == nuevoEvento.IdEvento).Any();
                 if (existeDuplicado)
                 {
@@ -281,7 +282,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                     nuevoEvento.IdEvento = (ultimo != null && ultimo.IdEvento >= 700) ? ultimo.IdEvento + 1 : 700;
                 }
-                // =======================================================
 
                 coleccionEventos.InsertOne(nuevoEvento);
                 TempData["Exito"] = $"Evento '{nuevoEvento.NombreEvento}' registrado con ID: {nuevoEvento.IdEvento}";
@@ -378,6 +378,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 {
                     TempData["Error"] = "No tienes permisos para modificar eventos.";
                     return RedirectToAction("Index");
+                }
+
+                if (eventoModificado.Agenda == null)
+                {
+                    eventoModificado.Agenda = new List<ItemAgenda>();
                 }
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");

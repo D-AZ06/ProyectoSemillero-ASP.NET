@@ -20,6 +20,12 @@
         background-color: #cbd5e1;
         border-radius: 4px;
     }
+
+    .table-agenda th {
+        background-color: #f1f5f9;
+        color: #334155;
+        font-weight: 600;
+    }
 </style>
 
 <div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
@@ -39,7 +45,6 @@
             @using (Html.BeginForm("Modificar", "Eventos", FormMethod.Post, new { id = "formModificarEvento" }))
             {
                 @Html.AntiForgeryToken()
-
                 @Html.HiddenFor(m => m.Id)
 
                 <div class="mb-4 bg-light p-3 rounded-3 border border-primary-subtle">
@@ -50,8 +55,8 @@
                     <small class="text-muted"><i class="bi bi-info-circle-fill text-info mt-2"></i> Este identificador no se puede alterar.</small>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-7 mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-7">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-card-text me-1"></i> Nombre del Evento
                         </label>
@@ -66,7 +71,7 @@
                             }
                         </datalist>
                     </div>
-                    <div class="col-md-5 mb-3">
+                    <div class="col-md-5">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-tags-fill me-1"></i> Tipo de Evento
                         </label>
@@ -83,48 +88,42 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-5 mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-calendar-event-fill me-1"></i> Fecha de Celebración
                         </label>
                         @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-secondary-subtle", @type = "date", @required = "required", id = "FechaEvento", data_fecha_original = Model.FechaEvento })
                         <small class="text-danger fw-semibold d-none" id="errorFecha">No puedes modificarla a una nueva fecha en el pasado.</small>
                     </div>
-                    <div class="col-md-7 mb-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación
+                            <i class="bi bi-clock-fill me-1"></i> Hora de Inicio
                         </label>
-                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaLugares", autocomplete = "off", data_tipo = "lugares" })
-                        <datalist id="listaLugares">
-                            @if (ViewBag.LugaresSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.LugaresSugeridos)
-                                {
-                                    <option value="@item"></option>
-                                }
-                            }
-                        </datalist>
+                        @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control border-secondary-subtle", @type = "time", @required = "required", id = "HoraInicio" })
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-clock-history me-1"></i> Hora de Finalización
+                        </label>
+                        @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control border-secondary-subtle", @type = "time", @required = "required", id = "HoraFin" })
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-person-badge-fill me-1"></i> Organizador Principal
+                            <i class="bi bi-info-square-fill me-1"></i> Estado del Evento
                         </label>
-                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaOrganizadores", autocomplete = "off", data_tipo = "organizadores" })
-                        <datalist id="listaOrganizadores">
-                            @if (ViewBag.OrganizadoresSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.OrganizadoresSugeridos)
-                                {
-                                    <option value="@item"></option>
-                                }
-                            }
-                        </datalist>
+                        @Html.DropDownListFor(m => m.Estado, new SelectList(new[] { "Programado", "Borrador", "En curso", "Finalizado", "Cancelado" }), new { @class = "form-select border-secondary-subtle fw-medium" })
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-globe me-1"></i> Modalidad
+                        </label>
+                        @Html.DropDownListFor(m => m.Modalidad, new SelectList(new[] { "Presencial", "Virtual", "Híbrido" }), new { @class = "form-select border-secondary-subtle fw-medium", id = "selectModalidad" })
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-diagram-3-fill me-1"></i> Semillero Vinculado
                         </label>
@@ -140,6 +139,109 @@
                     </div>
                 </div>
 
+                <div class="mb-3 d-none" id="divEnlaceReunion">
+                    <label class="form-label fw-bold text-primary">
+                        <i class="bi bi-link-45deg me-1"></i> Enlace de la Reunión (Teams / Zoom / Meet)
+                    </label>
+                    @Html.TextBoxFor(m => m.EnlaceReunion, new { @class = "form-control border-primary-subtle", placeholder = "https://ejemplo.com/reunion-semillero", id = "EnlaceReunion" })
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación
+                        </label>
+                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaLugares", autocomplete = "off", data_tipo = "lugares" })
+                        <datalist id="listaLugares">
+                            @if (ViewBag.LugaresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.LugaresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-person-badge-fill me-1"></i> Organizador Principal
+                        </label>
+                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaOrganizadores", autocomplete = "off", data_tipo = "organizadores" })
+                        <datalist id="listaOrganizadores">
+                            @if (ViewBag.OrganizadoresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.OrganizadoresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="bi bi-blockquote-left me-1"></i> Descripción del Evento
+                    </label>
+                    @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control border-secondary-subtle", rows = "3", placeholder = "Escribe una breve descripción u objetivos del evento..." })
+                </div>
+
+                <div class="row align-items-center mb-4 bg-light p-3 rounded-3 border border-secondary-subtle">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.RequiereInscripcion, new { @class = "form-check-input", role = "switch", id = "checkInscripcion", style = "cursor:pointer;" })
+                            <label class="form-check-label fw-bold text-dark" for="checkInscripcion" style="cursor:pointer;">¿Requiere Inscripción previa?</label>
+                        </div>
+                        <small class="text-muted">Habilita un control de aforo para los asistentes.</small>
+                    </div>
+                    <div class="col-md-6 d-none" id="divCapacidad">
+                        <label class="form-label fw-bold text-secondary mb-1">Capacidad Máxima (Cupos)</label>
+                        @Html.TextBoxFor(m => m.CapacidadMaxima, new { @class = "form-control bg-white border-secondary-subtle", @type = "number", min = "1", id = "CapacidadMaxima" })
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar3-event text-primary me-1"></i> Cronograma / Agenda del Evento
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" id="btnAgregarActividad">
+                            <i class="bi bi-plus-lg"></i> Añadir Actividad
+                        </button>
+                    </div>
+                    <div class="border rounded-3 p-2 bg-white shadow-sm caja-scroll" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered align-middle mb-0 table-agenda">
+                            <thead>
+                                <tr class="text-center">
+                                    <th style="width: 20%;">Hora</th>
+                                    <th style="width: 50%;">Actividad / Tema</th>
+                                    <th style="width: 25%;">Ponente / Responsable</th>
+                                    <th style="width: 5%;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoAgenda">
+                                @if (Model.Agenda != null && Model.Agenda.Count > 0)
+                                {
+                                    for (int i = 0; i < Model.Agenda.Count; i++)
+                                    {
+                                        <tr class="fila-agenda">
+                                            <td><input type="time" name="Agenda[@i].Hora" class="form-control form-control-sm border-secondary-subtle" value="@Model.Agenda[i].Hora" required /></td>
+                                            <td><input type="text" name="Agenda[@i].Actividad" class="form-control form-control-sm border-secondary-subtle" value="@Model.Agenda[i].Actividad" required placeholder="Ej. Apertura del evento" /></td>
+                                            <td><input type="text" name="Agenda[@i].Ponente" class="form-control form-control-sm border-secondary-subtle" value="@Model.Agenda[i].Ponente" placeholder="Opcional" /></td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-eliminar-actividad"><i class="bi bi-trash3-fill"></i></button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                        <div id="agendaVacia" class="text-muted text-center small p-3 @(Model.Agenda != null && Model.Agenda.Count > 0 ? "d-none" : "")">
+                            No se han definido actividades para la agenda de este evento.
+                        </div>
+                    </div>
+                </div>
+
                 <hr class="text-muted my-4" />
 
                 <div class="row">
@@ -148,7 +250,6 @@
                             <i class="bi bi-journal-code text-primary me-1"></i> Proyectos Participantes <span class="text-danger">*</span>
                         </label>
                         <p class="text-muted small mb-2">Marca las casillas para modificar los proyectos vinculados.</p>
-
                         <div id="contenedorProyectos" class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
                         </div>
                     </div>
@@ -158,7 +259,6 @@
                             <i class="bi bi-award text-info me-1"></i> Patrocinadores Asignados
                         </label>
                         <p class="text-muted small mb-2">Marca las entidades que respaldan económicamente este evento.</p>
-
                         <div class="caja-scroll border border-info-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
                             @if (ViewBag.CatalogoPatrocinadores != null)
                             {
@@ -209,7 +309,6 @@
         const dd = String(hoy.getDate()).padStart(2, '0');
         const fechaMinima = `${yyyy}-${mm}-${dd}`;
 
-        // Lógica para bloquear el calendario visualmente
         let limiteMinimoVisual = fechaMinima;
         if (fechaOriginal && fechaOriginal < fechaMinima) {
             limiteMinimoVisual = fechaOriginal;
@@ -227,6 +326,98 @@
             }
         });
 
+        // ==========================================
+        // CONTROL CONDICIONAL: Modalidad y Enlaces
+        // ==========================================
+        const selectModalidad = document.getElementById('selectModalidad');
+        const divEnlaceReunion = document.getElementById('divEnlaceReunion');
+        const inputEnlace = document.getElementById('EnlaceReunion');
+
+        function toggleModalidad() {
+            if (selectModalidad.value === 'Virtual' || selectModalidad.value === 'Híbrido') {
+                divEnlaceReunion.classList.remove('d-none');
+                inputEnlace.setAttribute('required', 'required');
+            } else {
+                divEnlaceReunion.classList.add('d-none');
+                inputEnlace.removeAttribute('required');
+                inputEnlace.value = '';
+            }
+        }
+        selectModalidad.addEventListener('change', toggleModalidad);
+        toggleModalidad(); // Control inicial al cargar
+
+        // ==========================================
+        // CONTROL CONDICIONAL: Inscripción y Cupos
+        // ==========================================
+        const checkInscripcion = document.getElementById('checkInscripcion');
+        const divCapacidad = document.getElementById('divCapacidad');
+        const inputCapacidad = document.getElementById('CapacidadMaxima');
+
+        function toggleInscripcion() {
+            if (checkInscripcion.checked) {
+                divCapacidad.classList.remove('d-none');
+                inputCapacidad.setAttribute('required', 'required');
+                if(inputCapacidad.value == '0') inputCapacidad.value = '1';
+            } else {
+                divCapacidad.classList.add('d-none');
+                inputCapacidad.removeAttribute('required');
+                inputCapacidad.value = '0';
+            }
+        }
+        checkInscripcion.addEventListener('change', toggleInscripcion);
+        toggleInscripcion(); // Control inicial
+
+        // ==========================================
+        // CONTROL DINÁMICO: Agenda / Cronograma
+        // ==========================================
+        const btnAgregarActividad = document.getElementById('btnAgregarActividad');
+        const cuerpoAgenda = document.getElementById('cuerpoAgenda');
+        const agendaVacia = document.getElementById('agendaVacia');
+
+        function verificarAgendaVacia() {
+            if (cuerpoAgenda.children.length === 0) {
+                agendaVacia.classList.remove('d-none');
+            } else {
+                agendaVacia.classList.add('d-none');
+            }
+        }
+
+        function reindexarAgenda() {
+            const filas = cuerpoAgenda.querySelectorAll('.fila-agenda');
+            filas.forEach((fila, index) => {
+                fila.querySelector('input[name$=".Hora"]').setAttribute('name', `Agenda[${index}].Hora`);
+                fila.querySelector('input[name$=".Actividad"]').setAttribute('name', `Agenda[${index}].Actividad`);
+                fila.querySelector('input[name$=".Ponente"]').setAttribute('name', `Agenda[${index}].Ponente`);
+            });
+            verificarAgendaVacia();
+        }
+
+        btnAgregarActividad.addEventListener('click', function() {
+            const index = cuerpoAgenda.children.length;
+            const nuevaFila = `
+                <tr class="fila-agenda">
+                    <td><input type="time" name="Agenda[${index}].Hora" class="form-control form-control-sm border-secondary-subtle" required /></td>
+                    <td><input type="text" name="Agenda[${index}].Actividad" class="form-control form-control-sm border-secondary-subtle" required placeholder="Ej. Exposición de adelantos" /></td>
+                    <td><input type="text" name="Agenda[${index}].Ponente" class="form-control form-control-sm border-secondary-subtle" placeholder="Opcional" /></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-eliminar-actividad"><i class="bi bi-trash3-fill"></i></button>
+                    </td>
+                </tr>`;
+            cuerpoAgenda.insertAdjacentHTML('beforeend', nuevaFila);
+            verificarAgendaVacia();
+        });
+
+        cuerpoAgenda.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-eliminar-actividad') || e.target.closest('.btn-eliminar-actividad')) {
+                const fila = e.target.closest('.fila-agenda');
+                fila.remove();
+                reindexarAgenda();
+            }
+        });
+
+        // ==========================================
+        // PROYECTOS Y AUTOCOMPLETADOS (Existentes)
+        // ==========================================
         const selectSemillero = document.getElementById('IdSemillero');
         const contenedorProyectos = document.getElementById('contenedorProyectos');
 
@@ -296,10 +487,8 @@
             input.addEventListener('blur', function() {
                 const valorIngresado = normalizar(this.value);
                 if (!valorIngresado) return;
-
                 const tipoDiccionario = this.getAttribute('data-tipo');
                 const lista = diccionarios[tipoDiccionario];
-
                 const coincidencia = lista.find(item => normalizar(item) === valorIngresado);
 
                 if (coincidencia && coincidencia !== this.value.trim()) {
@@ -311,7 +500,17 @@
             });
         });
 
+        // Validaciones previas al submit
         document.getElementById('formModificarEvento').addEventListener('submit', function (e) {
+            const hInicio = document.getElementById('HoraInicio').value;
+            const hFin = document.getElementById('HoraFin').value;
+
+            if(hInicio && hFin && hFin <= hInicio) {
+                e.preventDefault();
+                Swal.fire({ icon: 'error', title: 'Horario Inválido', text: 'La hora de finalización debe ser estrictamente posterior a la hora de inicio.', confirmButtonColor: '#dc3545' });
+                return;
+            }
+
             if(!inputFecha.value || (inputFecha.value < fechaMinima && inputFecha.value !== fechaOriginal)) {
                 e.preventDefault();
                 inputFecha.focus();
@@ -321,351 +520,7 @@
             const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
             if (proyectosSeleccionados.length === 0) {
                 e.preventDefault();
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Proyectos Requeridos',
-                    text: 'Es obligatorio mantener al menos un proyecto participante para este evento.',
-                    confirmButtonColor: '#ffc107'
-                });
-                return;
-            }
-
-            const btn = document.getElementById('btnGuardarEvento');
-            setTimeout(() => {
-                btn.disabled = true;
-                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Actualizando...`;
-            }, 10);
-        });
-    </script>
-}@model ProyectoSemillero_ASP.NET.Models.DatosEvento
-
-@{
-    ViewBag.Title = "Editar Evento";
-    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
-    string rolUsuario = ViewBag.RolUsuario as string;
-}
-
-<style>
-    body > .container {
-        display: block !important;
-        padding-top: 2rem !important;
-    }
-
-    .caja-scroll::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .caja-scroll::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
-        border-radius: 4px;
-    }
-</style>
-
-<div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
-
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <h3 class="fw-bold text-dark mb-0">
-            <i class="bi bi-pencil-square text-primary me-2"></i> Editar Evento Existente
-        </h3>
-
-        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary fw-bold shadow-sm">
-            <i class="bi bi-arrow-left"></i> Cancelar y Volver
-        </a>
-    </div>
-
-    <div class="card shadow-sm border-0 bg-white">
-        <div class="card-body p-4">
-            @using (Html.BeginForm("Modificar", "Eventos", FormMethod.Post, new { id = "formModificarEvento" }))
-            {
-                @Html.AntiForgeryToken()
-
-                @Html.HiddenFor(m => m.Id)
-
-                <div class="mb-4 bg-light p-3 rounded-3 border border-primary-subtle">
-                    <label class="form-label fw-bold text-primary mb-1">
-                        <i class="bi bi-hash me-1"></i> ID Evento
-                    </label>
-                    @Html.TextBoxFor(m => m.IdEvento, new { @class = "form-control bg-white text-muted fw-semibold", @type = "number", @readonly = "readonly" })
-                    <small class="text-muted"><i class="bi bi-info-circle-fill text-info mt-2"></i> Este identificador no se puede alterar.</small>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-7 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-card-text me-1"></i> Nombre del Evento
-                        </label>
-                        @Html.TextBoxFor(m => m.NombreEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaNombres", autocomplete = "off", data_tipo = "nombres" })
-                        <datalist id="listaNombres">
-                            @if (ViewBag.NombresSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.NombresSugeridos)
-                                {
-                                    <option value="@item"></option>
-}
-                            }
-                        </datalist>
-                    </div>
-                    <div class="col-md-5 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-tags-fill me-1"></i> Tipo de Evento
-                        </label>
-                        @Html.TextBoxFor(m => m.TipoEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaTipos", autocomplete = "off", data_tipo = "tipos" })
-                        <datalist id="listaTipos">
-                            @if (ViewBag.TiposSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.TiposSugeridos)
-                                {
-                                    <option value="@item"></option>
-}
-                            }
-                        </datalist>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-5 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-calendar-event-fill me-1"></i> Fecha de Celebración
-                        </label>
-                        @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-secondary-subtle", @type = "date", @required = "required", id = "FechaEvento", data_fecha_original = Model.FechaEvento })
-                        <small class="text-danger fw-semibold d-none" id="errorFecha">No puedes modificarla a una nueva fecha en el pasado.</small>
-                    </div>
-                    <div class="col-md-7 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación
-                        </label>
-                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaLugares", autocomplete = "off", data_tipo = "lugares" })
-                        <datalist id="listaLugares">
-                            @if (ViewBag.LugaresSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.LugaresSugeridos)
-                                {
-                                    <option value="@item"></option>
-}
-                            }
-                        </datalist>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-person-badge-fill me-1"></i> Organizador Principal
-                        </label>
-                        @Html.TextBoxFor(m => m.OrganizadorEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @list = "listaOrganizadores", autocomplete = "off", data_tipo = "organizadores" })
-                        <datalist id="listaOrganizadores">
-                            @if (ViewBag.OrganizadoresSugeridos != null)
-                            {
-                                foreach (var item in ViewBag.OrganizadoresSugeridos)
-                                {
-                                    <option value="@item"></option>
-}
-                            }
-                        </datalist>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-diagram-3-fill me-1"></i> Semillero Vinculado
-                        </label>
-                        @if (rolUsuario == "Líder")
-                        {
-                            <input type="text" class="form-control bg-light border-secondary-subtle text-muted" value="@ViewBag.NombreSemilleroFijo" readonly />
-                            <input type="hidden" name="IdSemillero" id="IdSemillero" value="@ViewBag.IdSemilleroFijo" />
-                        }
-                        else
-                        {
-                            @Html.DropDownListFor(m => m.IdSemillero, ViewBag.ListaSemilleros as SelectList, "-- Seleccione un Semillero --", new { @class = "form-select border-secondary-subtle fw-medium", @required = "required", id = "IdSemillero" })
-                        }
-                    </div>
-                </div>
-
-                <hr class="text-muted my-4" />
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-dark">
-                            <i class="bi bi-journal-code text-primary me-1"></i> Proyectos Participantes <span class="text-danger">*</span>
-                        </label>
-                        <p class="text-muted small mb-2">Marca las casillas para modificar los proyectos vinculados.</p>
-
-                        <div id="contenedorProyectos" class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-dark">
-                            <i class="bi bi-award text-info me-1"></i> Patrocinadores Asignados
-                        </label>
-                        <p class="text-muted small mb-2">Marca las entidades que respaldan económicamente este evento.</p>
-
-                        <div class="caja-scroll border border-info-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 140px; overflow-y: auto;">
-                            @if (ViewBag.CatalogoPatrocinadores != null)
-                            {
-                                var patrocActuales = Model.Patrocinadores?.Select(p => p.IdPatrocinador).ToList() ?? new List<int>();
-                                foreach (var pat in (List<ProyectoSemillero_ASP.NET.Models.DatosPatrocinador>)ViewBag.CatalogoPatrocinadores)
-                                {
-                                    bool isSelected = patrocActuales.Contains(pat.IdPatrocinador);
-                                    <div class="form-check mb-1">
-                                        <input class="form-check-input border-info" type="checkbox" name="patrocinadoresSeleccionados" value="@pat.IdPatrocinador" id="pat_@pat.IdPatrocinador" @(isSelected ? "checked" : "")>
-                                        <label class="form-check-label text-dark fw-medium" for="pat_@pat.IdPatrocinador" style="cursor: pointer;">
-                                            @pat.NombrePatrocinador <span class="text-muted small">(@pat.TipoPatrocinador)</span>
-                                        </label>
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <div class="text-muted small">No hay patrocinadores registrados en el catálogo.</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 text-end">
-                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarEvento">
-                        <i class="bi bi-arrow-repeat me-1"></i> Guardar Cambios
-                    </button>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        var mensajeError = '@TempData["Error"]';
-        if (mensajeError) {
-            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
-        }
-
-        const inputFecha = document.getElementById('FechaEvento');
-        const errorFecha = document.getElementById('errorFecha');
-        const fechaOriginal = inputFecha.getAttribute('data-fecha-original');
-
-        const hoy = new Date();
-        const yyyy = hoy.getFullYear();
-        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dd = String(hoy.getDate()).padStart(2, '0');
-        const fechaMinima = `${yyyy}-${mm}-${dd}`;
-
-        // Lógica para bloquear el calendario visualmente
-        let limiteMinimoVisual = fechaMinima;
-        if (fechaOriginal && fechaOriginal < fechaMinima) {
-            limiteMinimoVisual = fechaOriginal;
-        }
-        inputFecha.setAttribute('min', limiteMinimoVisual);
-
-        inputFecha.addEventListener('change', function() {
-            if(this.value && this.value < fechaMinima && this.value !== fechaOriginal) {
-                this.classList.add('border-danger');
-                errorFecha.classList.remove('d-none');
-                this.value = fechaOriginal;
-            } else {
-                this.classList.remove('border-danger');
-                errorFecha.classList.add('d-none');
-            }
-        });
-
-        const selectSemillero = document.getElementById('IdSemillero');
-        const contenedorProyectos = document.getElementById('contenedorProyectos');
-
-        const proyectosDisponibles = [
-            @if(ViewBag.ListaProyectos != null) {
-                foreach(var p in (List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>)ViewBag.ListaProyectos) {
-                    @Html.Raw($"{{ id: '{p.IdProyecto}', titulo: '{HttpUtility.JavaScriptStringEncode(p.TituloProyecto)}', semillero: '{p.IdSemillero}' }},")
-                }
-            }
-        ];
-
-        const proyectosYaVinculados = [
-            @if(Model.ProyectosParticipantes != null) {
-                foreach(var pp in Model.ProyectosParticipantes) {
-                    @Html.Raw($"'{pp.IdProyecto}',")
-                }
-            }
-        ];
-
-        function actualizarProyectos() {
-            if(!selectSemillero) return;
-            const semilleroSeleccionado = selectSemillero.value;
-            contenedorProyectos.innerHTML = '';
-
-            if(!semilleroSeleccionado) {
-                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">-- Seleccione un semillero primero --</div>';
-                return;
-            }
-
-            const filtrados = proyectosDisponibles.filter(p => p.semillero === semilleroSeleccionado);
-
-            if(filtrados.length === 0) {
-                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">No hay proyectos registrados en este semillero.</div>';
-            } else {
-                filtrados.forEach(p => {
-                    const isSelected = proyectosYaVinculados.includes(p.id) ? 'checked' : '';
-                    const chkHTML = `
-                        <div class="form-check mb-1">
-                            <input class="form-check-input border-primary" type="checkbox" name="proyectosSeleccionados" value="${p.id}" id="proy_${p.id}" ${isSelected}>
-                            <label class="form-check-label text-dark fw-medium" for="proy_${p.id}" style="cursor: pointer;">
-                                ID: ${p.id} - ${p.titulo}
-                            </label>
-                        </div>
-                    `;
-                    contenedorProyectos.insertAdjacentHTML('beforeend', chkHTML);
-                });
-            }
-        }
-
-        if(selectSemillero) {
-            selectSemillero.addEventListener('change', actualizarProyectos);
-            actualizarProyectos();
-        }
-
-        const diccionarios = {
-            nombres: [ @if(ViewBag.NombresSugeridos != null) { foreach(var n in ViewBag.NombresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(n)}\",") } } ],
-            tipos: [ @if(ViewBag.TiposSugeridos != null) { foreach(var t in ViewBag.TiposSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(t)}\",") } } ],
-            lugares: [ @if(ViewBag.LugaresSugeridos != null) { foreach(var l in ViewBag.LugaresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(l)}\",") } } ],
-            organizadores: [ @if(ViewBag.OrganizadoresSugeridos != null) { foreach(var o in ViewBag.OrganizadoresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(o)}\",") } } ]
-        };
-
-        function normalizar(texto) {
-            return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
-        }
-
-        document.querySelectorAll('.autocompletar').forEach(input => {
-            input.addEventListener('blur', function() {
-                const valorIngresado = normalizar(this.value);
-                if (!valorIngresado) return;
-
-                const tipoDiccionario = this.getAttribute('data-tipo');
-                const lista = diccionarios[tipoDiccionario];
-
-                const coincidencia = lista.find(item => normalizar(item) === valorIngresado);
-
-                if (coincidencia && coincidencia !== this.value.trim()) {
-                    this.value = coincidencia;
-                    Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 }).fire({
-                        icon: 'info', title: 'Estandarizado', text: `Auto-corregido a "${coincidencia}"`
-                    });
-                }
-            });
-        });
-
-        document.getElementById('formModificarEvento').addEventListener('submit', function (e) {
-            if(!inputFecha.value || (inputFecha.value < fechaMinima && inputFecha.value !== fechaOriginal)) {
-                e.preventDefault();
-                inputFecha.focus();
-                return;
-            }
-
-            const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
-            if (proyectosSeleccionados.length === 0) {
-                e.preventDefault();
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Proyectos Requeridos',
-                    text: 'Es obligatorio mantener al menos un proyecto participante para este evento.',
-                    confirmButtonColor: '#ffc107'
-                });
+                Swal.fire({ icon: 'warning', title: 'Proyectos Requeridos', text: 'Es obligatorio mantener al menos un proyecto participante para este evento.', confirmButtonColor: '#ffc107' });
                 return;
             }
 

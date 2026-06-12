@@ -1,6 +1,5 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using System;
 using System.Collections.Generic;
 
 namespace ProyectoSemillero_ASP.NET.Models
@@ -24,6 +23,37 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("fechaEvento")]
         public string FechaEvento { get; set; }
 
+        // =====================================
+        // NUEVOS CAMPOS: Tiempos y Detalles
+        // =====================================
+        [BsonElement("horaInicio")]
+        public string HoraInicio { get; set; }
+
+        [BsonElement("horaFin")]
+        public string HoraFin { get; set; }
+
+        [BsonElement("estado")]
+        public string Estado { get; set; }
+
+        [BsonElement("modalidad")]
+        public string Modalidad { get; set; }
+
+        [BsonElement("enlaceReunion")]
+        public string EnlaceReunion { get; set; }
+
+        [BsonElement("descripcion")]
+        public string Descripcion { get; set; }
+
+        [BsonElement("capacidadMaxima")]
+        public int CapacidadMaxima { get; set; }
+
+        [BsonElement("requiereInscripcion")]
+        public bool RequiereInscripcion { get; set; }
+
+        [BsonElement("agenda")]
+        public List<ItemAgenda> Agenda { get; set; } = new List<ItemAgenda>();
+        // =====================================
+
         [BsonElement("lugarEvento")]
         public string LugarEvento { get; set; }
 
@@ -36,7 +66,6 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("proyectosParticipantes")]
         public List<ProyectoParticipante> ProyectosParticipantes { get; set; } = new List<ProyectoParticipante>();
 
-        // MODIFICADO: Ahora apunta a DatosPatrocinador, que es el modelo global unificado
         [BsonElement("patrocinadores")]
         public List<DatosPatrocinador> Patrocinadores { get; set; } = new List<DatosPatrocinador>();
     }
@@ -51,6 +80,19 @@ namespace ProyectoSemillero_ASP.NET.Models
         public string TituloProyecto { get; set; }
     }
 
-    // NOTA: La clase Patrocinador que estaba aquí ya no es necesaria 
-    // porque usamos directamente 'DatosPatrocinador' del archivo independiente.
+    // =====================================
+    // NUEVA CLASE: Para gestionar la agenda
+    // =====================================
+    [BsonIgnoreExtraElements]
+    public class ItemAgenda
+    {
+        [BsonElement("hora")]
+        public string Hora { get; set; }
+
+        [BsonElement("actividad")]
+        public string Actividad { get; set; }
+
+        [BsonElement("ponente")]
+        public string Ponente { get; set; }
+    }
 }

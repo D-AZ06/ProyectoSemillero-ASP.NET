@@ -20,6 +20,12 @@
         background-color: #cbd5e1;
         border-radius: 4px;
     }
+
+    .table-agenda th {
+        background-color: #f1f5f9;
+        color: #334155;
+        font-weight: 600;
+    }
 </style>
 
 <div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
@@ -48,8 +54,8 @@
                     <small class="text-muted"><i class="bi bi-info-circle-fill text-info mt-2"></i> Este identificador se calcula automáticamente en el sistema.</small>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-7 mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-7">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-card-text me-1"></i> Nombre del Evento
                         </label>
@@ -64,7 +70,7 @@
                             }
                         </datalist>
                     </div>
-                    <div class="col-md-5 mb-3">
+                    <div class="col-md-5">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-tags-fill me-1"></i> Tipo de Evento
                         </label>
@@ -81,15 +87,66 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-5 mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-calendar-event-fill me-1"></i> Fecha de Celebración
                         </label>
                         @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-secondary-subtle", @type = "date", @required = "required", id = "FechaEvento" })
                         <small class="text-danger fw-semibold d-none" id="errorFecha">La fecha no puede ser en el pasado.</small>
                     </div>
-                    <div class="col-md-7 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-clock-fill me-1"></i> Hora de Inicio
+                        </label>
+                        @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control border-secondary-subtle", @type = "time", @required = "required", id = "HoraInicio" })
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-clock-history me-1"></i> Hora de Finalización
+                        </label>
+                        @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control border-secondary-subtle", @type = "time", @required = "required", id = "HoraFin" })
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-info-square-fill me-1"></i> Estado del Evento
+                        </label>
+                        @Html.DropDownListFor(m => m.Estado, new SelectList(new[] { "Programado", "Borrador", "En curso", "Finalizado", "Cancelado" }), new { @class = "form-select border-secondary-subtle fw-medium" })
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-globe me-1"></i> Modalidad
+                        </label>
+                        @Html.DropDownListFor(m => m.Modalidad, new SelectList(new[] { "Presencial", "Virtual", "Híbrido" }), new { @class = "form-select border-secondary-subtle fw-medium", id = "selectModalidad" })
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-diagram-3-fill me-1"></i> Semillero Vinculado
+                        </label>
+                        @if (rolUsuario == "Líder")
+                        {
+                            <input type="text" class="form-control bg-light border-secondary-subtle text-muted" value="@ViewBag.NombreSemilleroFijo" readonly />
+                            <input type="hidden" name="IdSemillero" id="IdSemillero" value="@ViewBag.IdSemilleroFijo" />
+                        }
+                        else
+                        {
+                            @Html.DropDownListFor(m => m.IdSemillero, ViewBag.ListaSemilleros as SelectList, "-- Seleccione un Semillero --", new { @class = "form-select border-secondary-subtle fw-medium", @required = "required", id = "IdSemillero" })
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3 d-none" id="divEnlaceReunion">
+                    <label class="form-label fw-bold text-primary">
+                        <i class="bi bi-link-45deg me-1"></i> Enlace de la Reunión (Teams / Zoom / Meet)
+                    </label>
+                    @Html.TextBoxFor(m => m.EnlaceReunion, new { @class = "form-control border-primary-subtle", placeholder = "https://ejemplo.com/reunion-semillero", id = "EnlaceReunion" })
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación
                         </label>
@@ -104,10 +161,7 @@
                             }
                         </datalist>
                     </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6">
                         <label class="form-label fw-bold text-secondary">
                             <i class="bi bi-person-badge-fill me-1"></i> Organizador Principal
                         </label>
@@ -122,19 +176,40 @@
                             }
                         </datalist>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-secondary">
-                            <i class="bi bi-diagram-3-fill me-1"></i> Semillero Vinculado
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="bi bi-blockquote-left me-1"></i> Descripción del Evento
+                    </label>
+                    @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control border-secondary-subtle", rows = "3", placeholder = "Escribe una breve descripción u objetivos del evento..." })
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar3-event text-primary me-1"></i> Cronograma / Agenda del Evento
                         </label>
-                        @if (rolUsuario == "Líder")
-                        {
-                            <input type="text" class="form-control bg-light border-secondary-subtle text-muted" value="@ViewBag.NombreSemilleroFijo" readonly />
-                            <input type="hidden" name="IdSemillero" id="IdSemillero" value="@ViewBag.IdSemilleroFijo" />
-                        }
-                        else
-                        {
-                            @Html.DropDownListFor(m => m.IdSemillero, ViewBag.ListaSemilleros as SelectList, "-- Seleccione un Semillero --", new { @class = "form-select border-secondary-subtle fw-medium", @required = "required", id = "IdSemillero" })
-                        }
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" id="btnAgregarActividad">
+                            <i class="bi bi-plus-lg"></i> Añadir Actividad
+                        </button>
+                    </div>
+                    <div class="border rounded-3 p-2 bg-white shadow-sm caja-scroll" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered align-middle mb-0 table-agenda">
+                            <thead>
+                                <tr class="text-center">
+                                    <th style="width: 20%;">Hora</th>
+                                    <th style="width: 50%;">Actividad / Tema</th>
+                                    <th style="width: 25%;">Ponente / Responsable</th>
+                                    <th style="width: 5%;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoAgenda">
+                            </tbody>
+                        </table>
+                        <div id="agendaVacia" class="text-muted text-center small p-3">
+                            No se han definido actividades para la agenda de este evento.
+                        </div>
                     </div>
                 </div>
 
@@ -189,12 +264,17 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         var mensajeError = '@TempData["Error"]';
         if (mensajeError) {
             Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
         }
 
+        // ==========================================
+        // MANEJO SEGURO DE FECHA
+        // ==========================================
         const inputFecha = document.getElementById('FechaEvento');
         const errorFecha = document.getElementById('errorFecha');
 
@@ -204,19 +284,100 @@
         const dd = String(hoy.getDate()).padStart(2, '0');
         const fechaMinima = `${yyyy}-${mm}-${dd}`;
 
-        inputFecha.setAttribute('min', fechaMinima);
+        if (inputFecha) {
+            inputFecha.setAttribute('min', fechaMinima);
 
-        inputFecha.addEventListener('change', function() {
-            if(this.value && this.value < fechaMinima) {
-                this.classList.add('border-danger');
-                errorFecha.classList.remove('d-none');
-                this.value = '';
+            inputFecha.addEventListener('change', function() {
+                if(this.value && this.value < fechaMinima) {
+                    this.classList.add('border-danger');
+                    if(errorFecha) errorFecha.classList.remove('d-none');
+                    this.value = '';
+                } else {
+                    this.classList.remove('border-danger');
+                    if(errorFecha) errorFecha.classList.add('d-none');
+                }
+            });
+        }
+
+        // ==========================================
+        // CONTROL CONDICIONAL: Modalidad y Enlaces
+        // ==========================================
+        const selectModalidad = document.getElementById('selectModalidad');
+        const divEnlaceReunion = document.getElementById('divEnlaceReunion');
+        const inputEnlace = document.getElementById('EnlaceReunion');
+
+        function toggleModalidad() {
+            if (!selectModalidad || !divEnlaceReunion || !inputEnlace) return;
+
+            if (selectModalidad.value === 'Virtual' || selectModalidad.value === 'Híbrido') {
+                divEnlaceReunion.classList.remove('d-none');
+                inputEnlace.setAttribute('required', 'required');
             } else {
-                this.classList.remove('border-danger');
-                errorFecha.classList.add('d-none');
+                divEnlaceReunion.classList.add('d-none');
+                inputEnlace.removeAttribute('required');
+                inputEnlace.value = '';
             }
-        });
+        }
+        if(selectModalidad) {
+            selectModalidad.addEventListener('change', toggleModalidad);
+            toggleModalidad();
+        }
 
+        // ==========================================
+        // CONTROL DINÁMICO: Agenda / Cronograma
+        // ==========================================
+        const btnAgregarActividad = document.getElementById('btnAgregarActividad');
+        const cuerpoAgenda = document.getElementById('cuerpoAgenda');
+        const agendaVacia = document.getElementById('agendaVacia');
+
+        function verificarAgendaVacia() {
+            if (!cuerpoAgenda || !agendaVacia) return;
+            if (cuerpoAgenda.children.length === 0) {
+                agendaVacia.classList.remove('d-none');
+            } else {
+                agendaVacia.classList.add('d-none');
+            }
+        }
+
+        function reindexarAgenda() {
+            if (!cuerpoAgenda) return;
+            const filas = cuerpoAgenda.querySelectorAll('.fila-agenda');
+            filas.forEach((fila, index) => {
+                fila.querySelector('input[name$=".Hora"]').setAttribute('name', `Agenda[${index}].Hora`);
+                fila.querySelector('input[name$=".Actividad"]').setAttribute('name', `Agenda[${index}].Actividad`);
+                fila.querySelector('input[name$=".Ponente"]').setAttribute('name', `Agenda[${index}].Ponente`);
+            });
+            verificarAgendaVacia();
+        }
+
+        if(btnAgregarActividad && cuerpoAgenda) {
+            btnAgregarActividad.addEventListener('click', function() {
+                const index = cuerpoAgenda.children.length;
+                const nuevaFila = `
+                    <tr class="fila-agenda">
+                        <td><input type="time" name="Agenda[${index}].Hora" class="form-control form-control-sm border-secondary-subtle" required /></td>
+                        <td><input type="text" name="Agenda[${index}].Actividad" class="form-control form-control-sm border-secondary-subtle" required placeholder="Ej. Exposición de adelantos" /></td>
+                        <td><input type="text" name="Agenda[${index}].Ponente" class="form-control form-control-sm border-secondary-subtle" placeholder="Opcional" /></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-eliminar-actividad"><i class="bi bi-trash3-fill"></i></button>
+                        </td>
+                    </tr>`;
+                cuerpoAgenda.insertAdjacentHTML('beforeend', nuevaFila);
+                verificarAgendaVacia();
+            });
+
+            cuerpoAgenda.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-eliminar-actividad') || e.target.closest('.btn-eliminar-actividad')) {
+                    const fila = e.target.closest('.fila-agenda');
+                    fila.remove();
+                    reindexarAgenda();
+                }
+            });
+        }
+
+        // ==========================================
+        // PROYECTOS Y AUTOCOMPLETADOS
+        // ==========================================
         const selectSemillero = document.getElementById('IdSemillero');
         const contenedorProyectos = document.getElementById('contenedorProyectos');
 
@@ -229,7 +390,7 @@
         ];
 
         function actualizarProyectos() {
-            if(!selectSemillero) return;
+            if(!selectSemillero || !contenedorProyectos) return;
             const semilleroSeleccionado = selectSemillero.value;
             contenedorProyectos.innerHTML = '';
 
@@ -292,35 +453,50 @@
             });
         });
 
-        // Validación final y Loader
-        document.getElementById('formAgregarEvento').addEventListener('submit', function (e) {
-            // Validar que la fecha sea correcta
-            if(!inputFecha.value || inputFecha.value < fechaMinima) {
-                e.preventDefault();
-                inputFecha.focus();
-                return;
-            }
+        // ==========================================
+        // VALIDACIÓN FINAL Y ENVÍO
+        // ==========================================
+        const formAgregar = document.getElementById('formAgregarEvento');
+        if (formAgregar) {
+            formAgregar.addEventListener('submit', function (e) {
+                const hInicio = document.getElementById('HoraInicio') ? document.getElementById('HoraInicio').value : null;
+                const hFin = document.getElementById('HoraFin') ? document.getElementById('HoraFin').value : null;
 
-            // Validar que haya al menos un proyecto seleccionado (OBLIGATORIO)
-            const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
-            if (proyectosSeleccionados.length === 0) {
-                e.preventDefault();
+                // Validar horas lógicas
+                if(hInicio && hFin && hFin <= hInicio) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Horario Inválido', text: 'La hora de finalización debe ser estrictamente posterior a la hora de inicio.', confirmButtonColor: '#dc3545' });
+                    return;
+                }
 
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Proyectos Requeridos',
-                    text: 'Es obligatorio vincular al menos un proyecto participante para poder programar este evento.',
-                    confirmButtonColor: '#ffc107'
-                });
-                return;
-            }
+                // Validar fecha
+                if(inputFecha && (!inputFecha.value || inputFecha.value < fechaMinima)) {
+                    e.preventDefault();
+                    inputFecha.focus();
+                    return;
+                }
 
-            // Mostrar loader si todo está perfecto
-            const btn = document.getElementById('btnGuardarEvento');
-            setTimeout(() => {
-                btn.disabled = true;
-                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando Evento...`;
-            }, 10);
-        });
+                // Validar proyectos (OBLIGATORIO)
+                const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
+                if (proyectosSeleccionados.length === 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Proyectos Requeridos',
+                        text: 'Es obligatorio vincular al menos un proyecto participante para poder programar este evento.',
+                        confirmButtonColor: '#ffc107'
+                    });
+                    return;
+                }
+
+                const btn = document.getElementById('btnGuardarEvento');
+                if (btn) {
+                    setTimeout(() => {
+                        btn.disabled = true;
+                        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando Evento...`;
+                    }, 10);
+                }
+            });
+        }
     </script>
 }
