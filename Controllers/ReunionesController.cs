@@ -13,15 +13,43 @@ namespace ProyectoSemillero_ASP.NET.Controllers
     {
         private Conexion conexionDB = new Conexion();
 
-        // ==========================================
-        // 1. LISTADO Y FILTROS (ACTUALIZADO PARA FILTRAR POR TODO)
-        // ==========================================
         public ActionResult Index(string tipoFiltro, string valorFiltro)
         {
             if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
             string rolUsuario = Session["Rol"].ToString();
 
             var coleccionReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+
+            var todasLasReuniones = coleccionReuniones.Find(new BsonDocument()).ToList();
+            DateTime ahora = DateTime.Now;
+
+            foreach (var r in todasLasReuniones)
+            {
+                if (r.EstadoReunion == "Programada" || r.EstadoReunion == "Reprogramada" || r.EstadoReunion == "En ejecución")
+                {
+                    if (DateTime.TryParse(r.FechaReunion + " " + r.HoraInicio, out DateTime inicio) &&
+                        DateTime.TryParse(r.FechaReunion + " " + r.HoraFin, out DateTime fin))
+                    {
+                        string estadoCorrecto = r.EstadoReunion;
+
+                        if (ahora > fin)
+                        {
+                            estadoCorrecto = "Terminada";
+                        }
+                        else if (ahora >= inicio && ahora <= fin)
+                        {
+                            estadoCorrecto = "En ejecución";
+                        }
+
+                        if (estadoCorrecto != r.EstadoReunion)
+                        {
+                            r.EstadoReunion = estadoCorrecto;
+                            coleccionReuniones.ReplaceOne(x => x.IdReunion == r.IdReunion, r);
+                        }
+                    }
+                }
+            }
+
             var builder = Builders<DatosReunion>.Filter;
             FilterDefinition<DatosReunion> filtroSeguridad = builder.Empty;
 
@@ -44,13 +72,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     case "idReunion":
                         if (int.TryParse(valorFiltro, out int idReu)) filtroBusqueda = builder.Eq(r => r.IdReunion, idReu);
                         break;
-                    
                     case "fechaReunion":
                     case "estadoReunion":
                     case "lugarReunion":
                     case "motivoReunion":
                     case "horaInicio":
-                    case "horaFin": 
+                    case "horaFin":
                         filtroBusqueda = builder.Regex(tipoFiltro, new BsonRegularExpression(valorFiltro, "i"));
                         break;
                     case "mesReunion":
@@ -65,29 +92,22 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return View(lista);
         }
 
-
         private void CargarDatosFormulario()
         {
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
             ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.RolUsuario == "Investigador").ToList();
 
             var colReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-
-           
             var lugaresUnicos = colReuniones.Distinct<string>("lugarReunion", Builders<DatosReunion>.Filter.Empty).ToList();
             ViewBag.ListaLugaresExistentes = lugaresUnicos;
-            
 
             var ultimo = colReuniones.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
-
-            // Mantiene tu secuencia de la serie 600
             ViewBag.SiguienteIdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
             int idLiderActual = (int)Session["IdUsuario"];
             var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
             ViewBag.NombreLider = liderDb != null ? liderDb.NombreUsuario : "Desconocido";
         }
-
 
         [HttpGet]
         public ActionResult Agregar()
@@ -96,24 +116,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             CargarDatosFormulario();
 
-            // 1. Buscamos al líder en la base de datos
             int idLiderActual = (int)Session["IdUsuario"];
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
             var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
 
-            // 2. AQUÍ ESTÁ LA MAGIA ANTIBALAS PARA EL ERROR DEL INT?
             int semilleroIdSeguro = 0;
             if (liderDb != null && liderDb.IdSemillero != null)
             {
-                // Forzamos la conversión a entero puro para que C# no se asuste
                 semilleroIdSeguro = Convert.ToInt32(liderDb.IdSemillero);
             }
 
-            // 3. Pasamos los datos seguros al ViewBag para la vista
             ViewBag.IdLider = idLiderActual;
             ViewBag.IdSemillero = semilleroIdSeguro;
 
-            // 4. Armamos el modelo inicializando con los enteros puros
             var modeloNuevo = new DatosReunion
             {
                 IdLider = idLiderActual,
@@ -154,7 +169,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         var usr = colUsr.Find(u => u.IdUsuario == idInv).FirstOrDefault();
                         if (usr != null)
                         {
-                            // Lo guardamos asegurando el nombre de campo principal
                             model.InvestigadoresConvocados.Add(new InvestigadorConvocado { IdInvestigador = usr.IdUsuario, Nombre = usr.NombreUsuario, EstadoAsistencia = "Pendiente" });
                         }
                     }
@@ -174,11 +188,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-
-                // Asignamos el ID directamente sumando 1 al último encontrado
                 var ultimo = coleccion.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
-                model.IdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
+                model.IdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
                 model.EstadoReunion = "Programada";
                 model.IdLider = (int)Session["IdUsuario"];
 
@@ -194,7 +206,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-
         [HttpGet]
         public ActionResult Modificar(int? id)
         {
@@ -203,7 +214,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
             var reunion = coleccion.Find(r => r.IdReunion == id).FirstOrDefault();
 
-            if (reunion == null || (reunion.EstadoReunion != "Programada" && reunion.EstadoReunion != "Reprogramado"))
+            if (reunion == null || (reunion.EstadoReunion != "Programada" && reunion.EstadoReunion != "Reprogramada"))
             {
                 TempData["Error"] = "Esta reunión se encuentra en un estado inalterable.";
                 return RedirectToAction("Index");
@@ -219,7 +230,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         {
             try
             {
-                // 1. CANDADO DEL LUGAR (Estrictamente obligatorio)
                 if (string.IsNullOrWhiteSpace(model.LugarReunion))
                 {
                     TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
@@ -227,7 +237,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return View(model);
                 }
 
-                // 2. REGLA DE LOS DOMINGOS
                 if (DateTime.TryParse(model.FechaReunion, out DateTime fecha) && fecha.DayOfWeek == DayOfWeek.Sunday)
                 {
                     TempData["Error"] = "Operación rechazada: No se permiten reuniones en domingo.";
@@ -235,7 +244,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return View(model);
                 }
 
-                // 3. CANDADO DEL MOTIVO
                 string analisisMotivo = ValidarMotivoEstricto(model.MotivoReunion);
                 if (analisisMotivo != "OK")
                 {
@@ -244,7 +252,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return View(model);
                 }
 
-                // 4. ACTUALIZAR INVESTIGADORES CONVOCADOS
                 model.InvestigadoresConvocados = new List<InvestigadorConvocado>();
                 if (investigadoresSeleccionados != null && investigadoresSeleccionados.Length > 0)
                 {
@@ -265,34 +272,24 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return View(model);
                 }
 
-                // =================================================================
-                // 5. GUARDAR EN LA BASE DE DATOS (DETECTAR REPROGRAMACIÓN)
-                // =================================================================
                 var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-
-                // Rescatamos el registro original antes de sobreescribirlo
                 var original = coleccion.Find(r => r.IdReunion == model.IdReunion).FirstOrDefault();
+
                 if (original != null)
                 {
-                    // Si cambió la fecha, la hora de inicio o la hora de fin, cambia a "Reprogramado"
                     if (original.FechaReunion != model.FechaReunion ||
                         original.HoraInicio != model.HoraInicio ||
                         original.HoraFin != model.HoraFin)
                     {
-                        model.EstadoReunion = "Reprogramado";
+                        model.EstadoReunion = "Reprogramada";
                     }
                     else
                     {
-                        // Si solo editó el lugar o el motivo, conserva su estado original
                         model.EstadoReunion = original.EstadoReunion;
                     }
                 }
 
                 model.IdLider = (int)Session["IdUsuario"];
-
-                // Reemplazamos el documento en MongoDB
-                coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
-
                 coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
 
                 TempData["Exito"] = "Reunión actualizada exitosamente.";
@@ -306,9 +303,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // ==========================================
-        // 4. CANCELAR Y OCUPACIÓN (AJAX)
-        // ==========================================
         [HttpPost]
         public JsonResult CancelarReunion(int id)
         {
@@ -319,7 +313,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (reunion == null) return Json(new { success = false, message = "La reunión no existe en la BD." });
 
-                // Evaluamos la fecha en tiempo real contra el reloj del servidor
                 if (DateTime.TryParse(reunion.FechaReunion + " " + reunion.HoraInicio, out DateTime inicioReunion))
                 {
                     if (inicioReunion < DateTime.Now)
@@ -328,12 +321,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                if (reunion.EstadoReunion == "Por iniciar" || reunion.EstadoReunion == "En ejecución" || reunion.EstadoReunion == "Finalizada")
+                if (reunion.EstadoReunion == "Por iniciar" || reunion.EstadoReunion == "En ejecución" || reunion.EstadoReunion == "Terminada")
                 {
                     return Json(new { success = false, message = "No se puede cancelar una reunión en curso o terminada." });
                 }
 
-                reunion.EstadoReunion = "Cancelado";
+                reunion.EstadoReunion = "Cancelada";
                 if (reunion.InvestigadoresConvocados != null)
                 {
                     foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Conflicto";
@@ -344,7 +337,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
             catch (Exception ex)
             {
-                // Si algo se rompe en C#, le mandamos el chisme completo a la vista
                 return Json(new { success = false, message = "Error del servidor: " + ex.Message });
             }
         }
@@ -355,7 +347,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
             var filtro = Builders<DatosReunion>.Filter.And(
                 Builders<DatosReunion>.Filter.Eq(r => r.FechaReunion, fecha),
-                Builders<DatosReunion>.Filter.Ne(r => r.EstadoReunion, "Cancelado"),
+                Builders<DatosReunion>.Filter.Ne(r => r.EstadoReunion, "Cancelada"),
                 Builders<DatosReunion>.Filter.Ne(r => r.IdReunion, idIgnorar)
             );
 
@@ -370,13 +362,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     TimeSpan inicioBD = TimeSpan.Parse(r.HoraInicio);
                     TimeSpan finBD = TimeSpan.Parse(r.HoraFin);
 
-                    // Verifica si las horas se cruzan
                     if (inicioReq < finBD && finReq > inicioBD)
                     {
                         lugaresOcupados.Add(r.LugarReunion);
                         if (r.InvestigadoresConvocados != null)
                         {
-                            // AQUÍ ESTÁ LA MAGIA: Extraemos el ID sin importar cómo lo llamó MongoDB
                             investigadoresOcupados.AddRange(r.InvestigadoresConvocados.Select(i => i.IdReal));
                         }
                     }
@@ -384,7 +374,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
             return Json(new { lugares = lugaresOcupados.Distinct(), investigadores = investigadoresOcupados.Distinct() }, JsonRequestBehavior.AllowGet);
         }
-
 
         private string ValidarMotivoEstricto(string texto)
         {
