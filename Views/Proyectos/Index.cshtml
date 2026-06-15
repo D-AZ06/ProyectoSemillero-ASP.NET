@@ -49,6 +49,7 @@
                         <option value="mesInicioProyecto">Mes de Inicio</option>
                         <option value="fechaFinProyecto">Fecha Exacta de Fin</option>
                         <option value="mesFinProyecto">Mes de Fin</option>
+                        <option value="estadoProyecto">Estado del Proyecto</option>
                         <option value="idSemillero">ID Semillero</option>
                         <option value="nombreSemillero">Nombre de Semillero</option>
                     </select>
@@ -89,6 +90,7 @@
                 <th scope="col" class="py-3">Descripción</th>
                 <th scope="col" class="py-3">Inicio</th>
                 <th scope="col" class="py-3">Fin</th>
+                <th scope="col" class="py-3">Estado</th>
                 <th scope="col" class="py-3 text-center">Semillero</th>
                 <th scope="col" class="py-3 text-center" style="min-width: 160px;">Acciones</th>
             </tr>
@@ -109,6 +111,34 @@
                         </td>
                         <td class="data-fechaInicioProyecto">@proyecto.FechaInicioProyecto</td>
                         <td class="data-fechaFinProyecto">@proyecto.FechaFinProyecto</td>
+
+                        <td class="data-estadoProyecto">
+                            @{
+                                string claseBadge = "bg-secondary text-white"; // Color por defecto
+
+                                switch (proyecto.Estado)
+                                {
+                                    case "Planeado":
+                                        claseBadge = "bg-primary text-white"; // Azul
+                                        break;
+                                    case "En ejecución":
+                                        claseBadge = "bg-success text-white"; // Verde
+                                        break;
+                                    case "Pausado":
+                                        claseBadge = "bg-warning text-dark"; // Amarillo
+                                        break;
+                                    case "Finalizado":
+                                        claseBadge = "bg-dark text-white"; // Gris oscuro / Negro
+                                        break;
+                                    case "Cancelado":
+                                        claseBadge = "bg-danger text-white"; // Rojo
+                                        break;
+                                }
+                            }
+                            <span class="badge @claseBadge fw-bold px-3 py-2 rounded-pill shadow-sm">
+                                @proyecto.Estado
+                            </span>
+                        </td>
 
                         <td class="text-center data-idSemillero">
                             <span class="badge bg-secondary mb-1">ID: @proyecto.IdSemillero</span><br />
@@ -161,6 +191,7 @@
             tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))],
             objetivoProyecto: [...new Set(Array.from(document.querySelectorAll('.data-objetivoProyecto')).map(el => el.textContent.trim()))],
             descripcionProyecto: [...new Set(Array.from(document.querySelectorAll('.data-descripcionProyecto')).map(el => el.textContent.trim()))],
+            estadoProyecto: [...new Set(Array.from(document.querySelectorAll('.data-estadoProyecto')).map(el => el.textContent.trim()))],
             idSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero span')).map(el => el.textContent.replace('ID: ', '').trim()))],
             nombreSemillero: [...new Set(Array.from(document.querySelectorAll('.data-idSemillero small')).map(el => el.textContent.trim()))]
         };
@@ -188,6 +219,17 @@
             }
             else if (filtroSeleccionado === 'mesInicioProyecto' || filtroSeleccionado === 'mesFinProyecto') {
                 nuevoInput = `<input type="month" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
+            }
+            else if (filtroSeleccionado === 'estadoProyecto') {
+                nuevoInput = `
+                <select class="form-select border-info" id="inputValor" name="valorFiltro" required>
+                    <option value="">Seleccione el estado a buscar...</option>
+                    <option value="Planeado">Planeado</option>
+                    <option value="En ejecución">En ejecución</option>
+                    <option value="Pausado">Pausado</option>
+                    <option value="Finalizado">Finalizado</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>`;
             }
             else {
                 let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idSemillero');

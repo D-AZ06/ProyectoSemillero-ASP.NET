@@ -23,6 +23,12 @@
 
                     <div class="row">
                         <div class="col-md-6">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">ID de Proyecto Asignado (No modificable)</label>
+                                @Html.TextBoxFor(m => m.IdProyecto, new { @class = "form-control bg-light fw-bold", @readonly = "readonly" })
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Título del Proyecto</label>
                                 @Html.TextBoxFor(m => m.TituloProyecto, new { @class = "form-control", required = "required", placeholder = "Ej. Desarrollo de un Sistema Web" })
@@ -64,6 +70,13 @@
                                     <label class="form-label fw-semibold">Fecha de Fin</label>
                                     @Html.TextBoxFor(m => m.FechaFinProyecto, new { @class = "form-control", type = "date", id = "fechaFin", required = "required" })
                                 </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Estado del Proyecto</label>
+                                    <input type="text" class="form-control bg-light text-primary fw-bold" value="Se calculará automáticamente según las fechas" readonly />
+                                    <!-- El estado real se generará en el Controlador -->
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -86,7 +99,11 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
 
-            // --- LÓGICA DE VALIDACIÓN DE FECHAS ---
+            const formProyecto = document.getElementById('form-proyecto');
+            const btnGuardar = formProyecto ? formProyecto.querySelector('button[type="submit"]') : null;
+            const inputTitulo = document.getElementById('TituloProyecto');
+            const inputObjetivo = document.getElementById('ObjetivoProyecto');
+            const inputDescripcion = document.getElementById('DescripcionProyecto');
             const fechaInicio = document.getElementById('fechaInicio');
             const fechaFin = document.getElementById('fechaFin');
 
@@ -101,12 +118,80 @@
 
                 // Evitar que la fecha fin sea anterior a la fecha de inicio seleccionada
                 fechaInicio.addEventListener('change', function () {
-                    fechaFin.setAttribute('min', this.value);
+                    if (this.value) {
+                        // Parsear la fecha seleccionada de forma segura
+                        let partes = this.value.split('-');
+                        let año = parseInt(partes[0]);
+                        let mes = parseInt(partes[1]) - 1; // Los meses en JS van de 0 a 11
+                        let dia = parseInt(partes[2]);
 
-                    // Si la fecha fin actual es menor que la nueva fecha de inicio, la limpiamos
-                    if (fechaFin.value && fechaFin.value < this.value) {
-                        fechaFin.value = '';
+                        let dateInst = new Date(año, mes, dia);
+
+                        // Sumar exactamente 1 mes
+                        dateInst.setMonth(dateInst.getMonth() + 1);
+
+                        // Formatear la nueva fecha a formato YYYY-MM-DD
+                        let yyyy = dateInst.getFullYear();
+                        let mm = String(dateInst.getMonth() + 1).padStart(2, '0');
+                        let dd = String(dateInst.getDate()).padStart(2, '0');
+                        let fechaMinimaFin = `${yyyy}-${mm}-${dd}`;
+
+                        // 1. Bloquear el calendario para que no deje elegir una fecha menor a esa
+                        fechaFin.setAttribute('min', fechaMinimaFin);
+
+                        // 2. Desplazar automáticamente el valor si está vacío o si es menor al mes requerido
+                        if (!fechaFin.value || fechaFin.value < fechaMinimaFin) {
+                            fechaFin.value = fechaMinimaFin;
+                        }
                     }
+                });
+            }
+
+            if (formProyecto) {
+                formProyecto.addEventListener('submit', function (e) {
+
+                    // A. Evitar textos que solo sean espacios en blanco
+                    if (inputTitulo && inputTitulo.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Título Inválido', text: 'El título no puede estar vacío ni contener solo espacios.', confirmButtonColor: '#0284c7' });
+                        inputTitulo.value = ''; inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && inputObjetivo.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Objetivo Inválido', text: 'El objetivo no puede contener solo espacios.', confirmButtonColor: '#0284c7' });
+                        inputObjetivo.value = ''; inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && inputDescripcion.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Descripción Inválida', text: 'La descripción no puede estar vacía.', confirmButtonColor: '#0284c7' });
+                        inputDescripcion.value = ''; inputDescripcion.focus();
+                        return;
+                    }
+
+                    // B. Prevenir textos absurdamente largos que rompan la tabla
+                    if (inputTitulo && inputTitulo.value.trim().length > 150) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Título muy largo', text: 'El título excede el límite permitido (Máximo 150 caracteres).', confirmButtonColor: '#dc3545' });
+                        return;
+                    }
+
+                    // C. Prevención de Múltiples Envíos (Doble Clic)
+                    if (btnGuardar) {
+                        btnGuardar.disabled = true;
+                        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+                    }
+
+                    // D. Alerta visual de procesamiento
+                    Swal.fire({
+                        title: 'Procesando Proyecto...',
+                        text: 'Guardando en la base de datos de GesSi.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
                 });
             }
 

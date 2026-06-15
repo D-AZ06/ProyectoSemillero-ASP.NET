@@ -96,6 +96,53 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
+        public ActionResult PorProyecto(int idProyecto)
+        {
+            try
+            {
+                // Validación de sesión básica
+                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+                // Buscamos el proyecto específico por su ID
+                var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+
+                if (proyecto == null)
+                {
+                    TempData["Error"] = "No se encontró el proyecto solicitado.";
+                    return RedirectToAction("Index", "Proyectos");
+                }
+
+                // Pasamos datos del proyecto a la vista mediante ViewBag para el encabezado
+                ViewBag.IdProyecto = proyecto.IdProyecto;
+                ViewBag.TituloProyecto = proyecto.TituloProyecto;
+
+                // Extraemos las actividades, si no tiene ninguna, creamos una lista vacía
+                var listaActividades = new List<DatosActividade>();
+
+                if (proyecto.Actividades != null && proyecto.Actividades.Any())
+                {
+                    listaActividades = proyecto.Actividades.Select(a => new DatosActividade
+                    {
+                        IdProyecto = proyecto.IdProyecto,
+                        TituloProyecto = proyecto.TituloProyecto,
+                        IdActividad = a.IdActividad,
+                        NombreActividad = a.NombreActividad,
+                        DuracionActividad = a.DuracionActividad,
+                        FechaEntregaActividad = a.FechaEntregaActividad
+                    }).ToList();
+                }
+
+                return View(listaActividades);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Ocurrió un error al cargar las actividades del proyecto: " + ex.Message;
+                return RedirectToAction("Index", "Proyectos");
+            }
+        }
+
         // GET: Actividades/Agregar?idProyecto=X&flujoSecuencial=true
         [HttpGet]
         public ActionResult Agregar(int? idProyecto, bool flujoSecuencial = false) // <-- El 'int?' permite que sea nulo sin dar error

@@ -26,6 +26,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 string rolUsuario = Session["Rol"].ToString();
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
 
+                var todosLosProyectos = coleccionProyectos.Find(new MongoDB.Bson.BsonDocument()).ToList();
+                foreach (var p in todosLosProyectos)
+                {
+                    string estadoCalculado = CalcularEstadoLogico(p.FechaInicioProyecto, p.FechaFinProyecto, p.Estado);
+
+                    // Si la fecha dictamina que el estado cambió, lo actualizamos en la BD silenciosamente
+                    if (estadoCalculado != p.Estado)
+                    {
+                        var update = Builders<DatosProyecto>.Update.Set(x => x.Estado, estadoCalculado);
+                        coleccionProyectos.UpdateOne(x => x.IdProyecto == p.IdProyecto, update);
+                    }
+                }
+
                 // ==========================================
                 // NUEVO: Obtener Nombres de los Semilleros
                 // ==========================================
@@ -103,6 +116,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             filtroBusqueda = builder.Regex(p => p.FechaFinProyecto, new BsonRegularExpression($"^{valorFiltro}"));
                             break;
 
+                        case "estadoProyecto":
+                            filtroBusqueda = builder.Eq(p => p.Estado, valorFiltro);
+                            break;
+
                         case "idSemillero":
                             if (int.TryParse(valorFiltro, out int idSem))
                                 filtroBusqueda = builder.Eq(p => p.IdSemillero, idSem);
@@ -144,6 +161,30 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
+        private string CalcularEstadoLogico(string fechaInicioStr, string fechaFinStr, string estadoActual)
+        {
+            // Si el usuario lo canceló, lo pausó o lo finalizó manualmente, bloqueamos el cambio automático
+            if (estadoActual == "Cancelado" || estadoActual == "Finalizado" || estadoActual == "Pausado")
+            {
+                return estadoActual;
+            }
+
+            if (DateTime.TryParse(fechaInicioStr, out DateTime fechaInicio) &&
+                DateTime.TryParse(fechaFinStr, out DateTime fechaFin))
+            {
+                DateTime hoy = DateTime.Today;
+
+                if (hoy < fechaInicio)
+                    return "Planeado";
+                else if (hoy >= fechaInicio && hoy <= fechaFin)
+                    return "En ejecución";
+                else if (hoy > fechaFin)
+                    return "Finalizado";
+            }
+
+            return estadoActual ?? "Planeado";
+        }
+
         // GET: Proyectos/Agregar
         [HttpGet]
         public ActionResult Agregar()
@@ -154,7 +195,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 string rolUsuario = Session["Rol"].ToString();
 
-                // Restricción para Investigador
                 if (rolUsuario == "Investigador")
                 {
                     TempData["Error"] = "No tienes permisos para agregar proyectos.";
@@ -164,23 +204,45 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 // Pasar el rol a la vista
                 ViewBag.RolUsuario = rolUsuario;
 
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                var ultimoProyecto = coleccionProyectos.Find(new MongoDB.Bson.BsonDocument())
+                                                      .SortByDescending(p => p.IdProyecto)
+                                                      .FirstOrDefault();
+                int correlativo = 1;
+
+                if (ultimoProyecto != null)
+                {
+                    string ultimoIdStr = ultimoProyecto.IdProyecto.ToString();
+                    if (ultimoIdStr.StartsWith("30"))
+                    {
+                        string numeroStr = ultimoIdStr.Substring(2);
+                        if (int.TryParse(numeroStr, out int numero))
+                        {
+                            correlativo = numero + 1;
+                        }
+                    }
+                }
+
+                // Instanciamos el modelo con el ID predictivo y el estado por defecto
+                var nuevoProyecto = new DatosProyecto
+                {
+                    IdProyecto = int.Parse("30" + correlativo.ToString()),
+                    Estado = "Planeado"
+                };
+                // =================================================================
+
                 if (rolUsuario == "Líder")
                 {
-                    // 1. Aseguramos el ID del semillero (asumiendo que este sí lo tienes en sesión)
                     int idSemillero = (int)Session["IdSemillero"];
                     ViewBag.IdSemilleroLider = idSemillero;
 
-                    // 2. Intentamos buscar el nombre en la sesión
                     if (Session["NombreSemillero"] != null)
                     {
                         ViewBag.NombreSemilleroLider = Session["NombreSemillero"].ToString();
                     }
                     else
                     {
-                        // 3. ¡SOLUCIÓN! Si el nombre no está en sesión, lo consultamos directo en la BD
                         var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
-
-                        // Buscamos el semillero que coincida con el ID del líder
                         var filtro = Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("idSemillero", idSemillero);
                         var semilleroDB = coleccionSemilleros.Find(filtro).FirstOrDefault();
 
@@ -188,8 +250,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         {
                             string nombreReal = semilleroDB["nombreSemillero"].AsString;
                             ViewBag.NombreSemilleroLider = nombreReal;
-
-                            // De paso, lo guardamos en sesión para que no tenga que buscarlo de nuevo después
                             Session["NombreSemillero"] = nombreReal;
                         }
                         else
@@ -212,7 +272,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     ViewBag.ListaSemilleros = new SelectList(listaSemilleros, "IdSemillero", "NombreSemillero");
                 }
 
-                return View();
+                // RETORNAMOS LA VISTA PASANDO EL MODELO GENERADO
+                return View(nuevoProyecto);
             }
             catch (Exception ex)
             {
@@ -242,7 +303,51 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (ModelState.IsValid)
                 {
+                    // Dentro de [HttpPost] Agregar, justo debajo de: if (ModelState.IsValid) {
+                    if (DateTime.TryParse(nuevoProyecto.FechaInicioProyecto, out DateTime fInicio) &&
+                        DateTime.TryParse(nuevoProyecto.FechaFinProyecto, out DateTime fFin))
+                    {
+                        // Validamos que la fecha fin sea de al menos un mes adelante
+                        if (fFin < fInicio.AddMonths(1))
+                        {
+                            TempData["Error"] = "Validación fallida: La fecha de finalización debe ser de al menos un mes posterior a la fecha de inicio.";
+
+                            // Recargar los ViewBags necesarios para volver a pintar la vista
+                            ViewBag.RolUsuario = rolUsuario;
+                            if (rolUsuario == "Líder")
+                            {
+                                ViewBag.NombreSemilleroLider = Session["NombreSemillero"];
+                                ViewBag.IdSemilleroLider = Session["IdSemillero"];
+                            }
+                            else if (rolUsuario == "Admin" || rolUsuario == "Administrador")
+                            {
+                                var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
+                                var listaSemilleros = coleccionSemilleros.Find(new MongoDB.Bson.BsonDocument()).ToList().Select(s => new
+                                {
+                                    IdSemillero = s["idSemillero"].AsInt32,
+                                    NombreSemillero = s["nombreSemillero"].AsString
+                                }).ToList();
+                                ViewBag.ListaSemilleros = new SelectList(listaSemilleros, "IdSemillero", "NombreSemillero");
+                            }
+
+                            return View(nuevoProyecto);
+                        }
+                    }
+
+
                     var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+                    var proyectoDuplicado = coleccionProyectos.Find(p =>
+                        p.TituloProyecto.ToLower() == nuevoProyecto.TituloProyecto.ToLower() &&
+                        p.IdSemillero == nuevoProyecto.IdSemillero
+                        ).FirstOrDefault();
+
+                    if (proyectoDuplicado != null)
+                    {
+                        TempData["Error"] = "Ya existe un proyecto registrado con este mismo título en tu semillero.";
+                        // Recargar ViewBags correspondientes...
+                        return View(nuevoProyecto);
+                    }
 
                     // --- AQUÍ EMPIEZA LA LÓGICA DEL ID GENERATIVO AUTOMÁTICO ---
                     var ultimoProyecto = coleccionProyectos.Find(new MongoDB.Bson.BsonDocument())
@@ -272,8 +377,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         nuevoProyecto.IdSemillero = (int)Session["IdSemillero"];
                     }
 
-                    // Inicializar las listas vacías como solicitaste
+                    // Inicializar las listas vacías 
                     nuevoProyecto.Actividades = new List<Actividad>();
+
+                    // Calculamos el estado inicial en base a las fechas que el usuario ingresó
+                    nuevoProyecto.Estado = CalcularEstadoLogico(nuevoProyecto.FechaInicioProyecto, nuevoProyecto.FechaFinProyecto, "Planeado");
 
                     // Guardar en MongoDB
                     coleccionProyectos.InsertOne(nuevoProyecto);
@@ -389,6 +497,30 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (ModelState.IsValid)
                 {
+                    if (DateTime.TryParse(proyectoModificado.FechaInicioProyecto, out DateTime fInicio) &&
+                        DateTime.TryParse(proyectoModificado.FechaFinProyecto, out DateTime fFin))
+                    {
+                        if (fFin < fInicio.AddMonths(1))
+                        {
+                            TempData["Error"] = "Validación fallida: El rango de duración del proyecto modificado no puede ser inferior a un mes.";
+
+                            // Recargamos el rol del usuario para la vista
+                            ViewBag.RolUsuario = rolUsuario;
+
+                            // Buscamos el nombre del semillero original para volver a mostrarlo como solo lectura
+                            var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
+                            var filtroSemillero = Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("idSemillero", proyectoModificado.IdSemillero);
+                            var semilleroDB = coleccionSemilleros.Find(filtroSemillero).FirstOrDefault();
+
+                            ViewBag.NombreSemillero = semilleroDB != null && semilleroDB.Contains("nombreSemillero")
+                                ? semilleroDB["nombreSemillero"].AsString
+                                : "Semillero Desconocido";
+
+                            // Devolvemos el modelo a la vista con la alerta sin guardar nada en MongoDB
+                            return View(proyectoModificado);
+                        }
+                    }
+
                     var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
 
                     var filtro = Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, proyectoModificado.IdProyecto);
@@ -410,9 +542,44 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         // CUIDADO DE DATOS VITALES:
                         proyectoModificado.Id = proyectoOriginal.Id;
                         proyectoModificado.Actividades = proyectoOriginal.Actividades ?? new List<Actividad>();
-
-                        // CANDADO: Forzamos que el Semillero siga siendo el original, no importa qué mande la vista
                         proyectoModificado.IdSemillero = proyectoOriginal.IdSemillero;
+
+
+                        proyectoModificado.TituloProyecto = proyectoModificado.TituloProyecto?.Trim();
+
+                        var proyectoDuplicado = coleccionProyectos.Find(p =>
+                            p.TituloProyecto.ToLower() == proyectoModificado.TituloProyecto.ToLower() &&
+                            p.IdSemillero == proyectoOriginal.IdSemillero &&
+                            p.IdProyecto != proyectoModificado.IdProyecto // EXCLUSIÓN: Ignora a sí mismo
+                        ).FirstOrDefault();
+
+                        if (proyectoDuplicado != null)
+                        {
+                            TempData["Error"] = "No se pueden guardar los cambios: Ya existe otro proyecto diferente registrado con este mismo título en el semillero.";
+
+                            // Recargar los datos obligatorios para pintar la vista de nuevo sin errores
+                            ViewBag.RolUsuario = rolUsuario;
+
+                            var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
+                            var filtroSemillero = Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("idSemillero", proyectoModificado.IdSemillero);
+                            var semilleroDB = coleccionSemilleros.Find(filtroSemillero).FirstOrDefault();
+                            ViewBag.NombreSemillero = semilleroDB != null && semilleroDB.Contains("nombreSemillero")
+                                ? semilleroDB["nombreSemillero"].AsString
+                                : "Semillero Desconocido";
+
+                            return View(proyectoModificado);
+                        }
+
+                        if (proyectoModificado.Estado == "Reanudar")
+                        {
+                            // Si pidió reanudar, forzamos que calcule el estado normal según las fechas
+                            proyectoModificado.Estado = CalcularEstadoLogico(proyectoModificado.FechaInicioProyecto, proyectoModificado.FechaFinProyecto, "Planeado");
+                        }
+                        else if (proyectoModificado.Estado != "Cancelado" && proyectoModificado.Estado != "Finalizado" && proyectoModificado.Estado != "Pausado")
+                        {
+                            // Si no es un estado forzado manual, recalculamos por si modificó las fechas de inicio/fin
+                            proyectoModificado.Estado = CalcularEstadoLogico(proyectoModificado.FechaInicioProyecto, proyectoModificado.FechaFinProyecto, proyectoOriginal.Estado);
+                        }
 
                         var resultado = coleccionProyectos.ReplaceOne(filtro, proyectoModificado);
 

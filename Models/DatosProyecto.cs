@@ -34,6 +34,9 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("fechaFinProyecto")]
         public string FechaFinProyecto { get; set; }
 
+        [BsonElement("estadoProyecto")]
+        public string Estado { get; set; } = "Planeado";
+
         // Aquí se mapea el array de actividades de MongoDB
         [BsonElement("actividades")]
         public List<Actividad> Actividades { get; set; } = new List<Actividad>();
