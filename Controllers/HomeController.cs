@@ -71,7 +71,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 return View(model);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Aquí puedes manejar cualquier excepción que ocurra durante el proceso de inicio de sesión
                 ViewBag.ErrorLogin = "Ocurrió un error al intentar iniciar sesión. Por favor, inténtalo de nuevo.";

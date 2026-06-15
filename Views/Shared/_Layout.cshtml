@@ -1,4 +1,10 @@
-﻿<!DOCTYPE html>
+﻿@{
+    string nombreUsuario = Session["UsuarioLogueado"] as string ?? "Usuario";
+    string rolUsuario = Session["Rol"] as string ?? "Sin Rol";
+    string controladorActual = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -6,92 +12,107 @@
     <title>@ViewBag.Title - GesSi</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
             --bg-body: #f4f7f6;
-            --bg-sidebar: #2c3e50;
-            --bg-sidebar-hover: #34495e;
-            --blue-light: #e0f2fe;
+            --bg-sidebar: #1e293b;
             --blue-primary: #0284c7;
-            --navbar-height: 70px; /* Altura fija para la barra superior */
-            --sidebar-width: 260px; /* Ancho fijo del menú */
+            --navbar-height: 75px;
+            --sidebar-width: 270px;
         }
 
         body {
             background-color: var(--bg-body);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
             margin: 0;
         }
 
-        /* --- 1 y 2: BARRA SUPERIOR FIJA Y LOGO VISIBLE --- */
+        /* --- BARRA SUPERIOR FIJA (PLANA) --- */
         .top-navbar {
             height: var(--navbar-height);
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: fixed; /* Se queda pegada arriba al hacer scroll */
+            background-color: rgba(255, 255, 255, 0.98);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1050; /* Por encima de todo en la página */
+            z-index: 1050;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 1.5rem;
         }
 
-        /* Espacio para que el contenido no quede oculto detrás de la barra fija */
         #wrapper {
             padding-top: var(--navbar-height);
         }
 
-        /* --- 3: MENÚ LATERAL (SIDEBAR) --- */
+        /* --- MENÚ LATERAL FLOTANTE --- */
         #sidebar-wrapper {
             position: fixed;
-            top: var(--navbar-height);
-            left: 0;
-            width: var(--sidebar-width);
-            height: calc(100vh - var(--navbar-height));
+            top: calc(var(--navbar-height) + 15px);
+            left: 15px;
+            width: calc(var(--sidebar-width) - 30px);
+            height: calc(100vh - var(--navbar-height) - 30px);
             background-color: var(--bg-sidebar);
-            color: white;
+            color: #f1f5f9;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
             overflow-y: auto;
+            overflow-x: hidden;
             z-index: 1040;
-            transition: transform 0.3s ease-in-out;
-            /* Por defecto en móvil: oculto hacia la izquierda */
-            transform: translateX(-100%);
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-120%);
         }
 
-        /* En móvil: cuando se abre, flota POR ENCIMA del contenido (no lo achica) */
+        .sidebar-header {
+            padding: 1.5rem 2.2rem 0.5rem 2.2rem;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
         #wrapper.toggled #sidebar-wrapper {
             transform: translateX(0);
-            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
         }
 
-        /* Área de contenido principal */
+        #sidebar-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
         #page-content-wrapper {
             width: 100%;
-            transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease-in-out;
+            padding-top: 15px;
         }
 
-        /* Comportamiento en pantallas grandes (Desktop) */
         @@media (min-width: 768px) {
             #sidebar-wrapper {
-                transform: translateX(0); /* Visible por defecto */
-                box-shadow: none;
-                border-right: 1px solid rgba(0,0,0,0.1);
+                transform: translateX(0);
             }
 
             #page-content-wrapper {
-                margin-left: var(--sidebar-width); /* Empuja el contenido */
+                margin-left: var(--sidebar-width);
                 width: calc(100% - var(--sidebar-width));
             }
-            /* En PC: Si se oculta el menú, el contenido ocupa toda la pantalla */
+
             #wrapper.toggled #sidebar-wrapper {
-                transform: translateX(-100%);
+                transform: translateX(-120%);
             }
 
             #wrapper.toggled #page-content-wrapper {
@@ -100,106 +121,143 @@
             }
         }
 
-        /* --- ESTILOS INTERNOS DEL MENÚ --- */
-        .sidebar-user-info {
-            padding: 1.5rem 1rem;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            background-color: rgba(0,0,0,0.15);
-        }
-
+        /* --- ESTILOS DE LOS BOTONES DEL MENÚ (INDEPENDIENTES Y CON CONTORNO) --- */
         .list-group-item-action {
-            background-color: transparent;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: #cbd5e1;
-            border: none;
-            padding: 0.8rem 1.5rem;
+            padding: 0.75rem 1.2rem;
+            margin: 0.35rem 1rem; /* Márgenes laterales de 1rem (aprox 16px) a cada lado, total 2rem */
+            width: calc(100% - 2rem); /* ARREGLO: Forzamos el ancho exacto restando los márgenes para evitar el corte */
+            border-radius: 8px;
             font-size: 0.95rem;
-            transition: all 0.3s;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
         }
 
             .list-group-item-action:hover, .list-group-item-action:focus {
-                background-color: var(--bg-sidebar-hover);
-                color: white;
-                border-left: 4px solid var(--blue-primary);
+                background-color: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.3);
+                color: #ffffff;
+                transform: translateX(4px);
             }
 
         .list-group-item i {
-            margin-right: 10px;
-            font-size: 1.1rem;
+            margin-right: 12px;
+            font-size: 1.2rem;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
         }
 
-        /* Componentes de la vista */
+        .list-group-item-action:hover i {
+            opacity: 1;
+            color: #38bdf8;
+        }
+
+        /* Componentes de la vista principal */
         .main-content-card {
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            padding: 20px;
-            min-height: 500px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 24px;
+            min-height: calc(100vh - var(--navbar-height) - 45px);
+            border: 1px solid rgba(0,0,0,0.06);
         }
 
-        /* Ajuste de botones superiores para celular */
-        @@media (max-width: 576px) {
-            .btn-text {
-                display: none;
-            }
-            /* Oculta el texto, deja solo íconos */
-            .top-navbar {
-                padding: 0 1rem;
-            }
+        /* Logo Icono Superior (Plano) */
+        .logo-icon {
+            background-color: var(--blue-primary);
+            color: white;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        /* Indicador de menú activo */
+        .active-menu-item {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: var(--blue-primary);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+            .active-menu-item i {
+                opacity: 1;
+                color: #38bdf8;
+            }
     </style>
 </head>
 <body>
 
     <header class="top-navbar">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-light" id="menu-toggle" title="Alternar menú" style="border: 1px solid #ddd;">
-                <i class="bi bi-list fs-4"></i>
+        <div class="d-flex align-items-center" style="flex: 1;">
+            <button class="btn btn-light rounded-3 me-3" id="menu-toggle" style="background-color: #f1f5f9; border: 1px solid #e2e8f0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-list fs-4 text-secondary"></i>
             </button>
 
-            <div class="fs-4 fw-bold text-info m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-cpu"></i>
-                <span class="d-none d-sm-inline text-dark">GesSi</span>
+            <div class="d-none d-md-flex flex-column lh-sm border-start ps-3" style="border-color: #e2e8f0 !important;">
+                <span class="fw-bold text-dark" style="font-size: 0.95rem;">@nombreUsuario</span>
+                <span class="text-secondary mt-1 d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                    <i class="bi bi-person-badge-fill text-primary"></i> @rolUsuario
+                </span>
             </div>
         </div>
 
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-info">
-                <i class="bi bi-robot"></i> <span class="btn-text">Ayuda IA</span>
-            </button>
+        <div class="d-flex justify-content-center align-items-center" style="flex: 1;">
+            <a href="@Url.Action("Index", "Gessi")" class="text-decoration-none d-flex align-items-center gap-2">
+                <div class="logo-icon">
+                    <i class="bi bi-cpu fs-5"></i>
+                </div>
+                <span class="fs-4 fw-bold text-dark m-0 tracking-tight" style="letter-spacing: -0.5px;">GesSi</span>
+            </a>
+        </div>
 
-            <button type="button" class="btn btn-outline-danger" onclick="confirmarSalida('@Url.Action("IniciarSesion", "Home")')">
-                <i class="bi bi-box-arrow-right"></i> <span class="btn-text">Salir</span>
+        <div class="d-flex justify-content-end gap-2 align-items-center" style="flex: 1;">
+            <a href="@Url.Action("AsistenteIA", "Gessi")" class="btn text-white rounded-pill d-flex align-items-center gap-2 px-3" style="background-color: #8b5cf6; border: 1px solid #7c3aed; font-size: 0.9rem; padding-top: 0.45rem; padding-bottom: 0.45rem;">
+                <i class="bi bi-robot fs-6"></i>
+                <span class="d-none d-lg-inline fw-medium">Asistente IA</span>
+            </a>
+
+            <button type="button" class="btn text-danger rounded-pill d-flex align-items-center gap-2 px-3" style="background-color: #fef2f2; border: 1px solid #fecdd3; font-size: 0.9rem; padding-top: 0.45rem; padding-bottom: 0.45rem;" onclick="confirmarSalida('@Url.Action("CerrarSesion", "Home")')">
+                <i class="bi bi-box-arrow-right fs-6"></i>
+                <span class="d-none d-lg-inline fw-medium">Salir</span>
             </button>
         </div>
     </header>
 
     <div id="wrapper">
         <div id="sidebar-wrapper">
-            <div class="sidebar-user-info">
-                <div class="fw-bold">Bienvenido Líder</div>
-                <small class="text-light">¿Qué desea gestionar hoy?</small>
+            <div class="sidebar-header">
+                Menú Principal
             </div>
-            <div class="list-group list-group-flush mt-2">
-                <a href="@Url.Action("Index", "Usuarios")" class="list-group-item list-group-item-action"><i class="bi bi-person-badge"></i> Usuarios</a>
-                <a href="@Url.Action("Index", "Semillero")" class="list-group-item list-group-item-action"><i class="bi bi-tree"></i> Semillero</a>
-                <a href="@Url.Action("Index", "Proyectos")" class="list-group-item list-group-item-action"><i class="bi bi-folder2-open"></i> Proyectos</a>
-                <a href="@Url.Action("Index", "Actividades")" class="list-group-item list-group-item-action"><i class="bi bi-card-checklist"></i> Actividades</a>
-                <a href="@Url.Action("Index", "Fases")" class="list-group-item list-group-item-action"><i class="bi bi-signpost-split"></i> Fases</a>
-                <a href="@Url.Action("Index", "Reuniones")" class="list-group-item list-group-item-action"><i class="bi bi-people"></i> Reuniones</a>
-                <a href="@Url.Action("Index", "Eventos")" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event"></i> Eventos</a>
-                <a href="@Url.Action("Index", "Patrocinadores")" class="list-group-item list-group-item-action"><i class="bi bi-heart"></i> Patrocinadores</a>
-                <a href="@Url.Action("Index", "Reportes")" class="list-group-item list-group-item-action"><i class="bi bi-file-earmark-bar-graph"></i> Reportes</a>
+
+            <div class="list-group list-group-flush mt-2 pb-4">
+                <a href="@Url.Action("Index", "Usuarios")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Usuarios" ? "active-menu-item" : "")"><i class="bi bi-people"></i> Usuarios</a>
+                <a href="@Url.Action("Index", "Semillero")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Semillero" ? "active-menu-item" : "")"><i class="bi bi-tree"></i> Semillero</a>
+                <a href="@Url.Action("Index", "Proyectos")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Proyectos" ? "active-menu-item" : "")"><i class="bi bi-folder2-open"></i> Proyectos</a>
+                <a href="@Url.Action("Index", "Actividades")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Actividades" ? "active-menu-item" : "")"><i class="bi bi-card-checklist"></i> Actividades</a>
+                <a href="@Url.Action("Index", "Fases")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Fases" ? "active-menu-item" : "")"><i class="bi bi-signpost-split"></i> Fases</a>
+                <a href="@Url.Action("Index", "Reuniones")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Reuniones" ? "active-menu-item" : "")"><i class="bi bi-camera-video"></i> Reuniones</a>
+                <a href="@Url.Action("Index", "Eventos")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Eventos" ? "active-menu-item" : "")"><i class="bi bi-calendar-event"></i> Eventos</a>
+                <a href="@Url.Action("Index", "Patrocinadores")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Patrocinadores" ? "active-menu-item" : "")"><i class="bi bi-heart"></i> Patrocinadores</a>
+
+                @if (rolUsuario != "Investigador")
+                {
+                    <a href="@Url.Action("Index", "Reportes")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Reportes" ? "active-menu-item" : "")"><i class="bi bi-file-earmark-bar-graph"></i> Reportes</a>
+                }
             </div>
         </div>
 
         <div id="page-content-wrapper">
-            <main class="container-fluid p-3 p-md-4">
-
+            <main class="container-fluid pe-3 pe-md-4">
                 <div class="main-content-card position-relative">
                     @RenderBody()
                 </div>
-
             </main>
         </div>
     </div>
@@ -217,7 +275,6 @@
 
     <script>
         function confirmarSalida(urlDestino) {
-            // Primera alerta: Pregunta si está seguro
             Swal.fire({
                 title: '¿Deseas cerrar sesión?',
                 text: "Tendrás que volver a ingresar tus credenciales para acceder al sistema.",
@@ -226,24 +283,21 @@
                 confirmButtonColor: '#0284c7',
                 cancelButtonColor: '#dc3545',
                 confirmButtonText: 'Sí, salir',
-                cancelButtonText: 'Cancelar'
+                cancelButtonText: 'Cancelar',
+                borderRadius: '12px'
             }).then((result) => {
                 if (result.isConfirmed) {
-
-                    // Segunda alerta: Muestra el éxito AQUÍ MISMO en el layout
                     Swal.fire({
                         icon: 'success',
                         title: '¡Hasta pronto!',
                         text: 'Tu sesión se ha cerrado correctamente.',
                         confirmButtonColor: '#0284c7',
                         confirmButtonText: 'OK',
-                        allowOutsideClick: false, // Evita que se cierre haciendo clic por fuera
+                        allowOutsideClick: false,
                         allowEscapeKey: false
                     }).then(() => {
-                        // Cuando el usuario le da "OK", lo enviamos a destruir la sesión
                         window.location.href = urlDestino;
                     });
-
                 }
             });
         }

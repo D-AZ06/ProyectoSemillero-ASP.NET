@@ -1,4 +1,6 @@
-﻿@{
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosUsuario
+
+@{
     ViewBag.Title = "Inicio";
 }
 
@@ -13,8 +15,15 @@
                             <span class="badge px-3 py-2 rounded-pill fs-6 mb-3 shadow-sm" style="background-color: var(--blue-primary); color: white;">
                                 <i class="bi bi-cpu me-1"></i> GesSi
                             </span>
+                            <span class="badge px-3 py-2 rounded-pill fs-6 mb-3 shadow-sm ms-2 bg-secondary text-white">
+                                <i class="bi bi-person-badge me-1"></i> @(Model != null ? Model.RolUsuario : "Sin Rol")
+                            </span>
                         </div>
-                        <h1 class="display-6 fw-bold text-dark mb-3">¡Bienvenido al sistema, Líder! 👋</h1>
+
+                        <h1 class="display-6 fw-bold text-dark mb-3">
+                            ¡Bienvenido al sistema, @(Model != null ? Model.NombreUsuario : "Invitado")! 👋
+                        </h1>
+
                         <p class="lead text-secondary mb-4" style="font-size: 1.1rem; line-height: 1.6;">
                             Nos alegra tenerte aquí. Estás en el panel principal del <strong>Sistema de Gestión de Semilleros de Investigación</strong>.
                             Este espacio está diseñado para facilitar tu trabajo, permitiéndote administrar de forma centralizada y eficiente todo tu entorno.
@@ -28,14 +37,12 @@
                         </div>
                     </div>
 
-                    <!-- Ilustración decorativa -->
                     <div class="col-md-4 d-none d-md-flex align-items-center justify-content-center p-5 border-start" style="background-color: rgba(2, 132, 199, 0.03);">
                         <i class="bi bi-rocket-takeoff" style="font-size: 10rem; color: var(--blue-primary); opacity: 0.2;"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Tarjeta Informativa sobre el Asistente IA -->
             <div class="card border-0 shadow-sm rounded-4" style="border-left: 5px solid #17a2b8 !important;">
                 <div class="card-body p-4 d-flex align-items-center">
                     <div class="p-3 rounded-circle me-4 d-none d-sm-block" style="background-color: rgba(23, 162, 184, 0.1);">
