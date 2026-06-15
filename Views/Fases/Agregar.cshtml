@@ -4,6 +4,8 @@
 
     bool vinoDesdePorActividad = ViewBag.VinoDesdePorActividad ?? false;
     bool desdeGlobal = ViewBag.DesdeGlobal ?? false;
+    bool flujoSecuencial = ViewBag.FlujoSecuencial ?? false;
+
     var proyectosCombobox = ViewBag.ProyectosMapeados as List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>;
 }
 
@@ -21,19 +23,36 @@
             <i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Nueva Fase
         </h3>
 
-        @if (vinoDesdePorActividad)
+        @if (!flujoSecuencial)
         {
-            <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = ViewBag.IdProyecto, idActividad = ViewBag.IdActividad, desdeGlobal = desdeGlobal })" class="btn btn-outline-secondary fw-bold shadow-sm">
-                <i class="bi bi-arrow-left"></i> Volver a Fases de Actividad
-            </a>
-        }
-        else
-        {
-            <a href="@Url.Action("Index", "Fases")" class="btn btn-outline-secondary fw-bold shadow-sm">
-                <i class="bi bi-arrow-left"></i> Cancelar y Volver
-            </a>
+            if (vinoDesdePorActividad)
+            {
+                <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = ViewBag.IdProyecto, idActividad = ViewBag.IdActividad, desdeGlobal = desdeGlobal })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                    <i class="bi bi-arrow-left"></i> Volver a Fases de Actividad
+                </a>
+            }
+            else
+            {
+                <a href="@Url.Action("Index", "Fases")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                    <i class="bi bi-arrow-left"></i> Cancelar y Volver
+                </a>
+            }
         }
     </div>
+
+    @if (flujoSecuencial)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 border-start border-5 border-success mb-4" role="alert">
+            <h5 class="alert-heading fw-bold text-success mb-2">
+                <i class="bi bi-check-circle-fill me-2"></i> @Html.Raw(ViewBag.MensajeExito ?? "¡Actividad registrada con éxito!")
+            </h5>
+            <hr class="border-success opacity-25 my-2">
+            <p class="mb-0 text-dark">
+                <i class="bi bi-info-circle-fill text-primary me-1"></i> @Html.Raw(ViewBag.MensajeInstruccion ?? "Para finalizar este registro inicial, es obligatorio crear la primera fase de esta actividad.")
+            </p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
 
     <div class="card shadow-sm border-0 bg-white">
         <div class="card-body p-4">
@@ -41,10 +60,13 @@
 
                 <input type="hidden" name="vinoDesdePorActividad" value="@(vinoDesdePorActividad ? "true" : "false")" />
                 <input type="hidden" name="desdeGlobal" value="@(desdeGlobal ? "true" : "false")" />
+                <input type="hidden" name="flujoSecuencial" value="@(flujoSecuencial ? "true" : "false")" />
+
+                <input type="hidden" name="origenActividad" value="@ViewBag.OrigenActividad" />
 
                 <div class="mb-4 bg-light p-3 rounded-3 border">
 
-                    @if (vinoDesdePorActividad)
+                    @if (vinoDesdePorActividad || flujoSecuencial)
                     {
                         <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
                         <input type="hidden" name="idActividad" value="@ViewBag.IdActividad" />
@@ -126,7 +148,14 @@
 
                 <div class="mt-4 text-end">
                     <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarFase">
-                        <i class="bi bi-check-circle me-1"></i> Guardar Fase
+                        @if (flujoSecuencial)
+                        {
+                            <i class="bi bi-flag-fill me-1"></i> @:Finalizar y Volver a Proyectos
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle me-1"></i> @:Guardar Fase
+                        }
                     </button>
                 </div>
 
@@ -137,8 +166,21 @@
 
 @section Scripts {
     <script>
+        // --- BLOQUEO DEL BOTÓN ATRÁS ---
+        @if (flujoSecuencial)
+        {
+            <text>
+            $(document).ready(function() {
+                window.history.pushState(null, "", window.location.href);
+                window.onpopstate = function() {
+                    window.history.pushState(null, "", window.location.href);
+                };
+            });
+            </text>
+        }
+
         // Lógica de ComboBox en cascada solo si estamos en el contexto Global
-        @if (!vinoDesdePorActividad && proyectosCombobox != null)
+        @if (!vinoDesdePorActividad && !flujoSecuencial && proyectosCombobox != null)
         {
             <text>
             const jerarquiaActividades = {
@@ -156,49 +198,45 @@
             const selectProyecto = document.getElementById('selectProyecto');
             const selectActividad = document.getElementById('selectActividad');
 
-            selectProyecto.addEventListener('change', function() {
-                const idSeleccionado = this.value;
-                selectActividad.innerHTML = '<option value="">-- Elija una actividad --</option>';
+            if (selectProyecto) {
+                selectProyecto.addEventListener('change', function() {
+                    const idSeleccionado = this.value;
+                    selectActividad.innerHTML = '<option value="">-- Elija una actividad --</option>';
 
-                if (idSeleccionado && jerarquiaActividades[idSeleccionado]) {
-                    selectActividad.disabled = false;
-                    jerarquiaActividades[idSeleccionado].forEach(act => {
-                        let option = document.createElement('option');
-                        option.value = act.id;
-                        option.textContent = `ID: ${act.id} - ${act.nombre}`;
-                        selectActividad.appendChild(option);
-                    });
-                } else {
-                    selectActividad.disabled = true;
-                    if(idSeleccionado) {
-                        selectActividad.innerHTML = '<option value="">No hay actividades disponibles</option>';
+                    if (idSeleccionado && jerarquiaActividades[idSeleccionado]) {
+                        selectActividad.disabled = false;
+                        jerarquiaActividades[idSeleccionado].forEach(act => {
+                            let option = document.createElement('option');
+                            option.value = act.id;
+                            option.textContent = `ID: ${act.id} - ${act.nombre}`;
+                            selectActividad.appendChild(option);
+                        });
                     } else {
-                        selectActividad.innerHTML = '<option value="">-- Elija primero un proyecto --</option>';
+                        selectActividad.disabled = true;
+                        if(idSeleccionado) {
+                            selectActividad.innerHTML = '<option value="">No hay actividades disponibles</option>';
+                        } else {
+                            selectActividad.innerHTML = '<option value="">-- Elija primero un proyecto --</option>';
+                        }
                     }
-                }
-            });
+                });
+            }
             </text>
         }
 
-        // Loader de envío modificado para evitar bloqueos del navegador
+        // Loader de envío
         document.getElementById('formAgregarFase').addEventListener('submit', function () {
-
-            // Si el select dinámico está deshabilitado por algún error visual, lo forzamos a habilitarse antes de enviar
             const selectAct = document.getElementById('selectActividad');
             if (selectAct) selectAct.disabled = false;
 
             const btn = document.getElementById('btnGuardarFase');
-
-            // Usamos un ligero retardo para dejar que el formulario ejecute su envío a C# sin interrupciones
             setTimeout(() => {
                 btn.disabled = true;
                 btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando Fase...`;
             }, 10);
         });
 
-        // --- LÓGICA PLUS: ESTANDARIZACIÓN DE FASES ---
-
-        // Pasamos la lista de C# a un array de JavaScript de forma segura
+        // --- ESTANDARIZACIÓN DE FASES ---
         const diccionarioFases = [
             @if(ViewBag.FasesSugeridas != null) {
                 foreach(var f in ViewBag.FasesSugeridas) {
@@ -209,7 +247,6 @@
 
         const inputNombreFase = document.getElementById('nombreFase');
 
-        // Función matemática/Regex para quitar tildes y convertir a minúsculas
         function normalizarTexto(texto) {
             if (!texto) return "";
             return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -219,32 +256,27 @@
             const valorIngresado = normalizarTexto(this.value);
             if (!valorIngresado) return;
 
-            // Busca si existe una fase que, normalizada, sea idéntica a lo que ingresó el usuario
             const coincidencia = diccionarioFases.find(f => normalizarTexto(f) === valorIngresado);
 
-            // Si hay coincidencia y el texto exacto es diferente (por tildes o mayúsculas)
             if (coincidencia && coincidencia !== this.value.trim()) {
-
-                // Reemplaza silenciosamente por el formato correcto
                 this.value = coincidencia;
 
-                // Dispara una alerta tipo "Toast" (notificación pequeña arriba a la derecha)
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3500,
-                    timerProgressBar: true
-                });
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3500,
+                        timerProgressBar: true
+                    });
 
-                Toast.fire({
-                    icon: 'info',
-                    title: 'Formato Unificado',
-                    text: `Se ha auto-corregido a "${coincidencia}" para evitar duplicados en el sistema.`
-                });
+                    Toast.fire({
+                        icon: 'info',
+                        title: 'Formato Unificado',
+                        text: `Se ha auto-corregido a "${coincidencia}" para evitar duplicados en el sistema.`
+                    });
+                }
             }
         });
-        // ----------------------------------------------
-
     </script>
 }

@@ -96,18 +96,18 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // GET: Actividades/PorProyecto?idProyecto=X
-        public ActionResult PorProyecto(int idProyecto)
+        // GET: Actividades/Agregar?idProyecto=X&flujoSecuencial=true
+        [HttpGet]
+        public ActionResult Agregar(int? idProyecto, bool flujoSecuencial = false) // <-- El 'int?' permite que sea nulo sin dar error
         {
-            try
+            if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
+            var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+            // Escenario 1: Viene con un proyecto asignado (Flujo secuencial o desde dentro de un proyecto)
+            if (idProyecto.HasValue)
             {
-                // Seguridad básica por sesión
-                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
-
-                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
-
-                // Buscamos únicamente el proyecto seleccionado
-                var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+                var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto.Value).FirstOrDefault();
 
                 if (proyecto == null)
                 {
@@ -115,18 +115,30 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index", "Proyectos");
                 }
 
-                // Pasamos los datos del proyecto padre a la vista mediante ViewBag
-                ViewBag.IdProyecto = proyecto.IdProyecto;
+                ViewBag.IdProyecto = idProyecto.Value;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
-
-                // Enviamos directamente la lista de actividades propia del modelo DatosProyecto
-                return View(proyecto.Actividades);
+                ViewBag.ProyectoFijo = true;
             }
-            catch (Exception ex)
+            // Escenario 2: Entró por "Gestionar Actividades" (Flujo general libre)
+            else
             {
-                TempData["Error"] = "Error al cargar las actividades del proyecto: " + ex.Message;
-                return RedirectToAction("Index", "Proyectos");
+                ViewBag.ProyectoFijo = false;
+
+                // Cargamos todos los proyectos para llenar el combobox (select) de la vista
+                var listaProyectos = coleccionProyectos.Find(new MongoDB.Bson.BsonDocument()).ToList();
+                ViewBag.ProyectosMapeados = listaProyectos;
             }
+
+            ViewBag.FlujoSecuencial = flujoSecuencial;
+
+            // Mensajes para la alerta flotante de la vista
+            if (flujoSecuencial)
+            {
+                ViewBag.MensajeExitoProyecto = "¡Proyecto creado con éxito!";
+                ViewBag.MensajeInstruccion = "Para continuar con el proceso, es obligatorio registrar la primera actividad de este proyecto.";
+            }
+
+            return View();
         }
 
         // MODIFICADO: Agregamos el parámetro opcional 'desdeProyecto'
@@ -156,81 +168,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return RedirectToAction("Index");
         }
 
-        // GET: Actividades/Agregar
-        // Puede recibir o no el idProyecto desde la URL
-        public ActionResult Agregar(int? idProyecto)
-        {
-            try
-            {
-                // 1. Validación de seguridad por sesión y rol
-                if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
-
-                string rolUsuario = Session["Rol"].ToString();
-                if (rolUsuario == "Investigador")
-                {
-                    TempData["Error"] = "No tienes permisos para realizar esta acción.";
-                    return RedirectToAction("Index");
-                }
-
-                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
-
-                // 2. ESCENARIO A: Viene desde un proyecto específico (Contextual)
-                if (idProyecto.HasValue)
-                {
-                    var proyectoFijo = coleccionProyectos.Find(p => p.IdProyecto == idProyecto.Value).FirstOrDefault();
-                    if (proyectoFijo != null)
-                    {
-                        ViewBag.ProyectoFijo = true;
-                        ViewBag.IdProyecto = proyectoFijo.IdProyecto;
-                        ViewBag.TituloProyecto = proyectoFijo.TituloProyecto;
-                    }
-                    else
-                    {
-                        TempData["Error"] = "El proyecto especificado no existe.";
-                        return RedirectToAction("Index", "Proyectos");
-                    }
-                }
-                // 3. ESCENARIO B: Entrada global (Cargar Combobox según Rol)
-                else
-                {
-                    ViewBag.ProyectoFijo = false;
-                    List<DatosProyecto> listaProyectosFiltrados;
-
-                    if (rolUsuario == "Administrador")
-                    {
-                        // El Admin puede elegir CUALQUIER proyecto
-                        listaProyectosFiltrados = coleccionProyectos.Find(_ => true).ToList();
-                    }
-                    else // Es Líder
-                    {
-                        int idSemillero = (int)Session["IdSemillero"];
-                        // El Líder solo elije proyectos de su semillero
-                        listaProyectosFiltrados = coleccionProyectos.Find(p => p.IdSemillero == idSemillero).ToList();
-                    }
-
-                    ViewBag.ProyectosMapeados = listaProyectosFiltrados;
-                }
-
-                return View();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = "Error al abrir el formulario: " + ex.Message;
-                return RedirectToAction("Index");
-            }
-        }
+        
 
         // POST: Actividades/Agregar
         [HttpPost]
-        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto)
+        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, bool flujoSecuencial = false)
         {
             try
             {
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-                // 1. Validación estricta de fecha en el Servidor (No hoy, no ayer, no pasado)
+                // 1. Validación estricta de fecha en el Servidor
                 DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
-                DateTime limiteMinimoEnServidor = DateTime.Today.AddDays(1); // Mañana es el mínimo permitido
+                DateTime limiteMinimoEnServidor = DateTime.Today.AddDays(1);
 
                 if (fechaEntrega < limiteMinimoEnServidor)
                 {
@@ -247,11 +197,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-
                 // 1. GENERACIÓN DE ID GLOBAL (Prefijo fijo "40")
                 int nuevoIdActividad = 401;
 
-                // Extraemos TODAS las actividades de TODOS los proyectos en la base de datos
                 var todasLasActividades = coleccionProyectos.Find(_ => true).ToList()
                     .Where(p => p.Actividades != null && p.Actividades.Any())
                     .SelectMany(p => p.Actividades)
@@ -260,11 +208,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (todasLasActividades.Any())
                 {
                     int maxSecuencia = 0;
-
                     foreach (var act in todasLasActividades)
                     {
                         string idStr = act.IdActividad.ToString();
-
                         if (idStr.StartsWith("40") && idStr.Length >= 3)
                         {
                             if (int.TryParse(idStr.Substring(2), out int secuenciaActual))
@@ -276,19 +222,18 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             }
                         }
                     }
-
                     int siguienteSecuencia = maxSecuencia + 1;
                     nuevoIdActividad = int.Parse("40" + siguienteSecuencia);
                 }
 
-                // 2. Concatenación inteligente para mantener tu modelo string intacto en MongoDB
+                // 2. Concatenación inteligente
                 string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
 
                 Actividad nuevaActividad = new Actividad
                 {
                     IdActividad = nuevoIdActividad,
                     NombreActividad = nombreActividad.Trim(),
-                    DuracionActividad = duracionCompuesta, // Guarda ej: "15 semanas" o "2 meses"
+                    DuracionActividad = duracionCompuesta,
                     FechaEntregaActividad = fechaEntregaActividad,
                     Fases = new List<Fase>()
                 };
@@ -298,14 +243,18 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 coleccionProyectos.UpdateOne(filtro, actualizacion);
 
-                TempData["Exito"] = "Actividad registrada con éxito bajo el ID " + nuevoIdActividad + ".";
+                string origenRetorno = vinoDesdeProyecto ? "PorProyecto" : "Index";
 
-                if (vinoDesdeProyecto)
+                TempData["Exito"] = "Actividad registrada con éxito. Ahora es obligatorio registrar su primera fase.";
+
+                // --- REGLA ABSOLUTA: SIEMPRE IR A FASES ---
+                return RedirectToAction("Agregar", "Fases", new
                 {
-                    return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
-                }
-
-                return RedirectToAction("Index");
+                    idProyecto = idProyecto,
+                    idActividad = nuevoIdActividad,
+                    flujoSecuencial = flujoSecuencial, // Si viene de proyecto será true, sino false
+                    origenActividad = origenRetorno    // <-- Viaja tu lógica de retorno
+                });
             }
             catch (Exception ex)
             {
@@ -313,6 +262,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         // GET: Actividades/Modificar?idProyecto=X&idActividad=Y&desdeProyecto=true
         [HttpGet]

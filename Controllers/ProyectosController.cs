@@ -279,7 +279,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     coleccionProyectos.InsertOne(nuevoProyecto);
 
                     TempData["Exito"] = $"El proyecto '{nuevoProyecto.TituloProyecto}' ha sido registrado con el ID: {nuevoProyecto.IdProyecto}";
-                    return RedirectToAction("Index");
+                    return RedirectToAction("Agregar", "Actividades", new { idProyecto = nuevoProyecto.IdProyecto, flujoSecuencial = true });
                 }
 
                 // Si hay error en el formulario, recargamos ViewBag

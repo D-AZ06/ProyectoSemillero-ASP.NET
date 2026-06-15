@@ -143,9 +143,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // GET: Fases/Agregar
         [HttpGet]
-        public ActionResult Agregar(int? idProyecto, int? idActividad, bool desdeGlobal = false)
+        public ActionResult Agregar(int? idProyecto, int? idActividad, bool desdeGlobal = false, bool flujoSecuencial = false, string origenActividad = null)
         {
             try
             {
@@ -160,13 +159,23 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
 
-                // Identificamos exactamente de dónde viene
                 bool vinoDesdePorActividad = idProyecto.HasValue && idActividad.HasValue;
 
                 ViewBag.VinoDesdePorActividad = vinoDesdePorActividad;
                 ViewBag.DesdeGlobal = desdeGlobal;
 
-                // ESCENARIO A: Viene de "Fases por Actividad"
+                // --- GUARDAMOS LAS NUEVAS VARIABLES ---
+                ViewBag.FlujoSecuencial = flujoSecuencial;
+                ViewBag.OrigenActividad = origenActividad;
+
+                // Configuramos los mensajes de la alerta flotante si aplica
+                if (flujoSecuencial)
+                {
+                    ViewBag.MensajeExito = "¡Actividad registrada con éxito!";
+                    ViewBag.MensajeInstruccion = "Para finalizar este registro inicial, es obligatorio crear la primera fase de esta actividad.";
+                }
+
+                // ESCENARIO A: Viene de "Fases por Actividad" o del Flujo Secuencial
                 if (vinoDesdePorActividad)
                 {
                     var proyectoFijo = coleccionProyectos.Find(p => p.IdProyecto == idProyecto.Value).FirstOrDefault();
@@ -203,7 +212,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     ViewBag.ProyectosMapeados = listaProyectosFiltrados;
                 }
 
-                // --- LÓGICA PLUS: DICCIONARIO GLOBAL DE FASES ---
+                // --- DICCIONARIO GLOBAL DE FASES ---
                 var todasLasFases = coleccionProyectos.Find(_ => true).ToList()
                     .Where(p => p.Actividades != null)
                     .SelectMany(p => p.Actividades)
@@ -211,8 +220,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     .SelectMany(a => a.Fases)
                     .Select(f => f.NombreFase)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
-                    .GroupBy(n => n.Trim().ToLower()) // Agrupa para evitar repetidos
-                    .Select(g => g.First()) // Se queda con la versión original (ej: "Análisis")
+                    .GroupBy(n => n.Trim().ToLower())
+                    .Select(g => g.First())
                     .OrderBy(n => n)
                     .ToList();
 
@@ -235,7 +244,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             {
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-                // 1. Extraemos los datos de forma segura (evita fallos silenciosos)
+                // 1. Extraemos los datos del formulario
                 int idProyecto = int.Parse(form["idProyecto"]);
                 int idActividad = int.Parse(form["idActividad"]);
                 string nombreFase = form["nombreFase"];
@@ -244,6 +253,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 bool vinoDesdePorActividad = form["vinoDesdePorActividad"] == "true";
                 bool desdeGlobal = form["desdeGlobal"] == "true";
+
+                // --- CAPTURAMOS LAS VARIABLES DE CONTROL DE FLUJO ---
+                bool flujoSecuencial = form["flujoSecuencial"] == "true";
+                string origenActividad = form["origenActividad"];
 
                 // 2. Buscamos el documento padre completo en MongoDB
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
@@ -263,9 +276,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 // 3. GENERACIÓN DE ID GLOBAL PARA FASES (Prefijo fijo "50")
-                int nuevoIdFase = 501; // Valor por defecto absoluto
+                int nuevoIdFase = 501;
 
-                // Extraemos TODAS las fases de TODAS las actividades en TODOS los proyectos
                 var todasLasFases = coleccionProyectos.Find(_ => true).ToList()
                     .Where(p => p.Actividades != null && p.Actividades.Any())
                     .SelectMany(p => p.Actividades)
@@ -281,10 +293,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     {
                         string idStr = fase.IdFase.ToString();
 
-                        // Verificamos que empiece estrictamente con "50" y tenga algo más
                         if (idStr.StartsWith("50") && idStr.Length >= 3)
                         {
-                            // Recortamos el "50" inicial y nos quedamos con el contador real (1, 9, 10...)
                             if (int.TryParse(idStr.Substring(2), out int secuenciaActual))
                             {
                                 if (secuenciaActual > maxSecuencia)
@@ -295,15 +305,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         }
                     }
 
-                    // Le sumamos 1 al contador real global
                     int siguienteSecuencia = maxSecuencia + 1;
-
-                    // Volvemos a pegar el "50" FIJO con el nuevo contador (Ej: "50" + "10" = 5010)
                     nuevoIdFase = int.Parse("50" + siguienteSecuencia);
                 }
 
-                // Prevención de errores: Inicializamos la lista de la actividad actual 
-                // si viene nula desde Mongo, para que no falle al hacer el .Add() más abajo.
                 if (actividadPadre.Fases == null)
                 {
                     actividadPadre.Fases = new List<Fase>();
@@ -319,12 +324,36 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     DuracionFase = duracionCompuesta
                 });
 
-                // 5. Reemplazamos el documento completo (100% seguro contra nulos)
+                // 5. Reemplazamos el documento completo en MongoDB
                 coleccionProyectos.ReplaceOne(p => p.IdProyecto == idProyecto, proyectoPadre);
 
+                // --------------------------------------------------------
+                // 6. REDIRECCIÓN INTELIGENTE SEGÚN EL ESCENARIO
+                // --------------------------------------------------------
+
+                // Escenario A: Flujo completo obligatorio (Creó Proyecto -> Actividad -> Fase)
+                if (flujoSecuencial)
+                {
+                    TempData["Exito"] = "¡Proceso completado! Proyecto, actividad y fase registrados exitosamente.";
+                    return RedirectToAction("Index", "Proyectos");
+                }
+
+                // A partir de aquí es para los otros flujos
                 TempData["Exito"] = "Fase registrada con éxito bajo el ID " + nuevoIdFase + ".";
 
-                // 6. Redirección Inteligente
+                // Escenario B: Flujo de 2 pasos (Creó Actividad suelta -> Fase obligatoria)
+                if (!string.IsNullOrEmpty(origenActividad))
+                {
+                    if (origenActividad == "PorProyecto")
+                    {
+                        // Regresa a la lista de actividades de ese proyecto específico
+                        return RedirectToAction("PorProyecto", "Actividades", new { idProyecto = idProyecto });
+                    }
+                    // Regresa a la gestión global de actividades
+                    return RedirectToAction("Index", "Actividades");
+                }
+
+                // Escenario C: Flujo simple (Entró a crear solo una fase)
                 if (vinoDesdePorActividad)
                 {
                     return RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal });
@@ -334,7 +363,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = "Error al guardar la fase: Verifica que todos los campos estén llenos. Detalle: " + ex.Message;
+                TempData["Error"] = "Error al guardar la fase. Detalle: " + ex.Message;
                 return RedirectToAction("Index");
             }
         }
