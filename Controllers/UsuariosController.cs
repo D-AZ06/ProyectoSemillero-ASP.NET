@@ -23,18 +23,13 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 string rolUsuario = Session["Rol"].ToString();
                 var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
 
-                // ==========================================
-                // Obtener Nombres de los Semilleros para la vista
-                // ==========================================
                 var coleccionSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
                 var listaSemilleros = coleccionSemilleros.Find(_ => true).ToList();
                 ViewBag.DiccionarioSemilleros = listaSemilleros.ToDictionary(s => s.IdSemillero, s => s.nombreSemillero);
-                // ==========================================
 
                 var builder = Builders<DatosUsuario>.Filter;
                 FilterDefinition<DatosUsuario> filtroSeguridad;
 
-                // 1. FILTRO DE SEGURIDAD
                 if (rolUsuario == "Administrador" || rolUsuario == "Admin")
                 {
                     filtroSeguridad = builder.Empty;
@@ -53,7 +48,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                // 2. FILTRO DE BÚSQUEDA
                 FilterDefinition<DatosUsuario> filtroBusqueda = builder.Empty;
 
                 if (!string.IsNullOrEmpty(tipoFiltro) && !string.IsNullOrEmpty(valorFiltro))
@@ -61,8 +55,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     switch (tipoFiltro)
                     {
                         case "idUsuario":
-                            if (int.TryParse(valorFiltro, out int idUsu))
-                                filtroBusqueda = builder.Eq(u => u.IdUsuario, idUsu);
+                            if (int.TryParse(valorFiltro, out int idUsu)) filtroBusqueda = builder.Eq(u => u.IdUsuario, idUsu);
                             break;
                         case "nombreUsuario":
                             filtroBusqueda = builder.Regex(u => u.NombreUsuario, new BsonRegularExpression(valorFiltro, "i"));
@@ -74,19 +67,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             filtroBusqueda = builder.Eq(u => u.RolUsuario, valorFiltro);
                             break;
                         case "idSemillero":
-                            if (int.TryParse(valorFiltro, out int idSem))
-                                filtroBusqueda = builder.Eq(u => u.IdSemillero, idSem);
+                            if (int.TryParse(valorFiltro, out int idSem)) filtroBusqueda = builder.Eq(u => u.IdSemillero, idSem);
                             break;
                         case "nombreSemillero":
                             var semilleroEncontrado = listaSemilleros.FirstOrDefault(s => s.nombreSemillero.Equals(valorFiltro, StringComparison.OrdinalIgnoreCase));
-                            filtroBusqueda = semilleroEncontrado != null
-                                ? builder.Eq(u => u.IdSemillero, semilleroEncontrado.IdSemillero)
-                                : builder.Eq(u => u.IdSemillero, -1);
+                            filtroBusqueda = semilleroEncontrado != null ? builder.Eq(u => u.IdSemillero, semilleroEncontrado.IdSemillero) : builder.Eq(u => u.IdSemillero, -1);
                             break;
                     }
                 }
 
-                // 3. COMBINAR Y EJECUTAR
                 var filtroFinal = builder.And(filtroSeguridad, filtroBusqueda);
                 List<DatosUsuario> listaFinal = coleccionUsuarios.Find(filtroFinal).ToList();
 
@@ -112,58 +101,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.RolUsuario = rolUsuario;
-
-            // ==============================================================
-            // NUEVO: Calcular el próximo ID para mostrarlo en el formulario
-            // ==============================================================
             var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-            var ultimoUsuario = coleccionUsuarios.Find(new MongoDB.Bson.BsonDocument())
-                                                 .SortByDescending(u => u.IdUsuario)
-                                                 .FirstOrDefault();
-            int correlativo = 1;
+            var ultimoUsuario = coleccionUsuarios.Find(new BsonDocument()).SortByDescending(u => u.IdUsuario).FirstOrDefault();
 
-            if (ultimoUsuario != null)
-            {
-                string ultimoIdStr = ultimoUsuario.IdUsuario.ToString();
-                if (ultimoIdStr.StartsWith("10"))
-                {
-                    if (int.TryParse(ultimoIdStr.Substring(2), out int numero)) correlativo = numero + 1;
-                }
-            }
-
-            // Creamos un modelo vacío y le asignamos el ID calculado
             var nuevoUsuario = new DatosUsuario();
-            nuevoUsuario.IdUsuario = int.Parse("20" + correlativo.ToString());
-           
 
-            // Lógica para cargar Semilleros dependiendo del Rol
-            if (rolUsuario == "Administrador" || rolUsuario == "Admin")
-            {
-                var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
-                var listaSemilleros = coleccionSemilleros.Find(new MongoDB.Bson.BsonDocument()).ToList().Select(s => new
-                {
-                    IdSemillero = s["idSemillero"].AsInt32,
-                    NombreSemillero = s["nombreSemillero"].AsString
-                }).ToList();
+            if (ultimoUsuario != null && ultimoUsuario.IdUsuario >= 200) nuevoUsuario.IdUsuario = ultimoUsuario.IdUsuario + 1;
+            else nuevoUsuario.IdUsuario = 201;
 
-                ViewBag.ListaSemilleros = new SelectList(listaSemilleros, "IdSemillero", "NombreSemillero");
-            }
-            else if (rolUsuario == "Líder")
-            {
-                int idSemillero = (int)Session["IdSemillero"];
-                ViewBag.IdSemilleroLider = idSemillero;
-
-                var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
-                var filtro = Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("idSemillero", idSemillero);
-                var semilleroDB = coleccionSemilleros.Find(filtro).FirstOrDefault();
-
-                ViewBag.NombreSemilleroLider = (semilleroDB != null && semilleroDB.Contains("nombreSemillero"))
-                                                ? semilleroDB["nombreSemillero"].AsString
-                                                : "Semillero Desconocido";
-            }
-
-            // IMPORTANTE: Ahora le enviamos el modelo 'nuevoUsuario' a la vista
+            RecargarDatosVista(rolUsuario);
             return View(nuevoUsuario);
         }
 
@@ -179,56 +125,47 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             ModelState.Remove("IdUsuario");
 
+            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+            var ultimoUsuario = coleccionUsuarios.Find(new BsonDocument()).SortByDescending(u => u.IdUsuario).FirstOrDefault();
+
+            if (ultimoUsuario != null && ultimoUsuario.IdUsuario >= 200) nuevoUsuario.IdUsuario = ultimoUsuario.IdUsuario + 1;
+            else nuevoUsuario.IdUsuario = 201;
+
+            if (rolUsuario == "Líder") nuevoUsuario.IdSemillero = (int)Session["IdSemillero"];
+            if (nuevoUsuario.RolUsuario == "Administrador" || nuevoUsuario.RolUsuario == "Admin") nuevoUsuario.IdSemillero = null;
+
             if (ModelState.IsValid)
             {
-                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-                var ultimoUsuario = coleccionUsuarios.Find(new BsonDocument()).SortByDescending(u => u.IdUsuario).FirstOrDefault();
-                int correlativo = 1;
-
-                if (ultimoUsuario != null)
+                if (string.IsNullOrWhiteSpace(nuevoUsuario.NombreUsuario) || !Regex.IsMatch(nuevoUsuario.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
                 {
-                    string ultimoIdStr = ultimoUsuario.IdUsuario.ToString();
-                    if (ultimoIdStr.StartsWith("20"))
-                    {
-                        if (int.TryParse(ultimoIdStr.Substring(2), out int numero)) correlativo = numero + 1;
-                    }
+                    TempData["Error"] = "El nombre es obligatorio y solo puede contener letras y espacios.";
+                    RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
-                nuevoUsuario.IdUsuario = int.Parse("20" + correlativo.ToString());
-
-                if (rolUsuario == "Líder")
+                if (!nuevoUsuario.TelefonoUsuario.HasValue || nuevoUsuario.TelefonoUsuario.Value.ToString().Length > 10)
                 {
-                    nuevoUsuario.IdSemillero = (int)Session["IdSemillero"];
+                    TempData["Error"] = "El número telefónico es obligatorio y no puede tener más de 10 dígitos.";
+                    RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
-                // Si el rol que se está creando es Administrador, no debería tener semillero
-                if (nuevoUsuario.RolUsuario == "Administrador" || nuevoUsuario.RolUsuario == "Admin")
+                if (!nuevoUsuario.EdadUsuario.HasValue || nuevoUsuario.EdadUsuario.Value < 15 || nuevoUsuario.EdadUsuario.Value > 100)
                 {
-                    nuevoUsuario.IdSemillero = null;
+                    TempData["Error"] = "La edad es obligatoria y debe ser mayor a 15 años.";
+                    RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
-                if (!Regex.IsMatch(nuevoUsuario.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+                if (string.IsNullOrWhiteSpace(nuevoUsuario.CorreoUsuario) || !Regex.IsMatch(nuevoUsuario.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
                 {
-                    TempData["Error"] = "Operación rechazada: El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.";
-                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
-                    return View(nuevoUsuario);
-                }
-                else if (!Regex.IsMatch(nuevoUsuario.TelefonoUsuario.ToString(), "1,10"))
-                {
-                    TempData["Error"] = "Operación rechazada: El número telefónico solo puede contener hasta 10 dígitos. No se permiten letras ni caracteres especiales.";
-                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
-                    return View(nuevoUsuario);
+                    TempData["Error"] = "El formato del correo electrónico no es válido.";
+                    RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
-                else if (!Regex.IsMatch(nuevoUsuario.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
-                {
-                    TempData["Error"] = "Operación rechazada: El formato del correo no es válido (ejemplo: usuario@dominio.com).";
-                    return View(nuevoUsuario);
-                }
                 coleccionUsuarios.InsertOne(nuevoUsuario);
                 TempData["Exito"] = $"Usuario registrado correctamente con el ID: {nuevoUsuario.IdUsuario}";
                 return RedirectToAction("Index");
             }
+
+            RecargarDatosVista(rolUsuario);
             return View(nuevoUsuario);
         }
 
@@ -256,34 +193,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 return RedirectToAction("Index");
             }
 
-            ViewBag.RolUsuario = rolUsuario;
-
-            // Misma lógica de semilleros para la vista de Modificar
-            if (rolUsuario == "Administrador" || rolUsuario == "Admin")
-            {
-                var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
-                var listaSemilleros = coleccionSemilleros.Find(new MongoDB.Bson.BsonDocument()).ToList().Select(s => new
-                {
-                    IdSemillero = s["idSemillero"].AsInt32,
-                    NombreSemillero = s["nombreSemillero"].AsString
-                }).ToList();
-
-                ViewBag.ListaSemilleros = new SelectList(listaSemilleros, "IdSemillero", "NombreSemillero");
-            }
-            else if (rolUsuario == "Líder")
-            {
-                int idSemillero = (int)Session["IdSemillero"];
-                ViewBag.IdSemilleroLider = idSemillero;
-
-                var coleccionSemilleros = conexionDB.Database.GetCollection<MongoDB.Bson.BsonDocument>("Semilleros");
-                var filtro = Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("idSemillero", idSemillero);
-                var semilleroDB = coleccionSemilleros.Find(filtro).FirstOrDefault();
-
-                ViewBag.NombreSemilleroLider = (semilleroDB != null && semilleroDB.Contains("nombreSemillero"))
-                                                ? semilleroDB["nombreSemillero"].AsString
-                                                : "Semillero Desconocido";
-            }
-
+            RecargarDatosVista(rolUsuario);
             return View(usuario);
         }
 
@@ -316,24 +226,29 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 {
                     usuarioModificado.IdSemillero = null;
                 }
-                // Validación estricta: Solo letras y espacios para el nombre
-                if (!Regex.IsMatch(usuarioModificado.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
+
+                if (string.IsNullOrWhiteSpace(usuarioModificado.NombreUsuario) || !Regex.IsMatch(usuarioModificado.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
                 {
-                    TempData["Error"] = "Operación rechazada: El nombre solo puede contener letras y espacios. No se permiten números ni caracteres especiales.";
-                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
-                    return View(usuarioModificado);
-                }
-                else if (!Regex.IsMatch(usuarioModificado.TelefonoUsuario.ToString(), "1,10"))
-                {
-                    TempData["Error"] = "Operación rechazada: El numero telefonico no puede contener letras. No se permiten letras ni caracteres especiales.";
-                    // Recuerda volver a cargar tus ViewBag aquí si los necesitas antes del return View()
-                    return View(usuarioModificado);
+                    TempData["Error"] = "El nombre es obligatorio y solo puede contener letras y espacios.";
+                    RecargarDatosVista(rolUsuario); return View(usuarioModificado);
                 }
 
-                else if (!Regex.IsMatch(usuarioModificado.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+                if (!usuarioModificado.TelefonoUsuario.HasValue || usuarioModificado.TelefonoUsuario.Value.ToString().Length > 10)
                 {
-                    TempData["Error"] = "Operación rechazada: El formato del correo no es válido (ejemplo: usuario@dominio.com).";
-                    return View(usuarioModificado);
+                    TempData["Error"] = "El número telefónico es obligatorio y no puede tener más de 10 dígitos.";
+                    RecargarDatosVista(rolUsuario); return View(usuarioModificado);
+                }
+
+                if (!usuarioModificado.EdadUsuario.HasValue || usuarioModificado.EdadUsuario.Value < 15 || usuarioModificado.EdadUsuario.Value > 100)
+                {
+                    TempData["Error"] = "La edad es obligatoria y debe ser mayor a 15 años.";
+                    RecargarDatosVista(rolUsuario); return View(usuarioModificado);
+                }
+
+                if (string.IsNullOrWhiteSpace(usuarioModificado.CorreoUsuario) || !Regex.IsMatch(usuarioModificado.CorreoUsuario, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+                {
+                    TempData["Error"] = "El formato del correo electrónico no es válido.";
+                    RecargarDatosVista(rolUsuario); return View(usuarioModificado);
                 }
 
                 var resultado = coleccionUsuarios.ReplaceOne(filtro, usuarioModificado);
@@ -342,6 +257,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 return RedirectToAction("Index");
             }
+
+            RecargarDatosVista(rolUsuario);
             return View(usuarioModificado);
         }
 
@@ -356,10 +273,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
             DeleteResult resultado;
 
-            if (rolUsuario == "Administrador" || rolUsuario == "Admin")
-            {
-                resultado = coleccionUsuarios.DeleteOne(u => u.IdUsuario == id);
-            }
+            if (rolUsuario == "Administrador" || rolUsuario == "Admin") resultado = coleccionUsuarios.DeleteOne(u => u.IdUsuario == id);
             else
             {
                 int idSemilleroLider = (int)Session["IdSemillero"];
@@ -370,6 +284,27 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             else TempData["Error"] = "No se pudo eliminar.";
 
             return RedirectToAction("Index");
+        }
+
+        private void RecargarDatosVista(string rolUsuario)
+        {
+            ViewBag.RolUsuario = rolUsuario;
+
+            if (rolUsuario == "Administrador" || rolUsuario == "Admin")
+            {
+                var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+                var lista = colSemilleros.Find(new BsonDocument()).ToList()
+                            .Select(s => new { IdSemillero = s["idSemillero"].AsInt32, NombreSemillero = s["nombreSemillero"].AsString }).ToList();
+                ViewBag.ListaSemilleros = new SelectList(lista, "IdSemillero", "NombreSemillero");
+            }
+            else if (rolUsuario == "Líder")
+            {
+                int idSemillero = (int)Session["IdSemillero"];
+                ViewBag.IdSemilleroLider = idSemillero;
+                var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+                var semilleroDB = colSemilleros.Find(Builders<BsonDocument>.Filter.Eq("idSemillero", idSemillero)).FirstOrDefault();
+                ViewBag.NombreSemilleroLider = (semilleroDB != null && semilleroDB.Contains("nombreSemillero")) ? semilleroDB["nombreSemillero"].AsString : "Desconocido";
+            }
         }
     }
 }

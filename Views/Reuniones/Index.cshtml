@@ -74,6 +74,10 @@
                 <th scope="col" class="py-3">Fecha y Horario</th>
                 <th scope="col" class="py-3">Lugar</th>
                 <th scope="col" class="py-3">Estado</th>
+                @if (rolActual == "Investigador" || rolActual == "Estudiante")
+                {
+                    <th scope="col" class="py-3 text-center">Mi Asistencia</th>
+                }
                 <th scope="col" class="py-3 text-center">Acciones</th>
             </tr>
         </thead>
@@ -82,8 +86,11 @@
             {
                 foreach (var r in Model)
                 {
-                    bool estadoValido = (r.EstadoReunion == "Programada" || r.EstadoReunion == "Reprogramado");
-                    bool tieneAsistencias = r.InvestigadoresConvocados != null && r.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmado");
+                    // Soporte para variaciones gramaticales de la BD antigua y nueva
+                    bool estadoValido = (r.EstadoReunion == "Programada" || r.EstadoReunion == "Reprogramada" || r.EstadoReunion == "Reprogramado");
+
+                    // Blindaje contra datos viejos ("Confirmado") y nuevos ("Confirmada")
+                    bool tieneAsistencias = r.InvestigadoresConvocados != null && r.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmada" || i.EstadoAsistencia == "Confirmado");
 
                     bool faltanMenosDe2Horas = false;
                     bool yaPasoOEmpezo = false;
@@ -95,15 +102,14 @@
                         if (diffHoras < 0) { yaPasoOEmpezo = true; }
                     }
 
-                    // APLICAMOS LA REGLA A AMBOS: Si faltan menos de 2h, o ya pasó, se bloquean tanto Modificar como Cancelar
+                    // Regla de negocio: si alguien confirmó, o el tiempo expiró, el líder no puede alterar la reunión
                     bool puedeModificar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas && !yaPasoOEmpezo;
-                    bool puedeCancelar = estadoValido && !faltanMenosDe2Horas && !yaPasoOEmpezo;
+                    bool puedeCancelar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas && !yaPasoOEmpezo;
 
-                    // Extraer la asistencia particular de este usuario si es investigador
                     string miAsistencia = "Pendiente";
                     if (rolActual == "Investigador" || rolActual == "Estudiante")
                     {
-                        var miRegistro = r.InvestigadoresConvocados.FirstOrDefault(i => i.IdReal == (int)Session["IdUsuario"]);
+                        var miRegistro = r.InvestigadoresConvocados.FirstOrDefault(i => i.IdInvestigador == idUsuarioLogueado || i.IdReal == idUsuarioLogueado);
                         if (miRegistro != null && !string.IsNullOrEmpty(miRegistro.EstadoAsistencia))
                         {
                             miAsistencia = miRegistro.EstadoAsistencia;
@@ -118,23 +124,43 @@
                         </td>
                         <td class="data-lugarReunion">@r.LugarReunion</td>
                         <td class="data-estadoReunion">
-                            @if (r.EstadoReunion == "Cancelado")
-                            {<span class="badge bg-danger">@r.EstadoReunion</span> }
-                        else if (r.EstadoReunion == "Finalizada")
-                        { <span class="badge bg-success">@r.EstadoReunion</span> }
-                    else
-                    { <span class="badge bg-info text-dark">@r.EstadoReunion</span>}
+                            @if (r.EstadoReunion == "Cancelada" || r.EstadoReunion == "Cancelado")
+                            {
+                                <span class="badge bg-danger">Cancelada</span>
+                            }
+                            else if (r.EstadoReunion == "Terminada" || r.EstadoReunion == "Finalizada")
+                            {
+                                <span class="badge bg-success">Terminada</span>
+                            }
+                            else if (r.EstadoReunion == "En ejecución")
+                            {
+                                <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-play-circle me-1"></i>En ejecución</span>
+                            }
+                            else if (r.EstadoReunion == "Reprogramada" || r.EstadoReunion == "Reprogramado")
+                            {
+                                <span class="badge bg-info text-dark">Reprogramada</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary">@r.EstadoReunion</span>
+                            }
                         </td>
 
                         @if (rolActual == "Investigador" || rolActual == "Estudiante")
                         {
                             <td class="text-center">
-                                @if (miAsistencia == "Confirmado")
-                                {<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Asistiré</span> }
-                                else if (miAsistencia == "Conflicto")
-                                { <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Conflicto</span> }
+                                @if (miAsistencia == "Confirmada" || miAsistencia == "Confirmado")
+                                {
+                                    <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Confirmada</span>
+                                }
+                                else if (miAsistencia == "No disponible" || miAsistencia == "Conflicto")
+                                {
+                                    <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> No disponible</span>
+                                }
                                 else
-                                { <span class="badge bg-secondary"><i class="bi bi-hourglass-split me-1"></i> Pendiente</span>}
+                                {
+                                    <span class="badge bg-secondary"><i class="bi bi-hourglass-split me-1"></i> Pendiente</span>
+                                }
                             </td>
                         }
 
@@ -144,17 +170,23 @@
                                 {
                                     if (estadoValido && !yaPasoOEmpezo && !faltanMenosDe2Horas)
                                     {
-                                        <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar Asistencia" onclick="responderAsistencia(@r.IdReunion, 'Confirmado')"><i class="bi bi-check-lg"></i></button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Reportar Conflicto de Horario" onclick="responderAsistencia(@r.IdReunion, 'Conflicto')"><i class="bi bi-calendar-x"></i></button>
+                                        if (miAsistencia == "Pendiente")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-success" title="Confirmar Asistencia" onclick="responderAsistencia(@r.IdReunion, 'Confirmada')"><i class="bi bi-check-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="No puedo asistir" onclick="responderAsistencia(@r.IdReunion, 'No disponible')"><i class="bi bi-calendar-x"></i></button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-secondary border-0" disabled title="Ya enviaste tu respuesta definitiva"><i class="bi bi-lock-fill fs-5"></i></button>
+                                        }
                                     }
                                     else
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary" disabled title="Reunión cerrada o muy próxima"><i class="bi bi-lock-fill"></i></button>
+                                        <button class="btn btn-sm btn-outline-secondary border-0" disabled title="Reunión cerrada o muy próxima"><i class="bi bi-lock-fill fs-5"></i></button>
                                     }
                                 }
                                 else
                                 {
-                                    // BOTÓN MODIFICAR
                                     if (puedeModificar)
                                     {
                                         <a href="@Url.Action("Modificar", "Reuniones", new { id = r.IdReunion })" class="btn btn-sm btn-outline-primary" title="Modificar"><i class="bi bi-pencil-square"></i></a>
@@ -164,7 +196,6 @@
                                         <button class="btn btn-sm btn-outline-secondary border-0" disabled title="No editable"><i class="bi bi-lock-fill fs-5"></i></button>
                                     }
 
-                                    // BOTÓN CANCELAR (Ahora es ROJO: btn-outline-danger)
                                     if (puedeCancelar)
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-danger" title="Cancelar Reunión" onclick="confirmarCancelacion(@r.IdReunion)"><i class="bi bi-x-circle"></i></button>
@@ -174,7 +205,6 @@
                                         <button class="btn btn-sm btn-outline-secondary border-0" disabled title="No cancelable"><i class="bi bi-lock-fill fs-5"></i></button>
                                     }
 
-                                    // BOTÓN ELIMINAR (Admin)
                                     if (rolActual == "Administrador" || rolActual == "Admin")
                                     {
                                         <button type="button" class="btn btn-sm btn-danger" title="Borrar de la BD" onclick="confirmarEliminacion(@r.IdReunion)"><i class="bi bi-trash"></i></button>
@@ -187,7 +217,7 @@
             }
             else
             {
-                <tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i> No hay reuniones programadas.</td></tr>
+                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i> No hay reuniones programadas.</td></tr>
             }
         </tbody>
     </table>
@@ -195,7 +225,6 @@
 
 @section Scripts {
     <script>
-        // Mapeo de datos para autocompletado en base a las filas de la tabla
         const datosAutocompletado = {
             idReunion: [...new Set(Array.from(document.querySelectorAll('.data-idReunion')).map(el => el.textContent.trim()))],
             motivoReunion: [...new Set(Array.from(document.querySelectorAll('.data-motivoReunion')).map(el => el.textContent.trim()))],
@@ -228,17 +257,11 @@
             else if (filtroSeleccionado === 'mesReunion') {
                 nuevoInput = `<input type="month" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
-            else if (filtroSeleccionado === 'horaInicio') {
-                nuevoInput = `<input type="time" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
-
-            }
             else if (filtroSeleccionado === 'horaInicio' || filtroSeleccionado === 'horaFin') {
                 nuevoInput = `<input type="time" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
-
-            // NUEVO FILTRO CORREGIDO: Expresión regular para que empiece obligatoriamente con 60
             else if (filtroSeleccionado === 'prefijo60') {
-                nuevoInput = `<input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Ej: 600, 609, 6010..." pattern="^60[0-9]+" title="El ID debe comenzar estrictamente con 60 (ejemplo: 600, 609, 6010)" required autocomplete="off">`;
+                nuevoInput = `<input type="text" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="Ej: 600, 609, 6010..." pattern="^60[0-9]+" title="El ID debe comenzar estrictamente con 60" required autocomplete="off">`;
             }
             else {
                 let esNumero = (filtroSeleccionado === 'idReunion' || filtroSeleccionado === 'idLider');
@@ -282,7 +305,6 @@
                     }
                 }
 
-                // Validación en tiempo real para el botón de enviar en la secuencia 60
                 if (filtro === 'prefijo60') {
                     const cumpleIdReunion = datosAutocompletado.idReunion.includes(valor);
                     const cumpleIdLider = datosAutocompletado.idLider.includes(valor);
@@ -295,10 +317,58 @@
             });
         }
 
+        // ==========================================
+        // ENVIAR ASISTENCIA DEFINITIVA (INVESTIGADOR)
+        // ==========================================
+        function responderAsistencia(idReunion, respuesta) {
+            let accionTexto = respuesta === 'Confirmada' ? 'CONFIRMAR tu asistencia' : 'marcar que NO ESTÁS DISPONIBLE';
+            let colorBoton = respuesta === 'Confirmada' ? '#198754' : '#dc3545';
+
+            Swal.fire({
+                title: '¿Estás completamente seguro?',
+                html: `Vas a <b>${accionTexto}</b> a esta reunión.<br><br><span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> ¡ATENCIÓN! Esta acción es definitiva.</span> Una vez enviada, no podrás cambiar tu decisión ni modificar tu respuesta.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: colorBoton,
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, es mi decisión definitiva',
+                cancelButtonText: 'Cancelar y revisar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Registrando respuesta...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                    fetch('@Url.Action("ResponderAsistencia", "Reuniones")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ idReunion: idReunion, respuesta: respuesta })
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error("Error HTTP: " + response.status);
+                        return response.json();
+                    })
+                    .then(res => {
+                        if (res.success) {
+                            Swal.fire({ icon: 'success', title: '¡Respuesta Registrada!', text: 'Tu estado de asistencia se ha guardado de forma permanente.', confirmButtonColor: '#0284c7' })
+                            .then(() => window.location.reload());
+                        } else {
+                            Swal.fire('Operación Denegada', res.message, 'warning');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error de comunicación:", error);
+                        Swal.fire('Error Crítico', 'No se pudo establecer conexión con el servidor.', 'error');
+                    });
+                }
+            });
+        }
+
+        // ==========================================
+        // CANCELAR REUNIÓN (LÍDER)
+        // ==========================================
         function confirmarCancelacion(id) {
             Swal.fire({
                 title: '¿Cancelar Reunión?',
-                text: "Esta acción pasará el estado a 'Cancelado' y liberará el horario de los investigadores.",
+                text: "Esta acción pasará el estado a 'Cancelada' y liberará el horario de los investigadores.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc3545',
@@ -309,13 +379,10 @@
 
                     Swal.fire({ title: 'Procesando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-                    // Usamos FETCH nativo, así nos libramos del problema de "$" (jQuery)
                     fetch('@Url.Action("CancelarReunion", "Reuniones")', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: new URLSearchParams({ id: id }) // Empaquetamos el ID de forma segura
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ id: id })
                     })
                     .then(response => {
                         if (!response.ok) throw new Error("Error HTTP: " + response.status);
@@ -323,28 +390,15 @@
                     })
                     .then(res => {
                         if (res.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Cancelada!',
-                                text: 'El estado de la reunión ha sido actualizado.',
-                                confirmButtonColor: '#0284c7'
-                            }).then(() => {
-                                window.location.reload();
-                            });
+                            Swal.fire({ icon: 'success', title: '¡Cancelada!', text: 'El estado de la reunión ha sido actualizado.', confirmButtonColor: '#0284c7' })
+                            .then(() => window.location.reload());
                         } else {
-                            // C# manda un rechazo lógico
                             Swal.fire('Atención', res.message || 'Error desconocido del servidor.', 'warning');
                         }
                     })
                     .catch(error => {
-                        // Atrapa si el servidor se cae
                         console.error("Fallo de red o servidor:", error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error de Conexión',
-                            text: 'Hubo un problema comunicándose con el servidor.',
-                            confirmButtonColor: '#dc3545'
-                        });
+                        Swal.fire({ icon: 'error', title: 'Error de Conexión', text: 'Hubo un problema comunicándose con el servidor.', confirmButtonColor: '#dc3545' });
                     });
                 }
             });

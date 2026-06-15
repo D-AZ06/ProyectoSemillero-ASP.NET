@@ -313,6 +313,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (reunion == null) return Json(new { success = false, message = "La reunión no existe en la BD." });
 
+                // ==========================================================
+                // EL CANDADO: Bloquea si alguien ya tiene "Confirmada"
+                // ==========================================================
+                if (reunion.InvestigadoresConvocados != null && reunion.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmada"))
+                {
+                    return Json(new { success = false, message = "Operación denegada: No puedes cancelar porque ya hay investigadores que confirmaron su asistencia." });
+                }
+
                 if (DateTime.TryParse(reunion.FechaReunion + " " + reunion.HoraInicio, out DateTime inicioReunion))
                 {
                     if (inicioReunion < DateTime.Now)
@@ -329,7 +337,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 reunion.EstadoReunion = "Cancelada";
                 if (reunion.InvestigadoresConvocados != null)
                 {
-                    foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Conflicto";
+                    // Si se cancela, los demás quedan en Pendiente o Conflicto
+                    foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Pendiente";
                 }
 
                 coleccion.ReplaceOne(r => r.IdReunion == id, reunion);
@@ -338,6 +347,46 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Error del servidor: " + ex.Message });
+            }
+        }
+
+        // ==========================================================
+        // NUEVO MÉTODO: Para recibir la asistencia del investigador
+        // ==========================================================
+        [HttpPost]
+        public JsonResult ResponderAsistencia(int idReunion, string respuesta)
+        {
+            try
+            {
+                if (Session["IdUsuario"] == null) return Json(new { success = false, message = "Sesión expirada." });
+                int idUsuarioLogueado = (int)Session["IdUsuario"];
+
+                var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+                var reunion = coleccion.Find(r => r.IdReunion == idReunion).FirstOrDefault();
+
+                if (reunion == null) return Json(new { success = false, message = "La reunión no existe en la BD." });
+
+                if (reunion.EstadoReunion == "Cancelada" || reunion.EstadoReunion == "Terminada" || reunion.EstadoReunion == "En ejecución")
+                {
+                    return Json(new { success = false, message = "No puedes cambiar tu asistencia a una reunión en este estado." });
+                }
+
+                // Aquí usamos IdReal o IdInvestigador según como lo tengas en tu modelo. 
+                // Usaré IdInvestigador basado en tu método Agregar.
+                var investigador = reunion.InvestigadoresConvocados?.FirstOrDefault(i => i.IdInvestigador == idUsuarioLogueado);
+                if (investigador == null)
+                {
+                    return Json(new { success = false, message = "No estás convocado a esta reunión." });
+                }
+
+                investigador.EstadoAsistencia = respuesta; // Recibe "Confirmada" o "No disponible"
+                coleccion.ReplaceOne(r => r.IdReunion == idReunion, reunion);
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error interno: " + ex.Message });
             }
         }
 

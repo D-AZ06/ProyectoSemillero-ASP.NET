@@ -24,14 +24,14 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("rolUsuario")]
         public string RolUsuario { get; set; }
 
-        // --- CAMPOS NUEVOS ---
+        
         [BsonElement("edadUsuario")]
-        public int EdadUsuario { get; set; }
+        public int? EdadUsuario { get; set; }
 
         [BsonElement("telefonoUsuario")]
-        public long TelefonoUsuario { get; set; }
+        public long? TelefonoUsuario { get; set; }
 
         [BsonElement("idSemillero")]
-        public int? IdSemillero { get; set; } // Puede ser null como en la imagen
+        public int? IdSemillero { get; set; }
     }
 }

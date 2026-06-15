@@ -118,19 +118,15 @@
         const btnGuardar = document.getElementById('btnGuardar');
         const formReunion = document.getElementById('form-reunion');
 
-        // Escucha de Errores
-        var mensajeError = '@TempData["Error"]';
+        var mensajeError = '@Html.Raw(TempData["Error"])';
         if (mensajeError && mensajeError !== '') {
             Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
         }
 
-        // Contar el motivo al cargar (ya que trae data de BD)
-        document.getElementById('contadorMotivo').innerText = `${txtMotivo.value.length}/500`;
-
         txtFecha.addEventListener('change', function() {
             let fechaSel = new Date(this.value + "T12:00:00");
             if (fechaSel.getDay() === 0) {
-                Swal.fire('Atención', 'Domingos bloqueados.', 'warning');
+                Swal.fire('Atención', 'No se programan reuniones los domingos.', 'warning');
                 fechaSel.setDate(fechaSel.getDate() - 2);
                 this.value = fechaSel.toISOString().split('T')[0];
             }
@@ -139,6 +135,7 @@
 
         function validarReglasHorario() {
             if(!txtInicio.value || !txtFin.value) return;
+
             let minIni = parseInt(txtInicio.value.split(':')[0]) * 60 + parseInt(txtInicio.value.split(':')[1]);
             let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
             let duracion = minFin - minIni;
@@ -162,40 +159,26 @@
             }
             validarDisponibilidad();
         }
+
         txtInicio.addEventListener('change', validarReglasHorario);
         txtFin.addEventListener('change', validarReglasHorario);
 
-        txtMotivo.addEventListener('input', function() {
-            let len = this.value.length;
-            document.getElementById('contadorMotivo').innerText = `${len}/500`;
-            if(len >= 10 && len <= 500) {
-                this.classList.remove('is-invalid');
-                btnGuardar.disabled = false;
-            } else {
-                this.classList.add('is-invalid');
-                btnGuardar.disabled = true;
-            }
-        });
-
-        // VALIDACIÓN DE DISPONIBILIDAD CON ID IGNORAR
         function validarDisponibilidad() {
             if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
 
-            // AQUÍ QUITÉ EL COMENTARIO: Le pasamos el ID actual para que no choque consigo misma
-           let parametros = {
+            // EL TRUCO ESTÁ AQUÍ: Pasamos el idIgnorar con el ID de la reunión actual
+            let parametros = {
                 fecha: txtFecha.value,
                 horaInicio: txtInicio.value,
                 horaFin: txtFin.value,
-                // Lo leemos directo del HTML para que Visual Studio no llore
-                idIgnorar: document.getElementById('IdReunion') ? document.getElementById('IdReunion').value : 0
+                idIgnorar: @Model.IdReunion
             };
 
             $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {
-                console.log("Respuesta del servidor (Ocupados):", res);
 
                 let txtLugar = document.getElementById('LugarReunion');
                 if (txtLugar.value && res.lugares.includes(txtLugar.value)) {
-                    Swal.fire('Cruce de Horarios', 'Este lugar ya está reservado en ese horario.', 'error');
+                    Swal.fire('Lugar Ocupado', 'Este lugar ya está reservado por otra reunión en este horario.', 'error');
                     txtLugar.value = '';
                 }
 
@@ -210,47 +193,51 @@
                         div.style.display = 'block';
                     }
                 });
-            }).fail(function(err) {
-                console.error("Error consultando la base de datos:", err);
             });
         }
 
-        // Ejecutar disponibilidad apenas se abra la página de Modificar
-        document.addEventListener("DOMContentLoaded", function() {
-            validarDisponibilidad();
-        });
-
         document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
 
-        // BOTÓN GUARDAR (Corregido, sin duplicar)
+        // Ejecutamos apenas carga la página para ocultar a los que ya estén ocupados
+        validarDisponibilidad();
+
+        txtMotivo.addEventListener('input', function() {
+            let len = this.value.length;
+            document.getElementById('contadorMotivo').innerText = `${len}/500`;
+            if(len >= 10 && len <= 500) {
+                this.classList.remove('is-invalid');
+                btnGuardar.disabled = false;
+            } else {
+                this.classList.add('is-invalid');
+                btnGuardar.disabled = true;
+            }
+        });
+
+        // Disparamos el conteo de motivo al cargar por si ya venía lleno
+        txtMotivo.dispatchEvent(new Event('input'));
+
         btnGuardar.addEventListener('click', function() {
-            // 1. CANDADO DEL LUGAR
-            let txtLugar = document.getElementById('LugarReunion').value.trim();
-            if (txtLugar === "") {
-                Swal.fire('Campo Incompleto', 'Debes escribir o seleccionar un lugar para la reunión obligatoriamente.', 'warning');
-                document.getElementById('LugarReunion').focus(); // Manda el cursor al campo
-                return; // Frena el guardado en seco
+            if (!formReunion.checkValidity()) {
+                formReunion.reportValidity();
+                return;
             }
 
-            // 2. CANDADO DE INVESTIGADORES
             let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
             if (checks === 0) {
                 Swal.fire('Error', 'Debes convocar al menos a un investigador.', 'error');
                 return;
             }
 
-            // SI TODO ESTÁ BIEN, GUARDAMOS
             Swal.fire({
-                title: '¿Actualizar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, guardar'
-            }).then((r) => { if (r.isConfirmed) formReunion.submit(); });
-        });
-
-        document.getElementById('btn-volver').addEventListener('click', function(e) {
-            e.preventDefault();
-            Swal.fire({ title: '¿Salir?', text: "Perderás los datos no guardados.", icon: 'warning', showCancelButton: true }).then((r) => {
-                if (r.isConfirmed) window.location.href = this.href;
+                title: '¿Actualizar Reunión?', text: 'Se notificarán los cambios de horario y lugar.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, actualizar'
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    formReunion.submit();
+                }
             });
         });
     </script>
-   
+}
+
 }

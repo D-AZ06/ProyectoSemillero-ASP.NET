@@ -78,7 +78,7 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
+                        <button type="button" id="btnGuardar" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
                             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Usuario
                         </button>
                     </div>
@@ -91,7 +91,17 @@
 @section Scripts {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Botón volver con advertencia
+
+            var mensajeError = '@Html.Raw(TempData["Error"])';
+            if (mensajeError && mensajeError !== '') {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
+            }
+
+            var mensajeExito = '@Html.Raw(TempData["Exito"])';
+            if (mensajeExito && mensajeExito !== '') {
+                Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
+            }
+
             const btnVolver = document.getElementById('btn-volver');
             if (btnVolver) {
                 btnVolver.addEventListener('click', function (e) {
@@ -99,7 +109,7 @@
                     const urlDestino = this.getAttribute('href');
                     Swal.fire({
                         title: '¿Estás seguro de salir?',
-                        text: "Si regresas, perderás los cambios que no hayas actualizado.",
+                        text: "Si regresas, perderás los cambios que no hayas guardado.",
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#d33',
@@ -114,44 +124,53 @@
                 });
             }
 
-            // Alerta de carga al guardar
+            const txtNombre = document.getElementById('NombreUsuario');
+            if (txtNombre) {
+                txtNombre.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                });
+            }
+
+            const txtNumerotelefonico = document.getElementById('TelefonoUsuario');
+            if (txtNumerotelefonico) {
+                txtNumerotelefonico.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
+
+            // AQUÍ ATRAPAMOS EL CLIC PARA PREGUNTAR ANTES DE ACTUALIZAR
+            const btnGuardar = document.getElementById('btnGuardar');
             const formUsuario = document.getElementById('form-usuario');
-            if (formUsuario) {
-                formUsuario.addEventListener('submit', function () {
+
+            if (btnGuardar && formUsuario) {
+                btnGuardar.addEventListener('click', function () {
+                    if (!formUsuario.checkValidity()) {
+                        formUsuario.reportValidity();
+                        return;
+                    }
+
                     Swal.fire({
-                        title: 'Actualizando Usuario...',
-                        text: 'Guardando los cambios en la base de datos.',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
+                        title: '¿Actualizar Usuario?',
+                        text: "¿Estás seguro de que deseas sobrescribir los datos?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#0284c7',
+                        cancelButtonColor: '#dc3545',
+                        confirmButtonText: 'Sí, actualizar',
+                        cancelButtonText: 'Revisar de nuevo'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Actualizando Usuario...',
+                                text: 'Por favor espera mientras se guardan los cambios.',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); }
+                            });
+                            formUsuario.submit();
                         }
                     });
                 });
             }
         });
-    </script>
-
-    <script>
-        // Asegúrate de que el ID coincida con el de tu TextBoxFor (suele ser "NombreUsuario" o "nombreUsuario")
-        const txtNombre = document.getElementById('NombreUsuario');
-
-        if (txtNombre) {
-            txtNombre.addEventListener('input', function () {
-                // Esta línea detecta al instante si ingresan un número o símbolo y lo elimina en tiempo real
-                this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-            });
-        }
-    </script>
-
-    <script>
-
-        const txtNumerotelefonico = document.getElementById('TelefonoUsuario');
-
-        if (txtNumerotelefonico) {
-            txtNumerotelefonico.addEventListener('input', function () {
-                // Esta línea detecta al instante si ingresan un número o símbolo y lo elimina en tiempo real
-                this.value = this.value.replace(/[^0-9]/g, '');
-            });
-        }
     </script>
 }
