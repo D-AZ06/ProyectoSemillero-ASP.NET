@@ -148,6 +148,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdActividad = actividad.IdActividad;
                 ViewBag.NombreActividad = actividad.NombreActividad;
 
+                ViewBag.DescripcionProyecto = proyecto.DescripcionProyecto;
+                ViewBag.EstadoProyecto = proyecto.Estado;
+
+                ViewBag.DuracionActividad = actividad.DuracionActividad;
+                ViewBag.FechaInicioActividad = actividad.FechaInicioActividad;
+                ViewBag.FechaEntregaActividad = actividad.FechaEntregaActividad;
+                ViewBag.EstadoActividad = actividad.EstadoActividad;
+
                 // Pasamos la bandera del flujo para configurar el botón de retroceso
                 ViewBag.DesdeGlobal = desdeGlobal;
 
@@ -205,6 +213,23 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         ViewBag.TituloProyecto = proyectoFijo.TituloProyecto;
                         ViewBag.IdActividad = actividadFija.IdActividad;
                         ViewBag.NombreActividad = actividadFija.NombreActividad;
+
+                        // --- NUEVO: CALCULAR LÍMITES DEL CALENDARIO ---
+                        DateTime minFecha = DateTime.Parse(actividadFija.FechaInicioActividad);
+                        DateTime maxFecha = DateTime.Parse(actividadFija.FechaEntregaActividad);
+
+                        // Si ya hay fases, bloqueamos hasta la fecha de la última fase + 1 día
+                        if (actividadFija.Fases != null && actividadFija.Fases.Any())
+                        {
+                            DateTime ultimaFechaFin = actividadFija.Fases.Max(f => f.FechaFin);
+                            if (ultimaFechaFin >= minFecha)
+                            {
+                                minFecha = ultimaFechaFin.AddDays(1);
+                            }
+                        }
+
+                        ViewBag.MinFecha = minFecha.ToString("yyyy-MM-dd");
+                        ViewBag.MaxFecha = maxFecha.ToString("yyyy-MM-dd");
                     }
                     else
                     {
@@ -294,6 +319,27 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 {
                     TempData["Error"] = "La actividad seleccionada ya no existe.";
                     return RedirectToAction("Index");
+                }
+
+                DateTime limiteInicio = DateTime.Parse(actividadPadre.FechaInicioActividad);
+                DateTime limiteFin = DateTime.Parse(actividadPadre.FechaEntregaActividad);
+
+                // 1. Que no se salga de la actividad
+                if (fechaInicio < limiteInicio || fechaFin > limiteFin)
+                {
+                    TempData["Error"] = $"Fechas inválidas. La fase debe estar entre {limiteInicio:dd/MM/yyyy} y {limiteFin:dd/MM/yyyy}.";
+                    return RedirectToAction("Agregar", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal, flujoSecuencial = flujoSecuencial });
+                }
+
+                // 2. Que no choque con otras fases
+                if (actividadPadre.Fases != null && actividadPadre.Fases.Any())
+                {
+                    bool existeCruce = actividadPadre.Fases.Any(f => fechaInicio <= f.FechaFin && fechaFin >= f.FechaInicio);
+                    if (existeCruce)
+                    {
+                        TempData["Error"] = "Choque de fechas. El rango se cruza con otra fase existente.";
+                        return RedirectToAction("Agregar", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal, flujoSecuencial = flujoSecuencial });
+                    }
                 }
 
                 // 3. GENERACIÓN DE ID GLOBAL PARA FASES (Prefijo fijo "50")
@@ -392,7 +438,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // GET: Fases/Modificar
         [HttpGet]
         public ActionResult Modificar(int idProyecto, int idActividad, int idFase, bool vinoDesdePorActividad = false, bool desdeGlobal = false)
         {
@@ -413,21 +458,21 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (proyecto == null)
                 {
                     TempData["Error"] = "El proyecto especificado no existe.";
-                    return RedirectToAction("Index");
+                    return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
                 }
 
                 var actividad = proyecto.Actividades?.FirstOrDefault(a => a.IdActividad == idActividad);
                 if (actividad == null)
                 {
                     TempData["Error"] = "La actividad especificada no existe en este proyecto.";
-                    return RedirectToAction("Index");
+                    return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
                 }
 
                 var fase = actividad.Fases?.FirstOrDefault(f => f.IdFase == idFase);
                 if (fase == null)
                 {
                     TempData["Error"] = "La fase especificada no existe.";
-                    return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad }) : RedirectToAction("Index");
+                    return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
                 }
 
                 // Pasamos las banderas de flujo
@@ -440,7 +485,24 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdActividad = actividad.IdActividad;
                 ViewBag.NombreActividad = actividad.NombreActividad;
 
-                // --- LÓGICA PLUS: DICCIONARIO GLOBAL DE FASES ---
+                // --- NUEVO: LÍMITES DEL CALENDARIO A PRUEBA DE ERRORES ---
+                DateTime minFecha = DateTime.Today; // Valores por defecto por si falla
+                DateTime maxFecha = DateTime.Today.AddYears(1);
+
+                if (!string.IsNullOrWhiteSpace(actividad.FechaInicioActividad))
+                {
+                    DateTime.TryParse(actividad.FechaInicioActividad, out minFecha);
+                }
+
+                if (!string.IsNullOrWhiteSpace(actividad.FechaEntregaActividad))
+                {
+                    DateTime.TryParse(actividad.FechaEntregaActividad, out maxFecha);
+                }
+
+                ViewBag.MinFecha = minFecha.ToString("yyyy-MM-dd");
+                ViewBag.MaxFecha = maxFecha.ToString("yyyy-MM-dd");
+                // ---------------------------------------------------------
+
                 var todasLasFases = coleccionProyectos.Find(_ => true).ToList()
                     .Where(p => p.Actividades != null)
                     .SelectMany(p => p.Actividades)
@@ -448,8 +510,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     .SelectMany(a => a.Fases)
                     .Select(f => f.NombreFase)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
-                    .GroupBy(n => n.Trim().ToLower()) // Agrupa para evitar repetidos
-                    .Select(g => g.First()) // Se queda con la versión original (ej: "Análisis")
+                    .GroupBy(n => n.Trim().ToLower())
+                    .Select(g => g.First())
                     .OrderBy(n => n)
                     .ToList();
 
@@ -460,7 +522,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "Error al abrir el formulario: " + ex.Message;
-                return RedirectToAction("Index");
+                // SI ALGO EXPLOTA, RESPETAMOS EL ORIGEN
+                return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
             }
         }
 
@@ -473,6 +536,50 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+                // ========================================================
+                // 1. BUSCAR LA ACTIVIDAD PARA VALIDAR LAS FECHAS
+                // ========================================================
+                var proyectoPadre = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+                var actividadPadre = proyectoPadre?.Actividades?.FirstOrDefault(a => a.IdActividad == idActividad);
+
+                if (actividadPadre != null)
+                {
+                    DateTime limiteInicio = DateTime.MinValue;
+                    DateTime limiteFin = DateTime.MaxValue;
+
+                    if (!string.IsNullOrWhiteSpace(actividadPadre.FechaInicioActividad))
+                        DateTime.TryParse(actividadPadre.FechaInicioActividad, out limiteInicio);
+
+                    if (!string.IsNullOrWhiteSpace(actividadPadre.FechaEntregaActividad))
+                        DateTime.TryParse(actividadPadre.FechaEntregaActividad, out limiteFin);
+
+                    // Validar que no se salga de la actividad
+                    if (fechaInicio < limiteInicio || fechaFin > limiteFin)
+                    {
+                        TempData["Error"] = $"Fechas inválidas. La fase debe estar entre {limiteInicio:dd/MM/yyyy} y {limiteFin:dd/MM/yyyy}.";
+                        return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
+                    }
+
+                    // Validar que no choque con otras fases (EXCLUYENDO LA FASE ACTUAL)
+                    if (actividadPadre.Fases != null)
+                    {
+                        bool existeCruce = actividadPadre.Fases.Any(f =>
+                            f.IdFase != idFase &&
+                            fechaInicio <= f.FechaFin &&
+                            fechaFin >= f.FechaInicio
+                        );
+
+                        if (existeCruce)
+                        {
+                            TempData["Error"] = "Choque de fechas. El nuevo rango se cruza con otra fase existente.";
+                            return vinoDesdePorActividad ? RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal }) : RedirectToAction("Index");
+                        }
+                    }
+                }
+                // ========================================================
+
+                // 2. ACTUALIZAR EN MONGODB
                 string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
 
                 var filtro = Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, idProyecto);
@@ -484,30 +591,28 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     .Set("actividades.$[a].fases.$[f].estado", estado);
 
                 var arrayFilters = new List<ArrayFilterDefinition>
-        {
-            new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("a.idActividad", idActividad)),
-            new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("f.idFase", idFase))
-        };
+                {
+                    new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("a.idActividad", idActividad)),
+                    new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("f.idFase", idFase))
+                };
 
                 var opciones = new UpdateOptions { ArrayFilters = arrayFilters };
                 coleccionProyectos.UpdateOne(filtro, actualizacion, opciones);
 
                 TempData["Exito"] = "Fase modificada correctamente.";
 
-                // AQUÍ ESTÁ LA MAGIA DE LA REDIRECCIÓN
+                // 3. REDIRECCIÓN INTELIGENTE
                 if (vinoDesdePorActividad)
                 {
-                    // Regresa a la vista de la Actividad específica, respetando si venía del menú global o de proyectos
                     return RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal });
                 }
 
-                // Regresa al index general de Fases
                 return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
                 TempData["Error"] = "Error al guardar las modificaciones: " + ex.Message;
-
+                // SI EXPLOTA AL GUARDAR, RESPETAMOS EL ORIGEN
                 if (vinoDesdePorActividad)
                 {
                     return RedirectToAction("PorActividad", new { idProyecto = idProyecto, idActividad = idActividad, desdeGlobal = desdeGlobal });

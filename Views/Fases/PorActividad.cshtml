@@ -11,6 +11,14 @@
     int idActividad = ViewBag.IdActividad;
     string nombreActividad = ViewBag.NombreActividad;
     bool desdeGlobal = ViewBag.DesdeGlobal != null ? (bool)ViewBag.DesdeGlobal : false;
+
+    string descripcionProyecto = ViewBag.DescripcionProyecto ?? "Sin descripción registrada.";
+    string estadoProyecto = ViewBag.EstadoProyecto ?? "N/A";
+
+    string duracionActividad = ViewBag.DuracionActividad ?? "N/A";
+    string fechaInicioActividad = ViewBag.FechaInicioActividad ?? "N/A";
+    string fechaEntregaActividad = ViewBag.FechaEntregaActividad ?? "N/A";
+    string estadoActividad = ViewBag.EstadoActividad ?? "N/A";
 }
 
 <style>
@@ -52,14 +60,27 @@
 
     <div class="card border-start border-4 border-info shadow-sm mb-4 bg-white">
         <div class="card-body py-3">
-            <div class="row align-items-center">
-                <div class="col-auto border-end pe-3">
-                    <span class="badge bg-secondary p-2 fs-6 text-white fw-bold mb-1" style="border-radius: 8px;">Proyecto ID: @idProyecto</span><br />
-                    <small class="text-muted fw-bold">@tituloProyecto</small>
+            <div class="row g-3">
+                <div class="col-md-6 border-end pe-md-4">
+                    <div class="d-flex align-items-center mb-2 gap-2">
+                        <span class="badge bg-secondary p-1 fw-bold" style="border-radius: 6px;">Proyecto ID: @idProyecto</span>
+                        <span class="badge bg-light text-dark border small">@estadoProyecto</span>
+                    </div>
+                    <h6 class="text-dark fw-bold mb-1">@tituloProyecto</h6>
+                    <small class="text-muted d-block text-truncate" title="@descripcionProyecto"><strong>Desc:</strong> @descripcionProyecto</small>
                 </div>
-                <div class="col ps-3">
-                    <span class="badge bg-info p-2 fs-6 text-white fw-bold mb-1" style="border-radius: 8px;">Actividad ID: @idActividad</span><br />
-                    <h5 class="text-secondary mb-0 fw-bold">Título: <span class="text-dark">@nombreActividad</span></h5>
+
+                <div class="col-md-6 ps-md-4">
+                    <div class="d-flex align-items-center mb-2 gap-2">
+                        <span class="badge bg-info p-1 text-white fw-bold" style="border-radius: 6px;">Actividad ID: @idActividad</span>
+                        <span class="badge bg-light text-dark border small">@estadoActividad</span>
+                    </div>
+                    <h6 class="text-primary fw-bold mb-1">@nombreActividad</h6>
+                    <div class="row g-1 small text-muted">
+                        <div class="col-6"><strong>Duración:</strong> @duracionActividad</div>
+                        <div class="col-6"><strong>Inicio:</strong> @fechaInicioActividad</div>
+                        <div class="col-12"><strong>Entrega:</strong> @fechaEntregaActividad</div>
+                    </div>
                 </div>
             </div>
         </div>

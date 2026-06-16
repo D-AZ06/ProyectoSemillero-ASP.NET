@@ -202,6 +202,28 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdProyecto = proyecto.IdProyecto;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
 
+                ViewBag.DescripcionProyecto = proyecto.DescripcionProyecto; // O el campo de descripción
+                ViewBag.EstadoProyecto = proyecto.Estado;           // O el campo de estado
+
+                if (DateTime.TryParse(proyecto.FechaInicioProyecto, out DateTime fechaIni))
+                {
+                    ViewBag.FechaInicioProyecto = fechaIni.ToString("dd/MM/yyyy");
+                }
+                else
+                {
+                    ViewBag.FechaInicioProyecto = proyecto.FechaInicioProyecto; // Si falla, deja el texto original
+                }
+
+                // Formatear Fecha de Fin
+                if (DateTime.TryParse(proyecto.FechaFinProyecto, out DateTime fechaFin))
+                {
+                    ViewBag.FechaFinProyecto = fechaFin.ToString("dd/MM/yyyy");
+                }
+                else
+                {
+                    ViewBag.FechaFinProyecto = proyecto.FechaFinProyecto; // Si falla, deja el texto original
+                }
+
                 var listaActividades = new List<DatosActividade>();
 
                 if (proyecto.Actividades != null && proyecto.Actividades.Any())
