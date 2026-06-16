@@ -28,7 +28,14 @@
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Rol del Usuario</label>
-                            @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                            @if (ViewBag.RolUsuario == "Líder")
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                            }
                         </div>
                     </div>
 
@@ -57,7 +64,7 @@
 
                         <div class="col-md-6 mb-4">
                             <label class="form-label fw-semibold">Teléfono</label>
-                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", required = "required", id = "TelefonoUsuario" })
+                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", placeholder = "Ej: 3001234567", required = "required", id = "TelefonoUsuario" })
                         </div>
                     </div>
 
@@ -135,10 +142,15 @@
             if (txtNumerotelefonico) {
                 txtNumerotelefonico.addEventListener('input', function () {
                     this.value = this.value.replace(/[^0-9]/g, '');
+                    // Forzamos a que si escriben algo que no empieza en 3, se ponga en rojo temporalmente
+                    if(this.value.length > 0 && !this.value.startsWith('3')) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
                 });
             }
 
-            // AQUÍ ATRAPAMOS EL CLIC PARA PREGUNTAR ANTES DE GUARDAR
             const btnGuardar = document.getElementById('btnGuardar');
             const formUsuario = document.getElementById('form-usuario');
 
@@ -146,6 +158,13 @@
                 btnGuardar.addEventListener('click', function () {
                     if (!formUsuario.checkValidity()) {
                         formUsuario.reportValidity();
+                        return;
+                    }
+
+                    // Validación en vivo antes del servidor
+                    let tel = txtNumerotelefonico.value;
+                    if(tel.length !== 10 || !tel.startsWith('3')) {
+                        Swal.fire('Error en Celular', 'El número de teléfono en Colombia debe tener exactamente 10 dígitos y empezar con el número 3.', 'error');
                         return;
                     }
 

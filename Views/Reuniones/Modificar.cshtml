@@ -18,23 +18,27 @@
                 {
                     @Html.AntiForgeryToken()
                     @Html.HiddenFor(m => m.IdReunion)
+                    @Html.HiddenFor(m => m.IdSemillero)
 
                     <div class="row mb-3 bg-light p-3 rounded border">
-                        <div class="col-md-3 mb-2 mb-md-0">
+                        <div class="col-md-2 mb-2 mb-md-0">
                             <label class="fw-semibold text-muted small">ID Reunión</label>
                             <input type="text" class="form-control form-control-sm text-primary fw-bold" value="@Model.IdReunion" readonly />
                         </div>
-                        <div class="col-md-5 mb-2 mb-md-0">
-                            <label class="fw-semibold text-muted small">Líder Responsable</label>
-                            <input type="text" class="form-control form-control-sm" value="@ViewBag.NombreLider" readonly />
+
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-diagram-3"></i> Semillero (Inalterable)</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="@ViewBag.NombreSemilleroReunion (ID: @Model.IdSemillero)" readonly />
                         </div>
+
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-person-badge"></i> Líder Responsable</label>
+                            @Html.DropDownListFor(m => m.IdLider, (SelectList)ViewBag.ListaLideres, "Seleccione un líder...", new { @class = "form-select form-select-sm border-primary", id = "SelectLider", required = "required" })
+                        </div>
+
                         <div class="col-md-2 mb-2 mb-md-0">
                             <label class="fw-semibold text-muted small">ID Líder</label>
-                            @Html.TextBoxFor(m => m.IdLider, new { @class = "form-control form-control-sm", @readonly = "readonly" })
-                        </div>
-                        <div class="col-md-2">
-                            <label class="fw-semibold text-muted small">ID Semillero</label>
-                            @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control form-control-sm text-success fw-bold", @readonly = "readonly" })
+                            <input type="text" class="form-control form-control-sm text-success fw-bold" id="InputIdLider" value="@Model.IdLider" readonly />
                         </div>
                     </div>
 
@@ -44,19 +48,18 @@
                             @Html.TextBoxFor(m => m.FechaReunion, new { @class = "form-control", type = "date", id = "FechaReunion", required = "required" })
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="fw-semibold">Hora Inicio</label>
+                            <label class="fw-semibold">Hora de Inicio</label>
                             @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control", type = "time", id = "HoraInicio", required = "required" })
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="fw-semibold">Hora Fin</label>
+                            <label class="fw-semibold">Hora de Fin</label>
                             @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control", type = "time", id = "HoraFin", required = "required" })
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="fw-semibold">Lugar de la Reunión</label>
-                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones o escriba uno nuevo..." value="@(Model != null ? Model.LugarReunion : "")" />
-
+                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones..." value="@Model.LugarReunion" />
                         <datalist id="listaLugares">
                             @if (ViewBag.ListaLugaresExistentes != null)
                             {
@@ -71,21 +74,22 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="fw-semibold">Investigadores (Disponibles)</label>
-
                             <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
                                 @if (ViewBag.ListaInvestigadores != null)
                                 {
-                                    foreach (var inv in ViewBag.ListaInvestigadores)
+                                    var listaInv = ViewBag.ListaInvestigadores as IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosUsuario>;
+                                    if (listaInv != null && listaInv.Any())
                                     {
-                                        bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
-                                                           Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
-
-                                        <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
-                                            <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
-                                            <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
-                                                @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
-                                            </label>
-                                        </div>
+                                        foreach (var inv in listaInv)
+                                        {
+                                            bool yaConvocado = Model.InvestigadoresConvocados != null && Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
+                                            <div class="form-check item-investigador" data-id="@inv.IdUsuario">
+                                                <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
+                                                <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                    @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
+                                                </label>
+                                            </div>
+                                        }
                                     }
                                 }
                             </div>
@@ -100,7 +104,7 @@
 
                     <div class="d-grid gap-2 mt-4">
                         <button type="button" id="btnGuardar" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Guardar Cambios
+                            <i class="bi bi-save me-1"></i> Actualizar Reunión
                         </button>
                     </div>
                 }
@@ -111,133 +115,171 @@
 
 @section Scripts {
     <script>
-        const txtFecha = document.getElementById('FechaReunion');
-        const txtInicio = document.getElementById('HoraInicio');
-        const txtFin = document.getElementById('HoraFin');
-        const txtMotivo = document.getElementById('MotivoReunion');
-        const btnGuardar = document.getElementById('btnGuardar');
-        const formReunion = document.getElementById('form-reunion');
+        document.addEventListener("DOMContentLoaded", function () {
 
-        var mensajeError = '@Html.Raw(TempData["Error"])';
-        if (mensajeError && mensajeError !== '') {
-            Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
-        }
+            const txtFecha = document.getElementById('FechaReunion');
+            const txtInicio = document.getElementById('HoraInicio');
+            const txtFin = document.getElementById('HoraFin');
+            const txtMotivo = document.getElementById('MotivoReunion');
+            const btnGuardar = document.getElementById('btnGuardar');
+            const formReunion = document.getElementById('form-reunion');
 
-        txtFecha.addEventListener('change', function() {
-            let fechaSel = new Date(this.value + "T12:00:00");
-            if (fechaSel.getDay() === 0) {
-                Swal.fire('Atención', 'No se programan reuniones los domingos.', 'warning');
-                fechaSel.setDate(fechaSel.getDate() - 2);
-                this.value = fechaSel.toISOString().split('T')[0];
+            var mensajeError = '@Html.Raw(TempData["Error"])';
+            if (mensajeError && mensajeError !== '') {
+                Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
             }
-            validarDisponibilidad();
-        });
 
-        function validarReglasHorario() {
-            if(!txtInicio.value || !txtFin.value) return;
-
-            let minIni = parseInt(txtInicio.value.split(':')[0]) * 60 + parseInt(txtInicio.value.split(':')[1]);
-            let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
-            let duracion = minFin - minIni;
-
-            if (minIni < 360) {
-                Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
-                txtInicio.value = "06:00"; return validarReglasHorario();
+            // Para que se vea en vivo cómo cambia el ID del líder en la caja verde
+            const selectLider = document.getElementById('SelectLider');
+            const inputIdLider = document.getElementById('InputIdLider');
+            if (selectLider) {
+                selectLider.addEventListener('change', function() {
+                    inputIdLider.value = this.value;
+                });
             }
-            if (minFin > 1320) {
-                Swal.fire('Aviso', 'La reunión no puede extenderse más allá de las 10:00 p.m.', 'info');
-                txtFin.value = "22:00"; return validarReglasHorario();
-            }
-            if (duracion < 30) {
-                Swal.fire('Aviso', 'Duración mínima de 30 minutos.', 'info');
-                let newMin = minIni + 30;
-                txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
-            } else if (duracion > 300) {
-                Swal.fire('Aviso', 'Duración máxima de 5 horas.', 'info');
-                let newMin = minIni + 300;
-                txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
-            }
-            validarDisponibilidad();
-        }
 
-        txtInicio.addEventListener('change', validarReglasHorario);
-        txtFin.addEventListener('change', validarReglasHorario);
+            txtFecha.addEventListener('change', function() {
+                let fechaSel = new Date(this.value + "T12:00:00");
+                if (fechaSel.getDay() === 0) {
+                    Swal.fire('Atención', 'No se programan reuniones los domingos.', 'warning');
+                    fechaSel.setDate(fechaSel.getDate() - 2);
+                    this.value = fechaSel.toISOString().split('T')[0];
+                }
+                validarDisponibilidad();
+            });
 
-        function validarDisponibilidad() {
-            if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+            function validarReglasHorario() {
+                if(!txtInicio.value || !txtFin.value) return false;
 
-            // EL TRUCO ESTÁ AQUÍ: Pasamos el idIgnorar con el ID de la reunión actual
-            let parametros = {
-                fecha: txtFecha.value,
-                horaInicio: txtInicio.value,
-                horaFin: txtFin.value,
-                idIgnorar: @Model.IdReunion
-            };
+                let minIni = parseInt(txtInicio.value.split(':')[0]) * 60 + parseInt(txtInicio.value.split(':')[1]);
+                let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
+                let duracion = minFin - minIni;
 
-            $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {
-
-                let txtLugar = document.getElementById('LugarReunion');
-                if (txtLugar.value && res.lugares.includes(txtLugar.value)) {
-                    Swal.fire('Lugar Ocupado', 'Este lugar ya está reservado por otra reunión en este horario.', 'error');
-                    txtLugar.value = '';
+                if (minIni < 360) {
+                    Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
+                    txtInicio.value = "06:00";
+                    return false;
+                }
+                if (minFin > 1320) {
+                    Swal.fire('Aviso', 'La reunión no puede extenderse más allá de las 10:00 p.m.', 'info');
+                    txtFin.value = "22:00";
+                    return false;
                 }
 
-                document.querySelectorAll('.item-investigador').forEach(div => {
-                    let id = parseInt(div.getAttribute('data-id'));
-                    let chk = div.querySelector('input');
+                if (duracion < 0) {
+                    Swal.fire('Error de Lógica', 'La hora de fin no puede ser ANTES de la hora de inicio.', 'error');
+                    let newMin = minIni + 30;
+                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
+                    return false;
+                }
+                else if (duracion < 30) {
+                    Swal.fire('Aviso', 'La duración mínima de una reunión es de 30 minutos.', 'info');
+                    let newMin = minIni + 30;
+                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
+                    return false;
+                }
+                else if (duracion > 300) {
+                    Swal.fire('Aviso', 'La duración máxima de una reunión es de 5 horas.', 'info');
+                    let newMin = minIni + 300;
+                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
+                    return false;
+                }
 
-                    if (res.investigadores.includes(id)) {
-                        div.style.display = 'none';
-                        if(chk) chk.checked = false;
-                    } else {
-                        div.style.display = 'block';
+                validarDisponibilidad();
+                return true;
+            }
+
+            txtInicio.addEventListener('blur', validarReglasHorario);
+            txtFin.addEventListener('blur', validarReglasHorario);
+            txtInicio.addEventListener('change', validarReglasHorario);
+            txtFin.addEventListener('change', validarReglasHorario);
+
+            function validarDisponibilidad() {
+                if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+
+                let parametros = {
+                    fecha: txtFecha.value,
+                    horaInicio: txtInicio.value,
+                    horaFin: txtFin.value,
+                    idIgnorar: @Model.IdReunion
+                };
+
+                $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {
+                    let txtLugar = document.getElementById('LugarReunion');
+                    if (txtLugar.value && res.lugares.includes(txtLugar.value)) {
+                        Swal.fire('Lugar Ocupado', 'Este lugar ya está reservado por otra reunión en este horario.', 'error');
+                        txtLugar.value = '';
+                    }
+
+                    document.querySelectorAll('.item-investigador').forEach(div => {
+                        let id = parseInt(div.getAttribute('data-id'));
+                        let chk = div.querySelector('input');
+
+                        if (res.investigadores.includes(id)) {
+                            div.style.display = 'none';
+                            if(chk) chk.checked = false;
+                        } else {
+                            div.style.display = 'block';
+                        }
+                    });
+                });
+            }
+
+            document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
+            validarDisponibilidad();
+
+            function actualizarContador() {
+                let len = txtMotivo.value.length;
+                document.getElementById('contadorMotivo').innerText = `${len}/500`;
+
+                if(len >= 10 && len <= 500) {
+                    txtMotivo.classList.remove('is-invalid');
+                    btnGuardar.disabled = false;
+                } else {
+                    txtMotivo.classList.add('is-invalid');
+                    btnGuardar.disabled = true;
+                }
+            }
+
+            txtMotivo.addEventListener('input', actualizarContador);
+            actualizarContador();
+
+            btnGuardar.addEventListener('click', function() {
+                if (!formReunion.checkValidity()) {
+                    formReunion.reportValidity();
+                    return;
+                }
+
+                if (!validarReglasHorario()) return;
+
+                let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
+                if (checks === 0) {
+                    Swal.fire('Error', 'Debes seleccionar al menos a un investigador disponible.', 'error');
+                    return;
+                }
+
+                Swal.fire({
+                    title: '¿Actualizar Reunión?',
+                    text: 'Se notificarán los cambios a los investigadores.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, actualizar',
+                    cancelButtonText: 'Cancelar'
+                }).then((r) => {
+                    if (r.isConfirmed) {
+                        Swal.fire({ title: 'Actualizando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        formReunion.submit();
                     }
                 });
             });
-        }
 
-        document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
-
-        // Ejecutamos apenas carga la página para ocultar a los que ya estén ocupados
-        validarDisponibilidad();
-
-        txtMotivo.addEventListener('input', function() {
-            let len = this.value.length;
-            document.getElementById('contadorMotivo').innerText = `${len}/500`;
-            if(len >= 10 && len <= 500) {
-                this.classList.remove('is-invalid');
-                btnGuardar.disabled = false;
-            } else {
-                this.classList.add('is-invalid');
-                btnGuardar.disabled = true;
-            }
-        });
-
-        // Disparamos el conteo de motivo al cargar por si ya venía lleno
-        txtMotivo.dispatchEvent(new Event('input'));
-
-        btnGuardar.addEventListener('click', function() {
-            if (!formReunion.checkValidity()) {
-                formReunion.reportValidity();
-                return;
-            }
-
-            let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
-            if (checks === 0) {
-                Swal.fire('Error', 'Debes convocar al menos a un investigador.', 'error');
-                return;
-            }
-
-            Swal.fire({
-                title: '¿Actualizar Reunión?', text: 'Se notificarán los cambios de horario y lugar.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, actualizar'
-            }).then((r) => {
-                if (r.isConfirmed) {
-                    Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                    formReunion.submit();
-                }
+            document.getElementById('btn-volver').addEventListener('click', function(e) {
+                e.preventDefault();
+                Swal.fire({ title: '¿Salir?', text: "Perderás los cambios no guardados.", icon: 'warning', showCancelButton: true }).then((r) => {
+                    if (r.isConfirmed) window.location.href = this.href;
+                });
             });
+
         });
     </script>
-}
-
 }
