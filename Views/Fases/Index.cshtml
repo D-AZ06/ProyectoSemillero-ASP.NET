@@ -40,6 +40,9 @@
                         <option value="nombreActividad">Nombre de la Actividad</option>
                         <option value="idFase">ID Fase</option>
                         <option value="nombreFase">Nombre de la Fase</option>
+                        <option value="estado">Estado</option>
+                        <option value="fechaInicio">Fecha de Inicio exacto</option>
+                        <option value="fechaFin">Fecha de Fin exacto</option>
                     </select>
                 </div>
 
@@ -75,6 +78,8 @@
                 <th scope="col" class="py-3 ps-3">ID Fase</th>
                 <th scope="col" class="py-3">Nombre de Fase</th>
                 <th scope="col" class="py-3">Duración</th>
+                <th scope="col" class="py-3">Fechas</th>
+                <th scope="col" class="py-3">Estado</th>
                 <th scope="col" class="py-3">Proyecto Correspondiente</th>
                 <th scope="col" class="py-3">Actividad Correspondiente</th>
                 <th scope="col" class="py-3 text-center" style="min-width: 120px;">Acciones</th>
@@ -93,6 +98,30 @@
                         </td>
 
                         <td>@fase.DuracionFase</td>
+
+                        <td>
+                            <small class="d-block text-muted"><strong>Inicio:</strong> @fase.FechaInicio.ToString("dd/MM/yyyy")</small>
+                            <small class="d-block text-muted"><strong>Fin:</strong> @fase.FechaFin.ToString("dd/MM/yyyy")</small>
+                        </td>
+                        <td class="data-estado">
+
+                            @if (fase.Estado == "Completado")
+                            {
+                                <span class="badge bg-success">@fase.Estado</span>
+                            }
+                            else if (fase.Estado == "En Progreso")
+                            {
+                                <span class="badge bg-primary">@fase.Estado</span>
+                            }
+                            else if (fase.Estado == "Pendiente")
+                            {
+                                <span class="badge bg-warning text-dark">@fase.Estado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@fase.Estado</span>
+                            }
+                        </td>
 
                         <td style="max-width: 200px; white-space: normal; word-wrap: break-word;">
                             <span class="badge bg-secondary mb-1 data-idProyecto">ID: @fase.IdProyecto</span><br />
@@ -164,14 +193,34 @@
             }
 
             btnConsultar.disabled = false;
+
+            // 1. CASO ESPECIAL: ESTADO (Combo box)
+            if (filtroSeleccionado === 'estado') {
+                contenedorInput.innerHTML = `
+                    <select class="form-select border-info" id="inputValor" name="valorFiltro" required>
+                        <option value="">Seleccione el estado a buscar...</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En Progreso">En Progreso</option>
+                        <option value="Completado">Completado</option>
+                        <option value="Cancelado">Cancelado</option>
+                    </select>
+                `;
+                configurarValidacionEnTiempoReal();
+                return;
+            }
+
             let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idActividad' || filtroSeleccionado === 'idFase');
-            let tipoInput = esNumero ? 'number' : 'text';
-            let placeholder = esNumero ? 'Seleccione o ingrese un ID...' : 'Escriba para buscar sugerencias...';
+            let esFecha = (filtroSeleccionado === 'fechaInicio' || filtroSeleccionado === 'fechaFin');
+
+            // AQUÍ ESTÁ LA CORRECCIÓN: Si esFecha es true, usamos 'date'
+            let tipoInput = esNumero ? 'number' : (esFecha ? 'date' : 'text');
+            let placeholder = esNumero ? 'Seleccione o ingrese un ID...' : (esFecha ? '' : 'Escriba para buscar sugerencias...');
             let extraAttr = esNumero ? 'min="1"' : '';
 
             let nuevoInput = `<input type="${tipoInput}" class="form-control border-info" id="inputValor" name="valorFiltro" placeholder="${placeholder}" ${extraAttr} list="opcionesSugeridas" autocomplete="off" required>`;
 
-            if (datosAutocompletado[filtroSeleccionado]) {
+            // Solo llenamos el datalist si no es fecha
+            if (!esFecha && datosAutocompletado[filtroSeleccionado]) {
                 datosAutocompletado[filtroSeleccionado].forEach(valor => {
                     let option = document.createElement('option');
                     option.value = valor;
@@ -187,16 +236,22 @@
             const inputValor = document.getElementById('inputValor');
             const formBusqueda = document.getElementById('formBusqueda');
 
-            formBusqueda.addEventListener('submit', function (e) {
+            // Limpiamos listeners previos si los hubiera al cambiar de input
+            const nuevoFormBusqueda = formBusqueda.cloneNode(true);
+            formBusqueda.parentNode.replaceChild(nuevoFormBusqueda, formBusqueda);
+
+            nuevoFormBusqueda.addEventListener('submit', function (e) {
+                const inputActual = document.getElementById('inputValor');
                 const filtro = selectFiltro.value;
-                const valor = inputValor.value.trim();
+                const valor = inputActual.value.trim();
 
                 if (!valor) {
                     e.preventDefault();
-                    Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Por favor ingrese un valor para buscar.', confirmButtonColor: '#0284c7' });
+                    Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'Por favor ingrese o seleccione un valor para buscar.', confirmButtonColor: '#0284c7' });
                     return;
                 }
 
+                // Validamos estrictamente solo los campos que tienen autocompletado del sistema (ignoramos estados y fechas)
                 if (['idProyecto', 'tituloProyecto', 'idActividad', 'nombreActividad', 'idFase', 'nombreFase'].includes(filtro)) {
                     if (!datosAutocompletado[filtro].includes(valor)) {
                         e.preventDefault();

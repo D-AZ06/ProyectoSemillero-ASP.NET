@@ -56,6 +56,7 @@
                     <th scope="col" class="py-3 ps-4" style="width: 100px;">ID Act.</th>
                     <th scope="col" class="py-3">Nombre de Actividad</th>
                     <th scope="col" class="py-3" style="width: 150px;">Duración</th>
+                    <th scope="col" class="py-3" style=" width: 150px;">Fecha Inicio</th>
                     <th scope="col" class="py-3" style="width: 150px;">Fecha Entrega</th>
                     <th scope="col" class="py-3" style="width: 130px;">Estado</th>
                     <th scope="col" class="py-3" style="width: 200px;">Investigadores</th>
@@ -73,14 +74,20 @@
                                 <span class="text-dark fw-bold">@actividad.NombreActividad</span>
                             </td>
                             <td>@actividad.DuracionActividad</td>
-                            <td>
-                                <span class="text-secondary"><i class="bi bi-calendar-event me-2"></i>@actividad.FechaEntregaActividad</span>
+
+                            <td class="data-fechaInicioActividad">
+                                <span class="text-secondary"><i class="bi bi-play-circle me-1"></i>@actividad.FechaInicioActividad</span>
                             </td>
 
-                            <td>
+                            <td class="data-fechaEntregaActividad">
+                                <span class="text-secondary"><i class="bi bi-calendar-event me-1"></i>@actividad.FechaEntregaActividad</span>
+                            </td>
+
+                            <td class="data-estadoActividad">
                                 @{
                                     string colorBadge = "bg-warning text-dark"; // Por defecto Pendiente
                                     if (actividad.EstadoActividad == "En Progreso") { colorBadge = "bg-primary"; }
+                                    else if (actividad.EstadoActividad == "Retrasado") { colorBadge = "bg-danger"; } // NUEVO
                                     else if (actividad.EstadoActividad == "Finalizado") { colorBadge = "bg-success"; }
                                 }
                                 <span class="badge @colorBadge shadow-sm">@actividad.EstadoActividad</span>
