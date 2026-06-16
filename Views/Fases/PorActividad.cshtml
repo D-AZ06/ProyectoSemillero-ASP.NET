@@ -72,6 +72,8 @@
                     <th scope="col" class="py-3 ps-4" style="width: 100px;">ID Fase</th>
                     <th scope="col" class="py-3">Nombre de la Fase</th>
                     <th scope="col" class="py-3" style="width: 200px;">Duración</th>
+                    <th scope="col" class="py-3">Fechas</th>
+                    <th scope="col" class="py-3">Estado</th>
                     <th scope="col" class="py-3 text-center" style="width: 150px;">Acciones</th>
                 </tr>
             </thead>
@@ -88,6 +90,29 @@
                             <td>
                                 <span class="text-secondary"><i class="bi bi-clock-history me-2"></i>@fase.DuracionFase</span>
                             </td>
+                            <td>
+                                <small class="d-block text-muted"><strong>Inicio:</strong> @fase.FechaInicio.ToString("dd/MM/yyyy")</small>
+                                <small class="d-block text-muted"><strong>Fin:</strong> @fase.FechaFin.ToString("dd/MM/yyyy")</small>
+                            </td>
+                            <td class="data-estado">
+                                @if (fase.Estado == "Completado")
+                                {
+                                    <span class="badge bg-success">@fase.Estado</span>
+                                }
+                                else if (fase.Estado == "En Progreso")
+                                {
+                                    <span class="badge bg-primary">@fase.Estado</span>
+                                }
+                                else if (fase.Estado == "Pendiente")
+                                {
+                                    <span class="badge bg-warning text-dark">@fase.Estado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@fase.Estado</span>
+                                }
+                            </td>
+
                             <td class="text-center">
                                 @if (rolActual != "Investigador")
                                 {

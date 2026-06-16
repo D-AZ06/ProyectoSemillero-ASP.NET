@@ -17,5 +17,8 @@ namespace ProyectoSemillero_ASP.NET.Models
         public int IdFase { get; set; }
         public string NombreFase { get; set; }
         public string DuracionFase { get; set; }
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaFin { get; set; }
+        public string Estado { get; set; }
     }
 }

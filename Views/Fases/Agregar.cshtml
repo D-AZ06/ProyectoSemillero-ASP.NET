@@ -146,6 +146,28 @@
                     </div>
                 </div>
 
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="fechaInicio" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-plus me-1"></i> Fecha de Inicio</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaInicio" name="fechaInicio" required />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="fechaFin" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check me-1"></i> Fecha de Fin</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaFin" name="fechaFin" required />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="estado" class="form-label fw-bold text-secondary"><i class="bi bi-activity me-1"></i> Estado</label>
+                        <select class="form-select border-secondary-subtle fw-semibold" id="estado" name="estado" required>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Progreso">En Progreso</option>
+                            <option value="Completado">Completado</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="mt-4 text-end">
                     <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarFase">
                         @if (flujoSecuencial)

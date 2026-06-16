@@ -53,6 +53,9 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("duracionActividad")]
         public string DuracionActividad { get; set; }
 
+        [BsonElement("fechaInicioActividad")]
+        public string FechaInicioActividad { get; set; }
+
         [BsonElement("fechaEntregaActividad")]
         public string FechaEntregaActividad { get; set; }
 
@@ -77,5 +80,8 @@ namespace ProyectoSemillero_ASP.NET.Models
 
         [BsonElement("duracionFase")]
         public string DuracionFase { get; set; }
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaFin { get; set; }
+        public string Estado { get; set; }
     }
 }

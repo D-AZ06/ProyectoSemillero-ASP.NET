@@ -59,7 +59,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             NombreActividad = a.NombreActividad,
                             IdFase = f.IdFase,
                             NombreFase = f.NombreFase,
-                            DuracionFase = f.DuracionFase
+                            DuracionFase = f.DuracionFase,
+                            FechaInicio = f.FechaInicio,
+                            FechaFin = f.FechaFin,
+                            Estado = f.Estado ?? "Pendiente"
                         })))
                     .ToList();
 
@@ -84,6 +87,21 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         break;
                     case "tituloProyecto":
                         listaFases = listaFases.Where(f => f.TituloProyecto.ToLower().Contains(valorFiltro)).ToList();
+                        break;
+                    case "estado":
+                        listaFases = listaFases.Where(f => f.Estado != null && f.Estado.ToLower() == valorFiltro.ToLower()).ToList();
+                        break;
+                    case "fechaInicio":
+                        if (DateTime.TryParse(valorFiltro, out DateTime dateInicio))
+                        {
+                            listaFases = listaFases.Where(f => f.FechaInicio.Date == dateInicio.Date).ToList();
+                        }
+                        break;
+                    case "fechaFin":
+                        if (DateTime.TryParse(valorFiltro, out DateTime dateFin))
+                        {
+                            listaFases = listaFases.Where(f => f.FechaFin.Date == dateFin.Date).ToList();
+                        }
                         break;
                 }
 
@@ -250,6 +268,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 string nombreFase = form["nombreFase"];
                 int duracionValor = int.Parse(form["duracionValor"]);
                 string duracionUnidad = form["duracionUnidad"];
+                DateTime fechaInicio = DateTime.Parse(form["fechaInicio"]);
+                DateTime fechaFin = DateTime.Parse(form["fechaFin"]);
+                string estado = form["estado"];
 
                 bool vinoDesdePorActividad = form["vinoDesdePorActividad"] == "true";
                 bool desdeGlobal = form["desdeGlobal"] == "true";
@@ -321,7 +342,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 {
                     IdFase = nuevoIdFase,
                     NombreFase = nombreFase.Trim(),
-                    DuracionFase = duracionCompuesta
+                    DuracionFase = duracionCompuesta,
+                    FechaInicio = fechaInicio,
+                    FechaFin = fechaFin,
+                    Estado = estado
                 });
 
                 // 5. Reemplazamos el documento completo en MongoDB
@@ -442,7 +466,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         // POST: Fases/Modificar
         [HttpPost]
-        public ActionResult Modificar(int idProyecto, int idActividad, int idFase, string nombreFase, int duracionValor, string duracionUnidad, bool vinoDesdePorActividad, bool desdeGlobal)
+        public ActionResult Modificar(int idProyecto, int idActividad, int idFase, string nombreFase, int duracionValor, string duracionUnidad, DateTime fechaInicio, DateTime fechaFin, string estado, bool vinoDesdePorActividad, bool desdeGlobal)
         {
             try
             {
@@ -454,7 +478,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 var filtro = Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, idProyecto);
                 var actualizacion = Builders<DatosProyecto>.Update
                     .Set("actividades.$[a].fases.$[f].nombreFase", nombreFase.Trim())
-                    .Set("actividades.$[a].fases.$[f].duracionFase", duracionCompuesta);
+                    .Set("actividades.$[a].fases.$[f].duracionFase", duracionCompuesta)
+                    .Set("actividades.$[a].fases.$[f].fechaInicio", fechaInicio)
+                    .Set("actividades.$[a].fases.$[f].fechaFin", fechaFin)
+                    .Set("actividades.$[a].fases.$[f].estado", estado);
 
                 var arrayFilters = new List<ArrayFilterDefinition>
         {

@@ -14,9 +14,9 @@ namespace ProyectoSemillero_ASP.NET
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
             routes.MapRoute(
-                name: "Default",
-                url: "{controller}/{action}/{id}",
-                defaults: new { controller = "Home", action = "Bienvenida", id = UrlParameter.Optional}
+            name: "Default",
+            url: "{controller}/{action}/{id}",
+            defaults: new { controller = "Home", action = "IniciarSesion", id = UrlParameter.Optional }
             );
         }
     }

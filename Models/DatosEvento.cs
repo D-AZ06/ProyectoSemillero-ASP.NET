@@ -61,7 +61,7 @@ namespace ProyectoSemillero_ASP.NET.Models
         public string OrganizadorEvento { get; set; }
 
         [BsonElement("idSemillero")]
-        public int IdSemillero { get; set; }
+        public List<int> IdSemilleros { get; set; }
 
         [BsonElement("proyectosParticipantes")]
         public List<ProyectoParticipante> ProyectosParticipantes { get; set; } = new List<ProyectoParticipante>();

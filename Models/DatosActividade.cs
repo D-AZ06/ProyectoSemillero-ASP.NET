@@ -12,6 +12,7 @@ namespace ProyectoSemillero_ASP.NET.Models
         public int IdActividad { get; set; }
         public string NombreActividad { get; set; }
         public string DuracionActividad { get; set; }
+        public string FechaInicioActividad { get; set; }
         public string FechaEntregaActividad { get; set; }
         public string EstadoActividad { get; set; }
         public List<int> InvestigadoresResponsables { get; set; }
