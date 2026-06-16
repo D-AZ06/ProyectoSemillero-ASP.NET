@@ -23,9 +23,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 string rolUsuario = Session["Rol"].ToString();
                 var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
 
-                var coleccionSemilleros = conexionDB.Database.GetCollection<DatosSemillero>("Semilleros");
-                var listaSemilleros = coleccionSemilleros.Find(_ => true).ToList();
-                ViewBag.DiccionarioSemilleros = listaSemilleros.ToDictionary(s => s.IdSemillero, s => s.nombreSemillero);
+                var coleccionSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+                var listaSemilleros = coleccionSemilleros.Find(new BsonDocument()).ToList()
+                            .Select(s => new { IdSemillero = s["idSemillero"].AsInt32, NombreSemillero = s["nombreSemillero"].AsString }).ToList();
+                ViewBag.DiccionarioSemilleros = listaSemilleros.ToDictionary(s => s.IdSemillero, s => s.NombreSemillero);
 
                 var builder = Builders<DatosUsuario>.Filter;
                 FilterDefinition<DatosUsuario> filtroSeguridad;
@@ -70,7 +71,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             if (int.TryParse(valorFiltro, out int idSem)) filtroBusqueda = builder.Eq(u => u.IdSemillero, idSem);
                             break;
                         case "nombreSemillero":
-                            var semilleroEncontrado = listaSemilleros.FirstOrDefault(s => s.nombreSemillero.Equals(valorFiltro, StringComparison.OrdinalIgnoreCase));
+                            var semilleroEncontrado = listaSemilleros.FirstOrDefault(s => s.NombreSemillero.Equals(valorFiltro, StringComparison.OrdinalIgnoreCase));
                             filtroBusqueda = semilleroEncontrado != null ? builder.Eq(u => u.IdSemillero, semilleroEncontrado.IdSemillero) : builder.Eq(u => u.IdSemillero, -1);
                             break;
                     }
@@ -136,15 +137,28 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             if (ModelState.IsValid)
             {
+                // ==========================================
+                // REGLA: El líder NO puede crear Administradores
+                // ==========================================
+                if (rolUsuario == "Líder" && (nuevoUsuario.RolUsuario == "Administrador" || nuevoUsuario.RolUsuario == "Admin"))
+                {
+                    TempData["Error"] = "Operación denegada: Un Líder no tiene permisos para crear usuarios con rol de Administrador.";
+                    RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
+                }
+
                 if (string.IsNullOrWhiteSpace(nuevoUsuario.NombreUsuario) || !Regex.IsMatch(nuevoUsuario.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
                 {
                     TempData["Error"] = "El nombre es obligatorio y solo puede contener letras y espacios.";
                     RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
-                if (!nuevoUsuario.TelefonoUsuario.HasValue || nuevoUsuario.TelefonoUsuario.Value.ToString().Length > 10)
+                // ==========================================
+                // REGLA: CELULAR COLOMBIANO (+57 -> 10 dígitos, empieza por 3)
+                // ==========================================
+                string telefonoStr = nuevoUsuario.TelefonoUsuario.HasValue ? nuevoUsuario.TelefonoUsuario.Value.ToString() : "";
+                if (telefonoStr.Length != 10 || !telefonoStr.StartsWith("3"))
                 {
-                    TempData["Error"] = "El número telefónico es obligatorio y no puede tener más de 10 dígitos.";
+                    TempData["Error"] = "El número debe tener exactamente 10 dígitos y empezar por el número 3 (Formato celular de Colombia).";
                     RecargarDatosVista(rolUsuario); return View(nuevoUsuario);
                 }
 
@@ -227,15 +241,28 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     usuarioModificado.IdSemillero = null;
                 }
 
+                // ==========================================
+                // REGLA: El líder NO puede escalar a un usuario a Administrador
+                // ==========================================
+                if (rolUsuario == "Líder" && (usuarioModificado.RolUsuario == "Administrador" || usuarioModificado.RolUsuario == "Admin"))
+                {
+                    TempData["Error"] = "Operación denegada: Un Líder no tiene permisos para ascender usuarios a Administrador.";
+                    RecargarDatosVista(rolUsuario); return View(usuarioModificado);
+                }
+
                 if (string.IsNullOrWhiteSpace(usuarioModificado.NombreUsuario) || !Regex.IsMatch(usuarioModificado.NombreUsuario, @"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"))
                 {
                     TempData["Error"] = "El nombre es obligatorio y solo puede contener letras y espacios.";
                     RecargarDatosVista(rolUsuario); return View(usuarioModificado);
                 }
 
-                if (!usuarioModificado.TelefonoUsuario.HasValue || usuarioModificado.TelefonoUsuario.Value.ToString().Length > 10)
+                // ==========================================
+                // REGLA: CELULAR COLOMBIANO
+                // ==========================================
+                string telefonoStr = usuarioModificado.TelefonoUsuario.HasValue ? usuarioModificado.TelefonoUsuario.Value.ToString() : "";
+                if (telefonoStr.Length != 10 || !telefonoStr.StartsWith("3"))
                 {
-                    TempData["Error"] = "El número telefónico es obligatorio y no puede tener más de 10 dígitos.";
+                    TempData["Error"] = "El número debe tener exactamente 10 dígitos y empezar por el número 3 (Formato celular de Colombia).";
                     RecargarDatosVista(rolUsuario); return View(usuarioModificado);
                 }
 

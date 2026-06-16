@@ -3,6 +3,7 @@
 @{
     ViewBag.Title = "Agendar Reunión";
     Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+    string rolActual = ViewBag.RolUsuario;
 }
 
 <div class="row justify-content-center w-100 m-0">
@@ -19,22 +20,41 @@
                     @Html.AntiForgeryToken()
 
                     <div class="row mb-3 bg-light p-3 rounded border">
-                        <div class="col-md-3 mb-2 mb-md-0">
+                        <div class="col-md-2 mb-2 mb-md-0">
                             <label class="fw-semibold text-muted small">ID Reunión</label>
                             <input type="text" class="form-control form-control-sm text-primary fw-bold" value="@ViewBag.SiguienteIdReunion" readonly />
                         </div>
-                        <div class="col-md-5 mb-2 mb-md-0">
-                            <label class="fw-semibold text-muted small">Líder Responsable</label>
-                            <input type="text" class="form-control form-control-sm" value="@ViewBag.NombreLider" readonly />
-                        </div>
-                        <div class="col-md-2 mb-2 mb-md-0">
-                            <label class="fw-semibold text-muted small">ID Líder</label>
-                            @Html.TextBoxFor(m => m.IdLider, new { @class = "form-control form-control-sm", @readonly = "readonly" })
-                        </div>
-                        <div class="col-md-2">
-                            <label class="fw-semibold text-muted small">ID Semillero</label>
-                            @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control form-control-sm text-success fw-bold", @readonly = "readonly" })
-                        </div>
+
+                        @if (rolActual == "Administrador" || rolActual == "Admin")
+                        {
+                            <div class="col-md-5 mb-2 mb-md-0">
+                                <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-diagram-3"></i> Seleccionar Semillero</label>
+                                @Html.DropDownList("AdminSelectSemillero", (SelectList)ViewBag.ListaSemilleros, "1. Elige un semillero...", new { @class = "form-select form-select-sm border-primary", id = "AdminSelectSemillero" })
+                                @Html.HiddenFor(m => m.IdSemillero, new { id = "IdSemilleroOculto" })
+                            </div>
+                            <div class="col-md-5 mb-2 mb-md-0">
+                                <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-person-badge"></i> Seleccionar Líder</label>
+                                <select class="form-select form-select-sm border-primary" id="AdminSelectLider" name="IdLider" required>
+                                    <option value="">2. Esperando semillero...</option>
+                                </select>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-diagram-3"></i> Semillero Asignado</label>
+                                <input type="text" class="form-control form-control-sm bg-white" value="@ViewBag.NombreSemilleroLider (ID: @Model.IdSemillero)" readonly />
+                                @Html.HiddenFor(m => m.IdSemillero)
+                            </div>
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-person-badge"></i> Líder Responsable</label>
+                                @Html.DropDownListFor(m => m.IdLider, (SelectList)ViewBag.ListaLideres, "Seleccione un líder...", new { @class = "form-select form-select-sm border-primary", id = "SelectLider", required = "required" })
+                            </div>
+                            <div class="col-md-2 mb-2 mb-md-0">
+                                <label class="fw-semibold text-muted small">ID Líder</label>
+                                <input type="text" class="form-control form-control-sm text-success fw-bold" id="InputIdLider" value="@Model.IdLider" readonly />
+                            </div>
+                        }
                     </div>
 
                     <div class="row">
@@ -54,8 +74,7 @@
 
                     <div class="mb-3">
                         <label class="fw-semibold">Lugar de la Reunión</label>
-                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones o escriba uno nuevo..." value="@(Model != null ? Model.LugarReunion : "")" />
-
+                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones..." value="@(Model != null ? Model.LugarReunion : "")" />
                         <datalist id="listaLugares">
                             @if (ViewBag.ListaLugaresExistentes != null)
                             {
@@ -70,21 +89,28 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="fw-semibold">Investigadores (Disponibles)</label>
-
                             <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
                                 @if (ViewBag.ListaInvestigadores != null)
                                 {
-                                    foreach (var inv in ViewBag.ListaInvestigadores)
+                                    var listaInv = ViewBag.ListaInvestigadores as IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosUsuario>;
+                                    if (listaInv != null && listaInv.Any())
                                     {
-                                        bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
-                                                           Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
+                                        foreach (var inv in listaInv)
+                                        {
+                                            bool yaConvocado = Model != null && Model.InvestigadoresConvocados != null &&
+                                                               Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
 
-                                        <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
-                                            <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
-                                            <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
-                                                @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
-                                            </label>
-                                        </div>
+                                            <div class="form-check item-investigador" data-id="@inv.IdUsuario" id="wrapper_@inv.IdUsuario">
+                                                <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
+                                                <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                    @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                    else if (rolActual == "Administrador" || rolActual == "Admin")
+                                    {
+                                        <div class="text-muted fst-italic p-2 text-center mt-3"><i class="bi bi-arrow-up-circle d-block fs-3 mb-1"></i>Selecciona un semillero arriba.</div>
                                     }
                                 }
                             </div>
@@ -119,15 +145,74 @@
             const btnGuardar = document.getElementById('btnGuardar');
             const formReunion = document.getElementById('form-reunion');
 
-            // Mostrar errores que vienen del servidor
             var mensajeError = '@Html.Raw(TempData["Error"])';
             if (mensajeError && mensajeError !== '') {
                 Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
             }
 
+            // Cambiar ID visible cuando un Líder elige a otro Líder
+            const selectLider = document.getElementById('SelectLider');
+            const inputIdLider = document.getElementById('InputIdLider');
+            if (selectLider) {
+                selectLider.addEventListener('change', function() {
+                    if (inputIdLider) inputIdLider.value = this.value;
+                });
+            }
+
             // ==========================================
-            // 1. INICIALIZAR HORARIOS
+            // LÓGICA AJAX: CASCADA PARA EL ADMIN
             // ==========================================
+            const selectSemillero = document.getElementById('AdminSelectSemillero');
+            if (selectSemillero) {
+                selectSemillero.addEventListener('change', function() {
+                    let idSemillero = this.value;
+                    document.getElementById('IdSemilleroOculto').value = idSemillero;
+                    let divInv = document.getElementById('contenedorInvestigadores');
+                    let selectLiderAdmin = document.getElementById('AdminSelectLider');
+
+                    if (!idSemillero) {
+                        selectLiderAdmin.innerHTML = '<option value="">Primero elige un semillero...</option>';
+                        divInv.innerHTML = '<div class="text-muted fst-italic p-2 text-center mt-3"><i class="bi bi-arrow-up-circle d-block fs-3 mb-1"></i>Selecciona un semillero arriba para cargar su personal.</div>';
+                        return;
+                    }
+
+                    selectLiderAdmin.innerHTML = '<option value="">Buscando líderes...</option>';
+                    divInv.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-primary" role="status"></div></div>';
+
+                    $.get('@Url.Action("ObtenerLideresYInvestigadores", "Reuniones")', { idSemillero: idSemillero }, function(res) {
+
+                        selectLiderAdmin.innerHTML = '<option value="">Seleccione al Líder a cargo...</option>';
+                        if (res.lideres.length === 0) {
+                            selectLiderAdmin.innerHTML = '<option value="">(No hay líderes registrados en este semillero)</option>';
+                        } else {
+                            res.lideres.forEach(l => {
+                                selectLiderAdmin.innerHTML += `<option value="${l.id}">${l.nombre} (ID: ${l.id})</option>`;
+                            });
+                        }
+
+                        divInv.innerHTML = '';
+                        if(res.investigadores.length === 0) {
+                            divInv.innerHTML = '<div class="text-danger fw-bold p-2 text-center mt-4">No hay investigadores registrados en este semillero.</div>';
+                        } else {
+                            res.investigadores.forEach(inv => {
+                                divInv.innerHTML += `
+                                    <div class="form-check item-investigador" data-id="${inv.id}" id="wrapper_${inv.id}">
+                                        <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="${inv.id}" id="chk_${inv.id}">
+                                        <label class="form-check-label text-dark fw-medium" for="chk_${inv.id}">
+                                            ${inv.nombre} <small class="text-muted">(ID: ${inv.id})</small>
+                                        </label>
+                                    </div>
+                                `;
+                            });
+                        }
+
+                        validarDisponibilidad();
+                    }).fail(function() {
+                        Swal.fire('Error', 'No se pudieron cargar los datos del semillero.', 'error');
+                    });
+                });
+            }
+
             function initTiempos() {
                 if (txtFecha.value) return;
 
@@ -153,9 +238,6 @@
             }
             initTiempos();
 
-            // ==========================================
-            // 2. VALIDACIONES ESTRICTAS DE TIEMPO Y FECHA
-            // ==========================================
             txtFecha.addEventListener('change', function() {
                 let fechaSel = new Date(this.value + "T12:00:00");
                 if (fechaSel.getDay() === 0) {
@@ -175,19 +257,16 @@
 
                 if (minIni < 360) {
                     Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
-                    txtInicio.value = "06:00";
-                    return false;
+                    txtInicio.value = "06:00"; return false;
                 }
                 if (minFin > 1320) {
                     Swal.fire('Aviso', 'La reunión no puede extenderse más allá de las 10:00 p.m.', 'info');
-                    txtFin.value = "22:00";
-                    return false;
+                    txtFin.value = "22:00"; return false;
                 }
 
-                // Si puso la hora de fin ANTES que la hora de inicio (duración negativa)
                 if (duracion < 0) {
                     Swal.fire('Error de Lógica', 'La hora de fin no puede ser ANTES de la hora de inicio.', 'error');
-                    let newMin = minIni + 30; // Le obligamos a que dure al menos 30 min
+                    let newMin = minIni + 30;
                     txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
                     return false;
                 }
@@ -208,15 +287,11 @@
                 return true;
             }
 
-            // Usamos 'blur' para que reaccione apenas el usuario quite el ratón del campo de hora
             txtInicio.addEventListener('blur', validarReglasHorario);
             txtFin.addEventListener('blur', validarReglasHorario);
             txtInicio.addEventListener('change', validarReglasHorario);
             txtFin.addEventListener('change', validarReglasHorario);
 
-            // ==========================================
-            // 3. DESAPARECER INVESTIGADORES OCUPADOS
-            // ==========================================
             function validarDisponibilidad() {
                 if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
 
@@ -249,9 +324,6 @@
 
             document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
 
-            // ==========================================
-            // 4. CONTADOR DEL MOTIVO (Arreglo del 0/500)
-            // ==========================================
             function actualizarContador() {
                 let len = txtMotivo.value.length;
                 document.getElementById('contadorMotivo').innerText = `${len}/500`;
@@ -266,39 +338,30 @@
             }
 
             txtMotivo.addEventListener('input', actualizarContador);
-            actualizarContador(); // Forzamos el conteo apenas carga la página
+            actualizarContador();
 
-            // ==========================================
-            // 5. GUARDADO CON DOBLE VALIDACIÓN
-            // ==========================================
             btnGuardar.addEventListener('click', function() {
-                // 1. Validar campos vacíos nativos
+                let adminSelect = document.getElementById('AdminSelectLider');
+                if (adminSelect && !adminSelect.value) {
+                    Swal.fire('Falta el Líder', 'Debes seleccionar qué Líder estará a cargo de esta reunión.', 'warning');
+                    return;
+                }
+
                 if (!formReunion.checkValidity()) {
                     formReunion.reportValidity();
                     return;
                 }
 
-                // 2. Forzar validación de hora por si se la saltaron
-                if (!validarReglasHorario()) {
-                    return; // Si el horario está mal, la función tira el SweetAlert y cancela el guardado
-                }
+                if (!validarReglasHorario()) return;
 
-                // 3. Validar investigadores
                 let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
                 if (checks === 0) {
                     Swal.fire('Error', 'Debes seleccionar al menos a un investigador disponible.', 'error');
                     return;
                 }
 
-
-                // 4. Todo perfecto, guardamos.
                 Swal.fire({
-                    title: '¿Agendar Reunión?',
-                    text: '¿Estás seguro de crear esta citación?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, agendar',
-                    cancelButtonText: 'Cancelar'
+                    title: '¿Agendar Reunión?', text: '¿Estás seguro de crear esta citación?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, agendar', cancelButtonText: 'Cancelar'
                 }).then((r) => {
                     if (r.isConfirmed) {
                         Swal.fire({ title: 'Guardando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -307,9 +370,13 @@
                 });
             });
 
+            document.getElementById('btn-volver').addEventListener('click', function(e) {
+                e.preventDefault();
+                Swal.fire({ title: '¿Salir?', text: "Perderás los datos.", icon: 'warning', showCancelButton: true }).then((r) => {
+                    if (r.isConfirmed) window.location.href = this.href;
+                });
+            });
+
         });
     </script>
 }
-
-
-

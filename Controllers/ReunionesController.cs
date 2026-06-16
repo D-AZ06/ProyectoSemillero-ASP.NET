@@ -32,14 +32,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     {
                         string estadoCorrecto = r.EstadoReunion;
 
-                        if (ahora > fin)
-                        {
-                            estadoCorrecto = "Terminada";
-                        }
-                        else if (ahora >= inicio && ahora <= fin)
-                        {
-                            estadoCorrecto = "En ejecución";
-                        }
+                        if (ahora > fin) estadoCorrecto = "Terminada";
+                        else if (ahora >= inicio && ahora <= fin) estadoCorrecto = "En ejecución";
 
                         if (estadoCorrecto != r.EstadoReunion)
                         {
@@ -92,21 +86,82 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return View(lista);
         }
 
+        // Carga de datos base (Para Agregar)
         private void CargarDatosFormulario()
         {
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-            ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.RolUsuario == "Investigador").ToList();
-
             var colReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-            var lugaresUnicos = colReuniones.Distinct<string>("lugarReunion", Builders<DatosReunion>.Filter.Empty).ToList();
-            ViewBag.ListaLugaresExistentes = lugaresUnicos;
+
+            ViewBag.ListaLugaresExistentes = colReuniones.Distinct<string>("lugarReunion", Builders<DatosReunion>.Filter.Empty).ToList();
 
             var ultimo = colReuniones.Find(new BsonDocument()).SortByDescending(r => r.IdReunion).FirstOrDefault();
             ViewBag.SiguienteIdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
 
-            int idLiderActual = (int)Session["IdUsuario"];
-            var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
-            ViewBag.NombreLider = liderDb != null ? liderDb.NombreUsuario : "Desconocido";
+            string rolUsuario = Session["Rol"].ToString();
+            ViewBag.RolUsuario = rolUsuario;
+
+            if (rolUsuario == "Administrador" || rolUsuario == "Admin")
+            {
+                var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+                var listaSemilleros = colSemilleros.Find(new BsonDocument()).ToList()
+                            .Select(s => new { IdSemillero = s["idSemillero"].AsInt32, NombreSemillero = s["nombreSemillero"].AsString }).ToList();
+
+                ViewBag.ListaSemilleros = new SelectList(listaSemilleros, "IdSemillero", "NombreSemillero");
+                ViewBag.ListaInvestigadores = new List<DatosUsuario>();
+                ViewBag.IdLider = null;
+                ViewBag.IdSemillero = null;
+                ViewBag.NombreLider = "";
+            }
+            else
+            {
+                int idLiderActual = (int)Session["IdUsuario"];
+                var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
+                int idSemilleroLider = liderDb != null && liderDb.IdSemillero.HasValue ? liderDb.IdSemillero.Value : 0;
+
+                var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+                var semDB = colSemilleros.Find(Builders<BsonDocument>.Filter.Eq("idSemillero", idSemilleroLider)).FirstOrDefault();
+                ViewBag.NombreSemilleroLider = semDB != null ? semDB["nombreSemillero"].AsString : "Desconocido";
+
+                ViewBag.IdLider = idLiderActual;
+                ViewBag.IdSemillero = idSemilleroLider;
+
+                // Cargamos TODOS los líderes de este semillero para que el Líder pueda elegir
+                var lideres = colUsuarios.Find(u => u.IdSemillero == idSemilleroLider && u.RolUsuario == "Líder").ToList();
+                ViewBag.ListaLideres = new SelectList(lideres, "IdUsuario", "NombreUsuario", idLiderActual);
+
+                ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.IdSemillero == idSemilleroLider && u.RolUsuario == "Investigador").ToList();
+            }
+        }
+
+        // Carga de datos específicos para la vista MODIFICAR
+        private void CargarDatosModificar(DatosReunion reunion)
+        {
+            CargarDatosFormulario(); // Carga base
+            var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+            var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
+
+            var semDB = colSemilleros.Find(Builders<BsonDocument>.Filter.Eq("idSemillero", reunion.IdSemillero)).FirstOrDefault();
+            ViewBag.NombreSemilleroReunion = semDB != null ? semDB["nombreSemillero"].AsString : "Desconocido";
+
+            // Cargamos los líderes que pertenecen a ese semillero específico
+            var lideres = colUsuarios.Find(u => u.IdSemillero == reunion.IdSemillero && u.RolUsuario == "Líder").ToList();
+            ViewBag.ListaLideres = new SelectList(lideres, "IdUsuario", "NombreUsuario", reunion.IdLider);
+
+            ViewBag.ListaInvestigadores = colUsuarios.Find(u => u.IdSemillero == reunion.IdSemillero && (u.RolUsuario == "Investigador" || u.RolUsuario == "Estudiante")).ToList();
+        }
+
+        [HttpGet]
+        public JsonResult ObtenerLideresYInvestigadores(int idSemillero)
+        {
+            var colUsr = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+
+            var lideres = colUsr.Find(u => u.IdSemillero == idSemillero && u.RolUsuario == "Líder").ToList()
+                .Select(u => new { id = u.IdUsuario, nombre = u.NombreUsuario }).ToList();
+
+            var investigadores = colUsr.Find(u => u.IdSemillero == idSemillero && (u.RolUsuario == "Investigador" || u.RolUsuario == "Estudiante")).ToList()
+                .Select(u => new { id = u.IdUsuario, nombre = u.NombreUsuario }).ToList();
+
+            return Json(new { lideres = lideres, investigadores = investigadores }, JsonRequestBehavior.AllowGet);
         }
 
         [HttpGet]
@@ -116,24 +171,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
             CargarDatosFormulario();
 
-            int idLiderActual = (int)Session["IdUsuario"];
-            var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
-            var liderDb = colUsuarios.Find(u => u.IdUsuario == idLiderActual).FirstOrDefault();
-
-            int semilleroIdSeguro = 0;
-            if (liderDb != null && liderDb.IdSemillero != null)
+            var modeloNuevo = new DatosReunion();
+            if (Session["Rol"].ToString() == "Líder")
             {
-                semilleroIdSeguro = Convert.ToInt32(liderDb.IdSemillero);
+                modeloNuevo.IdLider = ViewBag.IdLider;
+                modeloNuevo.IdSemillero = ViewBag.IdSemillero;
             }
-
-            ViewBag.IdLider = idLiderActual;
-            ViewBag.IdSemillero = semilleroIdSeguro;
-
-            var modeloNuevo = new DatosReunion
-            {
-                IdLider = idLiderActual,
-                IdSemillero = semilleroIdSeguro
-            };
 
             return View(modeloNuevo);
         }
@@ -149,16 +192,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (DateTime.TryParse(model.FechaReunion, out DateTime fecha) && fecha.DayOfWeek == DayOfWeek.Sunday)
                 {
                     TempData["Error"] = "Operación rechazada: No se permiten reuniones en domingo.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosFormulario(); return View(model);
                 }
 
                 string analisisMotivo = ValidarMotivoEstricto(model.MotivoReunion);
                 if (analisisMotivo != "OK")
                 {
                     TempData["Error"] = analisisMotivo;
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosFormulario(); return View(model);
                 }
 
                 if (investigadoresSeleccionados != null && investigadoresSeleccionados.Length > 0)
@@ -176,15 +217,13 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 else
                 {
                     TempData["Error"] = "Debe convocar al menos a un investigador.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosFormulario(); return View(model);
                 }
 
                 if (string.IsNullOrWhiteSpace(model.LugarReunion))
                 {
                     TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosFormulario(); return View(model);
                 }
 
                 var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
@@ -192,7 +231,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 model.IdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
                 model.EstadoReunion = "Programada";
-                model.IdLider = (int)Session["IdUsuario"];
+
+                // Ya no forzamos model.IdLider = Session["IdUsuario"], ahora el modelo lo toma directo del Dropdown en la vista.
 
                 coleccion.InsertOne(model);
                 TempData["Exito"] = "Reunión creada y agendada correctamente.";
@@ -220,7 +260,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 return RedirectToAction("Index");
             }
 
-            CargarDatosFormulario();
+            CargarDatosModificar(reunion);
             return View(reunion);
         }
 
@@ -233,23 +273,20 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (string.IsNullOrWhiteSpace(model.LugarReunion))
                 {
                     TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosModificar(model); return View(model);
                 }
 
                 if (DateTime.TryParse(model.FechaReunion, out DateTime fecha) && fecha.DayOfWeek == DayOfWeek.Sunday)
                 {
                     TempData["Error"] = "Operación rechazada: No se permiten reuniones en domingo.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosModificar(model); return View(model);
                 }
 
                 string analisisMotivo = ValidarMotivoEstricto(model.MotivoReunion);
                 if (analisisMotivo != "OK")
                 {
                     TempData["Error"] = analisisMotivo;
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosModificar(model); return View(model);
                 }
 
                 model.InvestigadoresConvocados = new List<InvestigadorConvocado>();
@@ -268,8 +305,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 else
                 {
                     TempData["Error"] = "Debe convocar al menos a un investigador.";
-                    CargarDatosFormulario();
-                    return View(model);
+                    CargarDatosModificar(model); return View(model);
                 }
 
                 var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
@@ -277,9 +313,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (original != null)
                 {
-                    if (original.FechaReunion != model.FechaReunion ||
-                        original.HoraInicio != model.HoraInicio ||
-                        original.HoraFin != model.HoraFin)
+                    if (original.FechaReunion != model.FechaReunion || original.HoraInicio != model.HoraInicio || original.HoraFin != model.HoraFin)
                     {
                         model.EstadoReunion = "Reprogramada";
                     }
@@ -289,7 +323,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
-                model.IdLider = (int)Session["IdUsuario"];
                 coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
 
                 TempData["Exito"] = "Reunión actualizada exitosamente.";
@@ -298,8 +331,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "Error crítico de base de datos: " + ex.Message;
-                CargarDatosFormulario();
-                return View(model);
+                CargarDatosModificar(model); return View(model);
             }
         }
 
@@ -313,9 +345,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (reunion == null) return Json(new { success = false, message = "La reunión no existe en la BD." });
 
-                // ==========================================================
-                // EL CANDADO: Bloquea si alguien ya tiene "Confirmada"
-                // ==========================================================
                 if (reunion.InvestigadoresConvocados != null && reunion.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmada"))
                 {
                     return Json(new { success = false, message = "Operación denegada: No puedes cancelar porque ya hay investigadores que confirmaron su asistencia." });
@@ -323,10 +352,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 if (DateTime.TryParse(reunion.FechaReunion + " " + reunion.HoraInicio, out DateTime inicioReunion))
                 {
-                    if (inicioReunion < DateTime.Now)
-                    {
-                        return Json(new { success = false, message = "No se puede cancelar: La reunión ya comenzó o ya pasó." });
-                    }
+                    if (inicioReunion < DateTime.Now) return Json(new { success = false, message = "No se puede cancelar: La reunión ya comenzó o ya pasó." });
                 }
 
                 if (reunion.EstadoReunion == "Por iniciar" || reunion.EstadoReunion == "En ejecución" || reunion.EstadoReunion == "Terminada")
@@ -337,7 +363,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 reunion.EstadoReunion = "Cancelada";
                 if (reunion.InvestigadoresConvocados != null)
                 {
-                    // Si se cancela, los demás quedan en Pendiente o Conflicto
                     foreach (var inv in reunion.InvestigadoresConvocados) inv.EstadoAsistencia = "Pendiente";
                 }
 
@@ -350,9 +375,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // ==========================================================
-        // NUEVO MÉTODO: Para recibir la asistencia del investigador
-        // ==========================================================
         [HttpPost]
         public JsonResult ResponderAsistencia(int idReunion, string respuesta)
         {
@@ -371,15 +393,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return Json(new { success = false, message = "No puedes cambiar tu asistencia a una reunión en este estado." });
                 }
 
-                // Aquí usamos IdReal o IdInvestigador según como lo tengas en tu modelo. 
-                // Usaré IdInvestigador basado en tu método Agregar.
                 var investigador = reunion.InvestigadoresConvocados?.FirstOrDefault(i => i.IdInvestigador == idUsuarioLogueado);
-                if (investigador == null)
-                {
-                    return Json(new { success = false, message = "No estás convocado a esta reunión." });
-                }
+                if (investigador == null) return Json(new { success = false, message = "No estás convocado a esta reunión." });
 
-                investigador.EstadoAsistencia = respuesta; // Recibe "Confirmada" o "No disponible"
+                investigador.EstadoAsistencia = respuesta;
                 coleccion.ReplaceOne(r => r.IdReunion == idReunion, reunion);
 
                 return Json(new { success = true });
@@ -414,10 +431,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     if (inicioReq < finBD && finReq > inicioBD)
                     {
                         lugaresOcupados.Add(r.LugarReunion);
-                        if (r.InvestigadoresConvocados != null)
-                        {
-                            investigadoresOcupados.AddRange(r.InvestigadoresConvocados.Select(i => i.IdReal));
-                        }
+                        if (r.InvestigadoresConvocados != null) investigadoresOcupados.AddRange(r.InvestigadoresConvocados.Select(i => i.IdReal));
                     }
                 }
             }
@@ -428,13 +442,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         {
             if (string.IsNullOrWhiteSpace(texto) || texto.Length < 10) return "Motivo inválido: Mínimo 10 caracteres.";
             if (texto.Length > 500) return "Motivo inválido: Máximo 500 caracteres.";
-
             int vocales = texto.Count(c => "aeiouAEIOUáéíóúÁÉÍÓÚ".Contains(c));
             int letras = texto.Count(char.IsLetter);
             if (letras > 0 && (double)vocales / letras < 0.20) return "Motivo inválido: Texto incoherente (menos del 20% de vocales).";
-
             if (Regex.IsMatch(texto, @"(.)\1{3,}")) return "Motivo inválido: Contiene 4 o más caracteres repetidos seguidos.";
-
             return "OK";
         }
     }
