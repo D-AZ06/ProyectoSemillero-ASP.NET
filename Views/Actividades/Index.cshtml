@@ -38,6 +38,8 @@
                         <option value="nombreActividad">Nombre de la Actividad</option>
                         <option value="idProyecto">ID Proyecto</option>
                         <option value="tituloProyecto">Título del Proyecto</option>
+                        <option value="fechaInicioActividad">Fecha Exacta de Inicio</option>
+                        <option value="mesEntregaActividad">Mes de Entrega</option>
                         <option value="fechaEntregaActividad">Fecha Exacta de Entrega</option>
                         <option value="mesEntregaActividad">Mes de Entrega</option>
                         <option value="estadoActividad">Estado de la Actividad</option>
@@ -78,6 +80,7 @@
                 <th scope="col" class="py-3">Nombre de Actividad</th>
                 <th scope="col" class="py-3">Proyecto</th>
                 <th scope="col" class="py-3">Duración</th>
+                <th scope="col" class="py-3">Fecha Inicio</th>
                 <th scope="col" class="py-3">Fecha Entrega</th>
                 <th scope="col" class="py-3">Estado</th>
                 <th scope="col" class="py-3">Investigador Responsable</th>
@@ -103,12 +106,19 @@
 
                         <td>@actividad.DuracionActividad</td>
 
-                        <td class="data-fechaEntregaActividad">@actividad.FechaEntregaActividad</td>
+                        <td class="data-fechaInicioActividad">
+                            <span class="text-secondary"><i class="bi bi-play-circle me-1"></i>@actividad.FechaInicioActividad</span>
+                        </td>
+
+                        <td class="data-fechaEntregaActividad">
+                            <span class="text-secondary"><i class="bi bi-calendar-event me-1"></i>@actividad.FechaEntregaActividad</span>
+                        </td>
 
                         <td class="data-estadoActividad">
                             @{
                                 string colorBadge = "bg-warning text-dark"; // Por defecto Pendiente
                                 if (actividad.EstadoActividad == "En Progreso") { colorBadge = "bg-primary"; }
+                                else if (actividad.EstadoActividad == "Retrasado") { colorBadge = "bg-danger"; } // NUEVO
                                 else if (actividad.EstadoActividad == "Finalizado") { colorBadge = "bg-success"; }
                             }
                             <span class="badge @colorBadge shadow-sm">@actividad.EstadoActividad</span>
@@ -172,7 +182,8 @@
             idProyecto: [...new Set(Array.from(document.querySelectorAll('.data-idProyecto')).map(el => el.textContent.replace('ID: ', '').trim()))],
             tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))],
             estadoActividad: [...new Set(Array.from(document.querySelectorAll('.data-estadoActividad')).map(el => el.textContent.trim()))],
-            investigadorResponsable: [...new Set(Array.from(document.querySelectorAll('.data-investigador')).map(el => el.textContent.trim()))]
+            investigadorResponsable: [...new Set(Array.from(document.querySelectorAll('.data-investigador')).map(el => el.textContent.trim()))],
+            fechaInicioActividad: [...new Set(Array.from(document.querySelectorAll('.data-fechaInicioActividad')).map(el => el.textContent.trim()))]
         };
 
         const selectFiltro = document.getElementById('selectFiltro');
@@ -193,7 +204,7 @@
             btnConsultar.disabled = false;
             let nuevoInput = '';
 
-            if (filtroSeleccionado === 'fechaEntregaActividad') {
+            if (filtroSeleccionado === 'fechaEntregaActividad' || filtroSeleccionado === 'fechaInicioActividad') {
                 nuevoInput = `<input type="date" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
             else if (filtroSeleccionado === 'mesEntregaActividad') {

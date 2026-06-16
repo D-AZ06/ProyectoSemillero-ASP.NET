@@ -50,6 +50,40 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 var proyectos = coleccionProyectos.Find(filtroSeguridad).ToList();
 
+                // --- ACTUALIZACIÓN AUTOMÁTICA DE ESTADOS POR TIEMPO ---
+                DateTime hoy = DateTime.Today;
+                foreach (var p in proyectos)
+                {
+                    if (p.Actividades != null && p.Actividades.Any())
+                    {
+                        foreach (var a in p.Actividades)
+                        {
+                            // Si no está finalizado, evaluamos si hay que cambiar el estado
+                            if (a.EstadoActividad != "Finalizado")
+                            {
+                                if (DateTime.TryParse(a.FechaInicioActividad, out DateTime dInicio) && DateTime.TryParse(a.FechaEntregaActividad, out DateTime dFin))
+                                {
+                                    string estadoCorrecto = "Pendiente";
+                                    if (hoy > dFin.Date) estadoCorrecto = "Retrasado";
+                                    else if (hoy >= dInicio.Date && hoy <= dFin.Date) estadoCorrecto = "En Progreso";
+
+                                    if (a.EstadoActividad != estadoCorrecto)
+                                    {
+                                        a.EstadoActividad = estadoCorrecto;
+                                        var filterUpdate = Builders<DatosProyecto>.Filter.And(
+                                            Builders<DatosProyecto>.Filter.Eq(proj => proj.IdProyecto, p.IdProyecto),
+                                            Builders<DatosProyecto>.Filter.ElemMatch(proj => proj.Actividades, act => act.IdActividad == a.IdActividad)
+                                        );
+                                        var update = Builders<DatosProyecto>.Update.Set("actividades.$.estadoActividad", estadoCorrecto);
+                                        coleccionProyectos.UpdateOne(filterUpdate, update);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // --- FIN ACTUALIZACIÓN AUTOMÁTICA ---
+
                 var listaActividades = proyectos
                     .Where(p => p.Actividades != null && p.Actividades.Any())
                     .SelectMany(p => p.Actividades.Select(a => new DatosActividade
@@ -59,9 +93,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         IdActividad = a.IdActividad,
                         NombreActividad = a.NombreActividad,
                         DuracionActividad = a.DuracionActividad,
+                        FechaInicioActividad = a.FechaInicioActividad,
                         FechaEntregaActividad = a.FechaEntregaActividad,
-
-                        // Nuevos campos mapeados
                         EstadoActividad = a.EstadoActividad ?? "Pendiente",
                         InvestigadoresResponsables = a.InvestigadoresResponsables,
                         NombresInvestigadores = a.InvestigadoresResponsables != null
@@ -93,13 +126,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             listaActividades = listaActividades.Where(a => a.FechaEntregaActividad == valorFiltro).ToList();
                             break;
                         case "mesEntregaActividad":
-                            // Evalúa si la fecha comienza con el patrón "YYYY-MM" del input
                             listaActividades = listaActividades.Where(a => !string.IsNullOrEmpty(a.FechaEntregaActividad) && a.FechaEntregaActividad.StartsWith(valorFiltro)).ToList();
                             break;
                         case "estadoActividad":
                             listaActividades = listaActividades.Where(a => a.EstadoActividad.ToLower() == valorFiltro).ToList();
                             break;
-
                         case "investigadorResponsable":
                             listaActividades = listaActividades.Where(a => a.NombresInvestigadores != null &&
                                                                            a.NombresInvestigadores.Any(n => n.ToLower().Contains(valorFiltro))).ToList();
@@ -121,18 +152,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         {
             try
             {
-                // Validación de sesión básica
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
 
-                // NUEVO: Traer usuarios para traducir los IDs a nombres en la vista
                 var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
                 var dictInvestigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador")
                                                           .ToList()
                                                           .ToDictionary(u => u.IdUsuario, u => u.NombreUsuario);
 
-                // Buscamos el proyecto específico por su ID
                 var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
 
                 if (proyecto == null)
@@ -141,11 +169,39 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index", "Proyectos");
                 }
 
-                // Pasamos datos del proyecto a la vista mediante ViewBag para el encabezado
+                // --- ACTUALIZACIÓN AUTOMÁTICA DE ESTADOS POR TIEMPO ---
+                DateTime hoy = DateTime.Today;
+                if (proyecto.Actividades != null && proyecto.Actividades.Any())
+                {
+                    foreach (var a in proyecto.Actividades)
+                    {
+                        if (a.EstadoActividad != "Finalizado")
+                        {
+                            if (DateTime.TryParse(a.FechaInicioActividad, out DateTime dInicio) && DateTime.TryParse(a.FechaEntregaActividad, out DateTime dFin))
+                            {
+                                string estadoCorrecto = "Pendiente";
+                                if (hoy > dFin.Date) estadoCorrecto = "Retrasado";
+                                else if (hoy >= dInicio.Date && hoy <= dFin.Date) estadoCorrecto = "En Progreso";
+
+                                if (a.EstadoActividad != estadoCorrecto)
+                                {
+                                    a.EstadoActividad = estadoCorrecto;
+                                    var filterUpdate = Builders<DatosProyecto>.Filter.And(
+                                        Builders<DatosProyecto>.Filter.Eq(proj => proj.IdProyecto, proyecto.IdProyecto),
+                                        Builders<DatosProyecto>.Filter.ElemMatch(proj => proj.Actividades, act => act.IdActividad == a.IdActividad)
+                                    );
+                                    var update = Builders<DatosProyecto>.Update.Set("actividades.$.estadoActividad", estadoCorrecto);
+                                    coleccionProyectos.UpdateOne(filterUpdate, update);
+                                }
+                            }
+                        }
+                    }
+                }
+                // --- FIN ACTUALIZACIÓN AUTOMÁTICA ---
+
                 ViewBag.IdProyecto = proyecto.IdProyecto;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
 
-                // Extraemos las actividades, si no tiene ninguna, creamos una lista vacía
                 var listaActividades = new List<DatosActividade>();
 
                 if (proyecto.Actividades != null && proyecto.Actividades.Any())
@@ -157,9 +213,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         IdActividad = a.IdActividad,
                         NombreActividad = a.NombreActividad,
                         DuracionActividad = a.DuracionActividad,
+                        FechaInicioActividad = a.FechaInicioActividad,
                         FechaEntregaActividad = a.FechaEntregaActividad,
-
-                        // NUEVO: Mapeo de estado e investigadores
                         EstadoActividad = a.EstadoActividad ?? "Pendiente",
                         InvestigadoresResponsables = a.InvestigadoresResponsables,
                         NombresInvestigadores = a.InvestigadoresResponsables != null
@@ -202,7 +257,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
                 ViewBag.ProyectoFijo = true;
 
-                // NUEVO: Pasamos las fechas del proyecto a la vista
                 ViewBag.FechaInicioProyecto = proyecto.FechaInicioProyecto;
                 ViewBag.FechaFinProyecto = proyecto.FechaFinProyecto;
 
@@ -310,21 +364,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         // POST: Actividades/Agregar
         [HttpPost]
-        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, bool flujoSecuencial = false, string estadoActividad = "Pendiente", int[] investigadoresResponsables = null)
+        public ActionResult Agregar(int idProyecto, string nombreActividad, string fechaInicioActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, bool flujoSecuencial = false, string estadoActividad = "Pendiente", int[] investigadoresResponsables = null)
         {
             try
             {
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
-
-                // 1. Validación estricta de fecha en el Servidor
-                DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
-                DateTime limiteMinimoEnServidor = DateTime.Today.AddDays(1);
-
-                if (fechaEntrega < limiteMinimoEnServidor)
-                {
-                    TempData["Error"] = "Operación rechazada: La fecha de entrega debe ser estrictamente posterior al día de hoy.";
-                    return RedirectToAction("Index");
-                }
 
                 if (investigadoresResponsables != null && investigadoresResponsables.Length > 2)
                 {
@@ -341,9 +385,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
-                if (fechaEntrega < limiteMinimoEnServidor)
+                DateTime fechaInicio = DateTime.Parse(fechaInicioActividad).Date;
+                DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
+                DateTime limiteMinimoEnServidor = DateTime.Today;
+
+                if (fechaInicio < limiteMinimoEnServidor)
                 {
-                    TempData["Error"] = "Operación rechazada: La fecha de entrega debe ser estrictamente posterior al día de hoy.";
+                    TempData["Error"] = "Operación rechazada: La fecha de inicio de la actividad no puede ser en el pasado.";
+                    return RedirectToAction("Index");
+                }
+
+                if (fechaEntrega < fechaInicio)
+                {
+                    TempData["Error"] = "Operación rechazada: La fecha de entrega no puede ser anterior a la fecha de inicio.";
                     return RedirectToAction("Index");
                 }
 
@@ -352,23 +406,26 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     DateTime inicioProyecto = DateTime.Parse(proyectoPadre.FechaInicioProyecto).Date;
                     DateTime finProyecto = DateTime.Parse(proyectoPadre.FechaFinProyecto).Date;
 
-                    if (fechaEntrega > finProyecto || fechaEntrega < inicioProyecto)
+                    if (fechaInicio < inicioProyecto || fechaInicio > finProyecto)
                     {
-                        TempData["Error"] = $"Operación rechazada: La fecha de la actividad debe estar entre el inicio ({inicioProyecto.ToShortDateString()}) y el fin del proyecto ({finProyecto.ToShortDateString()}).";
+                        TempData["Error"] = $"Operación rechazada: El inicio de la actividad debe estar entre las fechas del proyecto ({inicioProyecto.ToShortDateString()} - {finProyecto.ToShortDateString()}).";
+                        return RedirectToAction("Index");
+                    }
+
+                    if (fechaEntrega > finProyecto)
+                    {
+                        TempData["Error"] = $"Operación rechazada: La entrega de la actividad no puede superar el límite del proyecto ({finProyecto.ToShortDateString()}).";
                         return RedirectToAction("Index");
                     }
                 }
 
-                // 4. VALIDACIÓN ANTI-DUPLICADOS
                 if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any(a => a.NombreActividad.ToLower().Trim() == nombreActividad.ToLower().Trim()))
                 {
                     TempData["Error"] = "Operación rechazada: Ya existe una actividad con este mismo nombre en el proyecto.";
                     return RedirectToAction("Index");
                 }
 
-                // 1. GENERACIÓN DE ID GLOBAL (Prefijo fijo "40")
                 int nuevoIdActividad = 401;
-
                 var todasLasActividades = coleccionProyectos.Find(_ => true).ToList()
                     .Where(p => p.Actividades != null && p.Actividades.Any())
                     .SelectMany(p => p.Actividades)
@@ -380,31 +437,38 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     foreach (var act in todasLasActividades)
                     {
                         string idStr = act.IdActividad.ToString();
-                        if (idStr.StartsWith("40") && idStr.Length >= 3)
+                        if (idStr.StartsWith("40") && idStr.Length >= 3 && int.TryParse(idStr.Substring(2), out int secuenciaActual))
                         {
-                            if (int.TryParse(idStr.Substring(2), out int secuenciaActual))
-                            {
-                                if (secuenciaActual > maxSecuencia)
-                                {
-                                    maxSecuencia = secuenciaActual;
-                                }
-                            }
+                            if (secuenciaActual > maxSecuencia) maxSecuencia = secuenciaActual;
                         }
                     }
                     int siguienteSecuencia = maxSecuencia + 1;
                     nuevoIdActividad = int.Parse("40" + siguienteSecuencia);
                 }
 
-                // 2. Concatenación inteligente
                 string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
+
+                // --- CÁLCULO DEL ESTADO AL GUARDAR ---
+                string estadoCalculado = "Pendiente";
+                DateTime hoy = DateTime.Today;
+                if (estadoActividad != "Finalizado")
+                {
+                    if (hoy > fechaEntrega.Date) estadoCalculado = "Retrasado";
+                    else if (hoy >= fechaInicio.Date && hoy <= fechaEntrega.Date) estadoCalculado = "En Progreso";
+                }
+                else
+                {
+                    estadoCalculado = "Finalizado";
+                }
 
                 Actividad nuevaActividad = new Actividad
                 {
                     IdActividad = nuevoIdActividad,
                     NombreActividad = nombreActividad.Trim(),
+                    FechaInicioActividad = fechaInicioActividad,
                     DuracionActividad = duracionCompuesta,
                     FechaEntregaActividad = fechaEntregaActividad,
-                    EstadoActividad = estadoActividad,
+                    EstadoActividad = estadoCalculado, // Usamos el calculado
                     InvestigadoresResponsables = investigadoresResponsables != null ? investigadoresResponsables.ToList() : new List<int>(),
                     Fases = new List<Fase>()
                 };
@@ -418,13 +482,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 TempData["Exito"] = "Actividad registrada con éxito. Ahora es obligatorio registrar su primera fase.";
 
-                // --- REGLA ABSOLUTA: SIEMPRE IR A FASES ---
                 return RedirectToAction("Agregar", "Fases", new
                 {
                     idProyecto = idProyecto,
                     idActividad = nuevoIdActividad,
-                    flujoSecuencial = flujoSecuencial, // Si viene de proyecto será true, sino false
-                    origenActividad = origenRetorno    // <-- Viaja tu lógica de retorno
+                    flujoSecuencial = flujoSecuencial,
+                    origenActividad = origenRetorno
                 });
             }
             catch (Exception ex)
@@ -435,7 +498,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         }
 
 
-        // GET: Actividades/Modificar
         [HttpGet]
         public ActionResult Modificar(int idProyecto, int idActividad, bool desdeProyecto = false)
         {
@@ -473,7 +535,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdProyecto = proyecto.IdProyecto;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
 
-                // NUEVO: Pasamos las fechas del proyecto a la vista
                 ViewBag.FechaInicioProyecto = proyecto.FechaInicioProyecto;
                 ViewBag.FechaFinProyecto = proyecto.FechaFinProyecto;
 
@@ -488,20 +549,18 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         // POST: Actividades/Modificar
         [HttpPost]
-        public ActionResult Modificar(int idProyecto, int idActividad, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, string estadoActividad, int[] investigadoresResponsables = null)
+        public ActionResult Modificar(int idProyecto, int idActividad, string nombreActividad, string fechaInicioActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, string estadoActividad, int[] investigadoresResponsables = null)
         {
             try
             {
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
-                // 1. Validación de investigadores
                 if (investigadoresResponsables != null && investigadoresResponsables.Length > 2)
                 {
                     TempData["Error"] = "Operación rechazada: Solo puedes asignar un máximo de 2 investigadores.";
                     return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
                 }
 
-                // 2. BUSCAR EL PROYECTO PARA LAS VALIDACIONES
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
                 var proyectoPadre = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
 
@@ -511,30 +570,53 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
                 }
 
-                // 3. VALIDAR LÍMITES DE FECHA DEL PROYECTO
+                DateTime fechaInicio = DateTime.Parse(fechaInicioActividad).Date;
                 DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
+
+                if (fechaEntrega < fechaInicio)
+                {
+                    TempData["Error"] = "Operación rechazada: La fecha de entrega no puede ser anterior a la fecha de inicio.";
+                    return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                }
 
                 if (!string.IsNullOrEmpty(proyectoPadre.FechaInicioProyecto) && !string.IsNullOrEmpty(proyectoPadre.FechaFinProyecto))
                 {
                     DateTime inicioProyecto = DateTime.Parse(proyectoPadre.FechaInicioProyecto).Date;
                     DateTime finProyecto = DateTime.Parse(proyectoPadre.FechaFinProyecto).Date;
 
-                    if (fechaEntrega > finProyecto || fechaEntrega < inicioProyecto)
+                    if (fechaInicio < inicioProyecto || fechaInicio > finProyecto)
                     {
-                        TempData["Error"] = $"Operación rechazada: La fecha de la actividad debe estar entre el inicio ({inicioProyecto.ToShortDateString()}) y el fin del proyecto ({finProyecto.ToShortDateString()}).";
+                        TempData["Error"] = $"Operación rechazada: El inicio de la actividad debe estar entre las fechas del proyecto ({inicioProyecto.ToShortDateString()} - {finProyecto.ToShortDateString()}).";
+                        return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                    }
+
+                    if (fechaEntrega > finProyecto)
+                    {
+                        TempData["Error"] = $"Operación rechazada: La entrega de la actividad no puede superar el límite del proyecto ({finProyecto.ToShortDateString()}).";
                         return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
                     }
                 }
 
-                // 4. VALIDACIÓN ANTI-DUPLICADOS (Ignorando la actividad actual que estamos modificando)
                 if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any(a => a.IdActividad != idActividad && a.NombreActividad.ToLower().Trim() == nombreActividad.ToLower().Trim()))
                 {
                     TempData["Error"] = "Operación rechazada: Ya existe otra actividad con este mismo nombre en el proyecto.";
                     return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
                 }
 
-                // 5. ACTUALIZAR EN MONGODB
                 string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
+
+                // --- CÁLCULO DEL ESTADO AL MODIFICAR ---
+                string estadoCalculado = "Pendiente";
+                DateTime hoy = DateTime.Today;
+                if (estadoActividad != "Finalizado")
+                {
+                    if (hoy > fechaEntrega.Date) estadoCalculado = "Retrasado";
+                    else if (hoy >= fechaInicio.Date && hoy <= fechaEntrega.Date) estadoCalculado = "En Progreso";
+                }
+                else
+                {
+                    estadoCalculado = "Finalizado";
+                }
 
                 var filtro = Builders<DatosProyecto>.Filter.And(
                     Builders<DatosProyecto>.Filter.Eq(p => p.IdProyecto, idProyecto),
@@ -543,9 +625,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                 var actualizacion = Builders<DatosProyecto>.Update
                     .Set("actividades.$.nombreActividad", nombreActividad.Trim())
+                    .Set("actividades.$.fechaInicioActividad", fechaInicioActividad)
                     .Set("actividades.$.duracionActividad", duracionCompuesta)
                     .Set("actividades.$.fechaEntregaActividad", fechaEntregaActividad)
-                    .Set("actividades.$.estadoActividad", estadoActividad)
+                    .Set("actividades.$.estadoActividad", estadoCalculado) // Usamos el calculado
                     .Set("actividades.$.investigadoresResponsables", investigadoresResponsables != null ? investigadoresResponsables.ToList() : new List<int>());
 
                 coleccionProyectos.UpdateOne(filtro, actualizacion);

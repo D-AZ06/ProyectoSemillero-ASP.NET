@@ -152,7 +152,12 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-12 col-md-6 mb-3">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="fechaInicioActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-play-fill me-1"></i> Fecha de Inicio</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaInicioActividad" name="fechaInicioActividad" required />
+                    </div>
+
+                    <div class="col-12 col-md-4 mb-3">
                         <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
                         <div class="input-group">
                             <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" placeholder="Cant." required />
@@ -164,10 +169,10 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-md-6 mb-3">
-                        <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha Máxima de Entrega</label>
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha de Entrega</label>
                         <input type="date" class="form-control border-secondary-subtle" id="fechaEntregaActividad" name="fechaEntregaActividad" required />
-                        <small class="text-muted" id="ayudaFecha"><i class="bi bi-info-circle"></i> Selecciona la duración para calcular la fecha recomendada.</small>
+                        <small class="text-muted" id="ayudaFecha"><i class="bi bi-info-circle"></i> Se calculará automáticamente.</small>
                     </div>
                 </div>
 
@@ -195,9 +200,7 @@
         @if (flujoSecuencial)
         {
             <text>
-            // Usamos JavaScript puro para evitar conflictos de carga
             document.addEventListener("DOMContentLoaded", function() {
-                // Bloquear el retroceso del navegador
                 window.history.pushState(null, "", window.location.href);
                 window.onpopstate = function() {
                     window.history.pushState(null, "", window.location.href);
@@ -207,6 +210,7 @@
         }
 
         // --- DECLARACIÓN DE VARIABLES GLOBALES ---
+        const txtInicio = document.getElementById('fechaInicioActividad');
         const txtValor = document.getElementById('duracionValor');
         const cboUnidad = document.getElementById('duracionUnidad');
         const txtFecha = document.getElementById('fechaEntregaActividad');
@@ -214,37 +218,32 @@
 
         const selectProyecto = document.getElementById('selectProyectoForm');
         const contenedorCheckboxes = document.getElementById('contenedorCheckboxes');
-
         const urlObtenerInvestigadores = '@Url.Action("ObtenerInvestigadoresPorProyecto", "Actividades")';
 
-        // --- LÓGICA DE CÁLCULO DE FECHAS ---
+        // --- INICIALIZAR FECHA MÍNIMA (HOY) ---
         function establecerMinimoAbsoluto() {
-            if (!txtFecha) return;
+            if (!txtInicio) return;
+            let hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd = String(hoy.getDate()).padStart(2, '0');
+            txtInicio.min = `${yyyy}-${mm}-${dd}`;
 
-            let mañana = new Date();
-            mañana.setDate(mañana.getDate() + 1);
-
-            const yyyy = mañana.getFullYear();
-            const mm = String(mañana.getMonth() + 1).padStart(2, '0');
-            const dd = String(mañana.getDate()).padStart(2, '0');
-
-            const fechaMinimaBase = `${yyyy}-${mm}-${dd}`;
-            txtFecha.min = fechaMinimaBase;
+            // Si no tiene valor, sugerir la fecha de hoy
+            if(!txtInicio.value) txtInicio.value = `${yyyy}-${mm}-${dd}`;
         }
 
+        // --- LÓGICA DE CÁLCULO DE FECHAS ---
         function calcularFechaProyectada() {
-            if (!txtValor || !cboUnidad || !txtFecha) return;
+            if (!txtValor || !cboUnidad || !txtFecha || !txtInicio || !txtInicio.value) return;
 
             const valor = parseInt(txtValor.value) || 0;
             const unidad = cboUnidad.value;
 
-            if (valor <= 0) {
-                establecerMinimoAbsoluto();
-                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-info-circle text-muted"></i> Ingrese una duración válida numérica mayor a 0.`;
-                return;
-            }
+            if (valor <= 0) return;
 
-            let fechaCalculada = new Date();
+            // El cálculo arranca desde la fecha de inicio seleccionada
+            let fechaCalculada = new Date(txtInicio.value + 'T00:00:00');
 
             if (unidad === 'Días') {
                 fechaCalculada.setDate(fechaCalculada.getDate() + valor);
@@ -257,16 +256,15 @@
             const yyyy = fechaCalculada.getFullYear();
             const mm = String(fechaCalculada.getMonth() + 1).padStart(2, '0');
             const dd = String(fechaCalculada.getDate()).padStart(2, '0');
-            const formatoFinal = `${yyyy}-${mm}-${dd}`;
 
-            txtFecha.value = formatoFinal;
-            txtFecha.min = formatoFinal;
-            if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Bloqueado: Fecha calculada según duración estimada.`;
+            txtFecha.value = `${yyyy}-${mm}-${dd}`;
+            txtFecha.min = txtInicio.value;
+            if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Entrega calculada según duración.`;
         }
 
-        // --- NUEVA VALIDACIÓN ESTRICTA DE FECHAS EN TIEMPO REAL ---
+        // --- VALIDACIÓN ESTRICTA CONTRA LÍMITES DEL PROYECTO ---
         function validarLimitesFecha() {
-            if (!txtFecha || !txtFecha.value) return;
+            if (!txtInicio || !txtInicio.value || !txtFecha || !txtFecha.value) return;
 
             let limiteInicio = '@(ViewBag.FechaInicioProyecto ?? "")';
             let limiteFin = '@(ViewBag.FechaFinProyecto ?? "")';
@@ -279,18 +277,25 @@
 
             if (!limiteInicio || !limiteFin) return;
 
-            const fechaIngresada = new Date(txtFecha.value + 'T00:00:00');
-            const fechaMax = new Date(limiteFin + 'T00:00:00');
-            const fechaMin = new Date(limiteInicio + 'T00:00:00');
+            const vInicio = new Date(txtInicio.value + 'T00:00:00');
+            const vEntrega = new Date(txtFecha.value + 'T00:00:00');
+            const max = new Date(limiteFin + 'T00:00:00');
+            const min = new Date(limiteInicio + 'T00:00:00');
 
-            if (fechaIngresada > fechaMax) {
-                Swal.fire({ icon: 'warning', title: 'Límite Excedido', text: `La actividad no puede entregarse después de la fecha límite del proyecto (${limiteFin}).`, confirmButtonColor: '#ffc107' });
+            // 1. Validar que el inicio no se salga del proyecto
+            if (vInicio < min || vInicio > max) {
+                Swal.fire({ icon: 'warning', title: 'Fecha de Inicio Inválida', text: `La actividad debe iniciar dentro de las fechas del proyecto (${limiteInicio} al ${limiteFin}).`, confirmButtonColor: '#ffc107' });
+                txtInicio.value = limiteInicio;
+                // Si el inicio se corrige, debemos recalcular la entrega obligatoriamente
+                originalCalcularFecha();
+            }
+
+            // 2. Validar que la entrega recalculada no supere el fin del proyecto
+            const vEntregaNueva = new Date(txtFecha.value + 'T00:00:00');
+            if (vEntregaNueva > max) {
+                Swal.fire({ icon: 'warning', title: 'Límite de Entrega Excedido', text: `La duración hace que la entrega supere la fecha final del proyecto (${limiteFin}). Se ajustará al límite máximo permitido.`, confirmButtonColor: '#ffc107' });
                 txtFecha.value = limiteFin;
-                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Fecha ajustada al límite del proyecto.`;
-            } else if (fechaIngresada < fechaMin) {
-                Swal.fire({ icon: 'warning', title: 'Fecha Inválida', text: `La actividad no puede ser anterior a la fecha de inicio del proyecto (${limiteInicio}).`, confirmButtonColor: '#ffc107' });
-                txtFecha.value = limiteInicio;
-                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Fecha ajustada al inicio del proyecto.`;
+                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Entrega ajustada al límite del proyecto.`;
             }
         }
 
@@ -301,13 +306,14 @@
             validarLimitesFecha();
         };
 
+        if (txtInicio) txtInicio.addEventListener('change', calcularFechaProyectada);
         if (txtValor) txtValor.addEventListener('input', calcularFechaProyectada);
         if (cboUnidad) cboUnidad.addEventListener('change', calcularFechaProyectada);
         if (txtFecha) txtFecha.addEventListener('change', validarLimitesFecha);
 
         document.addEventListener('DOMContentLoaded', establecerMinimoAbsoluto);
 
-        // --- ANIMACIÓN AL GUARDAR LA ACTIVIDAD ---
+        // --- RESTO DE TU JS (GUARDADO Y AJAX) SE MANTIENE INTACTO ---
         const formActividad = document.getElementById('formAgregarActividad');
         if (formActividad) {
             formActividad.addEventListener('submit', function () {
@@ -321,24 +327,16 @@
             });
         }
 
-        // --- LÓGICA AJAX PARA EL ADMINISTRADOR ---
         if (selectProyecto && contenedorCheckboxes) {
             selectProyecto.addEventListener('change', function () {
                 const idProyectoSeleccionado = this.value;
-
-                // Re-disparar cálculo de fechas por si cambiaron los límites del nuevo proyecto
                 if(txtValor.value) calcularFechaProyectada();
 
                 if (!idProyectoSeleccionado) {
-                    contenedorCheckboxes.innerHTML = `
-                        <div class="text-center text-muted small mt-3">
-                            <i class="bi bi-arrow-up-circle fs-4 d-block mb-1"></i>
-                            Seleccione un proyecto para cargar los investigadores disponibles.
-                        </div>`;
+                    contenedorCheckboxes.innerHTML = `<div class="text-center text-muted small mt-3"><i class="bi bi-arrow-up-circle fs-4 d-block mb-1"></i> Seleccione un proyecto para cargar los investigadores disponibles.</div>`;
                     return;
                 }
 
-                // Loader visual mientras busca
                 contenedorCheckboxes.innerHTML = '<div class="text-center text-primary mt-3"><div class="spinner-border spinner-border-sm" role="status"></div> Cargando equipo...</div>';
 
                 fetch(`${urlObtenerInvestigadores}?idProyecto=${idProyectoSeleccionado}`)
@@ -351,9 +349,7 @@
                                     htmlCheckboxes += `
                                         <div class="form-check mb-2">
                                             <input class="form-check-input chk-investigador border-secondary" type="checkbox" name="investigadoresResponsables" value="${inv.IdUsuario}" id="chk_${inv.IdUsuario}">
-                                            <label class="form-check-label text-dark fw-medium" for="chk_${inv.IdUsuario}">
-                                                ${inv.NombreUsuario}
-                                            </label>
+                                            <label class="form-check-label text-dark fw-medium" for="chk_${inv.IdUsuario}">${inv.NombreUsuario}</label>
                                         </div>
                                     `;
                                 });
@@ -367,28 +363,51 @@
                         }
                     })
                     .catch(error => {
-                        console.error('Error AJAX:', error);
                         contenedorCheckboxes.innerHTML = '<span class="text-danger small">Error de conexión con el servidor.</span>';
                     });
             });
         }
 
-        // --- VALIDACIÓN DE LÍMITE DE CHECKBOXES (MÁXIMO 2) ---
         if (contenedorCheckboxes) {
             contenedorCheckboxes.addEventListener('change', function (e) {
                 if (e.target && e.target.classList.contains('chk-investigador')) {
                     const checkeados = document.querySelectorAll('.chk-investigador:checked');
                     if (checkeados.length > 2) {
-                        e.target.checked = false; // Desmarca el tercer intento
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Límite alcanzado',
-                            text: 'Solo puedes asignar un máximo de 2 investigadores a esta actividad.',
-                            confirmButtonColor: '#ffc107'
-                        });
+                        e.target.checked = false;
+                        Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo puedes asignar un máximo de 2 investigadores a esta actividad.', confirmButtonColor: '#ffc107' });
                     }
                 }
             });
+        }
+        function calcularEstadoAutomatico() {
+            if (!txtInicio || !txtInicio.value || !txtFecha || !txtFecha.value) return;
+
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            const vInicio = new Date(txtInicio.value + 'T00:00:00');
+            const vEntrega = new Date(txtFecha.value + 'T00:00:00');
+            const inputEstado = document.getElementById('estadoActividad');
+
+            if (inputEstado) {
+                // Respetamos si el backend ya mandó que está Finalizado
+                if (inputEstado.value === "Finalizado") {
+                    inputEstado.className = "form-control bg-light fw-bold text-success border-success-subtle";
+                    return;
+                }
+
+                // CAMBIO A RETRASADO
+                if (hoy > vEntrega) {
+                    inputEstado.value = "Retrasado";
+                    inputEstado.className = "form-control bg-light fw-bold text-danger border-danger-subtle";
+                } else if (hoy >= vInicio && hoy <= vEntrega) {
+                    inputEstado.value = "En Progreso";
+                    inputEstado.className = "form-control bg-light fw-bold text-primary border-primary-subtle";
+                } else {
+                    inputEstado.value = "Pendiente";
+                    inputEstado.className = "form-control bg-light fw-bold text-warning border-warning-subtle";
+                }
+            }
         }
     </script>
 }
