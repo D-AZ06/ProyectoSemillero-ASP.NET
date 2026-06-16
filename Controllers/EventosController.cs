@@ -57,7 +57,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     if (Session["IdSemillero"] != null)
                     {
                         int idSemillero = (int)Session["IdSemillero"];
-                        filtroSeguridad = builder.Eq(e => e.IdSemillero, idSemillero);
+                        // Usamos AnyEq porque IdSemilleros es una lista
+                        filtroSeguridad = builder.AnyEq(e => e.IdSemilleros, idSemillero);
                     }
                     else
                     {
@@ -179,6 +180,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 nuevoEvento.RequiereInscripcion = false;
                 nuevoEvento.CapacidadMaxima = 0;
                 nuevoEvento.Agenda = new List<ItemAgenda>();
+                nuevoEvento.IdSemilleros = new List<int>();
 
                 if (rolUsuario == "Líder")
                 {
@@ -190,8 +192,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
                 else
                 {
+                    // Enviamos la lista normal para poder hacer selección múltiple
                     var semilleros = colSemilleros.Find(_ => true).ToList();
-                    ViewBag.ListaSemilleros = new SelectList(semilleros, "IdSemillero", "nombreSemillero");
+                    ViewBag.ListaSemilleros = semilleros;
                     ViewBag.ListaProyectos = colProyectos.Find(_ => true).ToList();
                 }
 
@@ -201,7 +204,29 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.NombresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.NombreEvento)).Select(e => e.NombreEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
                 ViewBag.TiposSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.TipoEvento)).Select(e => e.TipoEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
                 ViewBag.LugaresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.LugarEvento)).Select(e => e.LugarEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(l => l).ToList();
-                ViewBag.OrganizadoresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+
+                // Cargar los Usuarios reales del sistema
+                try
+                {
+                    // Asegúrate de que esto sea lo que envías al ViewBag
+                    var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                    var usuarios = colUsuarios.Find(_ => true).ToList();
+
+                    // Creamos los SelectListItem manualmente para evitar el error de casting
+                    var listaOrganizadores = usuarios.Select(u => new SelectListItem
+                    {
+                        Value = u.NombreUsuario,
+                        Text = u.NombreUsuario
+                    }).ToList();
+
+                    ViewBag.ListaOrganizadores = new SelectList(listaOrganizadores, "Value", "Text");
+                }
+                catch
+                {
+                    // Plan B por si la colección falla
+                    var listaFallback = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+                    ViewBag.ListaOrganizadores = new SelectList(listaFallback);
+                }
 
                 ViewBag.RolUsuario = rolUsuario;
                 return View(nuevoEvento);
@@ -218,7 +243,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // =============================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Agregar(DatosEvento nuevoEvento, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados)
+        public ActionResult Agregar(DatosEvento nuevoEvento, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados, int[] semillerosSeleccionados)
         {
             try
             {
@@ -232,14 +257,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 if (nuevoEvento.Agenda == null)
-                {
                     nuevoEvento.Agenda = new List<ItemAgenda>();
-                }
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
 
+                // Asignar lista de semilleros
                 if (rolUsuario == "Líder")
-                    nuevoEvento.IdSemillero = (int)Session["IdSemillero"];
+                {
+                    nuevoEvento.IdSemilleros = new List<int> { (int)Session["IdSemillero"] };
+                }
+                else
+                {
+                    nuevoEvento.IdSemilleros = semillerosSeleccionados != null ? semillerosSeleccionados.ToList() : new List<int>();
+                }
 
                 nuevoEvento.ProyectosParticipantes = new List<ProyectoParticipante>();
                 if (proyectosSeleccionados != null && proyectosSeleccionados.Length > 0)
@@ -324,12 +354,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
+                if (evento.IdSemilleros == null) evento.IdSemilleros = new List<int>();
+
                 if (rolUsuario == "Líder")
                 {
                     int idSemilleroLider = (int)Session["IdSemillero"];
-                    if (evento.IdSemillero != idSemilleroLider)
+                    if (!evento.IdSemilleros.Contains(idSemilleroLider))
                     {
-                        TempData["Error"] = "Acceso denegado: Este evento pertenece a otro semillero.";
+                        TempData["Error"] = "Acceso denegado: Tu semillero no participa en este evento.";
                         return RedirectToAction("Index");
                     }
                     ViewBag.IdSemilleroFijo = idSemilleroLider;
@@ -340,7 +372,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 else
                 {
                     var semilleros = colSemilleros.Find(_ => true).ToList();
-                    ViewBag.ListaSemilleros = new SelectList(semilleros, "IdSemillero", "nombreSemillero");
+                    ViewBag.ListaSemilleros = semilleros;
                     ViewBag.ListaProyectos = colProyectos.Find(_ => true).ToList();
                 }
 
@@ -350,7 +382,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.NombresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.NombreEvento)).Select(e => e.NombreEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
                 ViewBag.TiposSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.TipoEvento)).Select(e => e.TipoEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t).ToList();
                 ViewBag.LugaresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.LugarEvento)).Select(e => e.LugarEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(l => l).ToList();
-                ViewBag.OrganizadoresSugeridos = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+
+                // Cargar usuarios para el modificador
+                try
+                {
+                    var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                    var listaNombresUsuarios = colUsuarios.Find(_ => true).ToList().Select(u => u.NombreUsuario).OrderBy(n => n).ToList();
+                    ViewBag.ListaOrganizadores = new SelectList(listaNombresUsuarios);
+                }
+                catch
+                {
+                    var listaFallback = todosEventos.Where(e => !string.IsNullOrWhiteSpace(e.OrganizadorEvento)).Select(e => e.OrganizadorEvento.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(o => o).ToList();
+                    ViewBag.ListaOrganizadores = new SelectList(listaFallback);
+                }
 
                 ViewBag.RolUsuario = rolUsuario;
                 return View(evento);
@@ -367,7 +411,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // =============================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Modificar(DatosEvento eventoModificado, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados)
+        public ActionResult Modificar(DatosEvento eventoModificado, int[] proyectosSeleccionados, int[] patrocinadoresSeleccionados, int[] semillerosSeleccionados)
         {
             try
             {
@@ -381,9 +425,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 if (eventoModificado.Agenda == null)
-                {
                     eventoModificado.Agenda = new List<ItemAgenda>();
-                }
 
                 var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
                 var filtro = Builders<DatosEvento>.Filter.Eq(e => e.IdEvento, eventoModificado.IdEvento);
@@ -393,7 +435,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     int idSemilleroLider = (int)Session["IdSemillero"];
                     filtro = Builders<DatosEvento>.Filter.And(
                         Builders<DatosEvento>.Filter.Eq(e => e.IdEvento, eventoModificado.IdEvento),
-                        Builders<DatosEvento>.Filter.Eq(e => e.IdSemillero, idSemilleroLider)
+                        Builders<DatosEvento>.Filter.AnyEq(e => e.IdSemilleros, idSemilleroLider)
                     );
                 }
 
@@ -406,7 +448,16 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 eventoModificado.Id = eventoOriginal.Id;
-                eventoModificado.IdSemillero = eventoOriginal.IdSemillero;
+
+                // Conservar semilleros si es líder, o actualizar si es admin
+                if (rolUsuario == "Líder")
+                {
+                    eventoModificado.IdSemilleros = eventoOriginal.IdSemilleros;
+                }
+                else
+                {
+                    eventoModificado.IdSemilleros = semillerosSeleccionados != null ? semillerosSeleccionados.ToList() : new List<int>();
+                }
 
                 eventoModificado.ProyectosParticipantes = new List<ProyectoParticipante>();
                 if (proyectosSeleccionados != null && proyectosSeleccionados.Length > 0)
@@ -478,13 +529,22 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 else
                 {
                     int idSemilleroLider = (int)Session["IdSemillero"];
-                    resultado = coleccionEventos.DeleteOne(e => e.IdEvento == id && e.IdSemillero == idSemilleroLider);
+                    var evento = coleccionEventos.Find(e => e.IdEvento == id).FirstOrDefault();
+                    if (evento != null && evento.IdSemilleros != null && evento.IdSemilleros.Contains(idSemilleroLider))
+                    {
+                        resultado = coleccionEventos.DeleteOne(e => e.IdEvento == id);
+                    }
+                    else
+                    {
+                        TempData["Error"] = "No tienes permisos para eliminar este evento.";
+                        return RedirectToAction("Index");
+                    }
                 }
 
-                if (resultado.DeletedCount > 0)
+                if (resultado != null && resultado.DeletedCount > 0)
                     TempData["Exito"] = "El evento ha sido eliminado correctamente.";
                 else
-                    TempData["Error"] = "No se pudo eliminar el evento o no tienes permisos.";
+                    TempData["Error"] = "No se pudo eliminar el evento.";
 
                 return RedirectToAction("Index");
             }
@@ -568,6 +628,50 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             {
                 TempData["Error"] = "Error al desvincular el patrocinador: " + ex.Message;
                 return RedirectToAction("Detalle", new { id = idEvento });
+            }
+        }
+
+        // =============================================
+        // GET AJAX: VerificarLugarOcupado (Validación de cruces)
+        // =============================================
+        [HttpGet]
+        public ActionResult VerificarLugarOcupado(string lugar, string fecha, string horaInicio, string horaFin)
+        {
+            try
+            {
+                var coleccionEventos = conexionDB.Database.GetCollection<DatosEvento>("Eventos");
+
+                // Buscamos eventos que sean en el mismo lugar y la misma fecha
+                var eventosPosibles = coleccionEventos.Find(e => e.LugarEvento == lugar && e.FechaEvento == fecha && e.Estado != "Cancelado").ToList();
+
+                bool existeCruce = false;
+
+                if (eventosPosibles.Any())
+                {
+                    TimeSpan tInicioNuevo = TimeSpan.Parse(horaInicio);
+                    TimeSpan tFinNuevo = TimeSpan.Parse(horaFin);
+
+                    foreach (var ev in eventosPosibles)
+                    {
+                        if (TimeSpan.TryParse(ev.HoraInicio, out TimeSpan tInicioExistente) &&
+                            TimeSpan.TryParse(ev.HoraFin, out TimeSpan tFinExistente))
+                        {
+                            // Fórmula de superposición de tiempo: (InicioA < FinB) && (FinA > InicioB)
+                            if (tInicioNuevo < tFinExistente && tFinNuevo > tInicioExistente)
+                            {
+                                existeCruce = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return Json(new { ocupado = existeCruce }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception)
+            {
+                // Si algo falla al parsear las horas, retornamos falso para permitir el guardado y no bloquear al usuario
+                return Json(new { ocupado = false }, JsonRequestBehavior.AllowGet);
             }
         }
     }
