@@ -19,7 +19,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             string rolUsuario = Session["Rol"].ToString();
 
             var coleccionReuniones = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
-
             var todasLasReuniones = coleccionReuniones.Find(new BsonDocument()).ToList();
             DateTime ahora = DateTime.Now;
 
@@ -86,7 +85,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return View(lista);
         }
 
-        // Carga de datos base (Para Agregar)
         private void CargarDatosFormulario()
         {
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
@@ -125,7 +123,6 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdLider = idLiderActual;
                 ViewBag.IdSemillero = idSemilleroLider;
 
-                // Cargamos TODOS los líderes de este semillero para que el Líder pueda elegir
                 var lideres = colUsuarios.Find(u => u.IdSemillero == idSemilleroLider && u.RolUsuario == "Líder").ToList();
                 ViewBag.ListaLideres = new SelectList(lideres, "IdUsuario", "NombreUsuario", idLiderActual);
 
@@ -133,17 +130,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // Carga de datos específicos para la vista MODIFICAR
         private void CargarDatosModificar(DatosReunion reunion)
         {
-            CargarDatosFormulario(); // Carga base
+            CargarDatosFormulario();
             var colUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
             var colSemilleros = conexionDB.Database.GetCollection<BsonDocument>("Semilleros");
 
             var semDB = colSemilleros.Find(Builders<BsonDocument>.Filter.Eq("idSemillero", reunion.IdSemillero)).FirstOrDefault();
             ViewBag.NombreSemilleroReunion = semDB != null ? semDB["nombreSemillero"].AsString : "Desconocido";
 
-            // Cargamos los líderes que pertenecen a ese semillero específico
             var lideres = colUsuarios.Find(u => u.IdSemillero == reunion.IdSemillero && u.RolUsuario == "Líder").ToList();
             ViewBag.ListaLideres = new SelectList(lideres, "IdUsuario", "NombreUsuario", reunion.IdLider);
 
@@ -187,6 +182,24 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         {
             try
             {
+                if (DateTime.TryParse(model.FechaReunion + " " + model.HoraInicio, out DateTime inicioReunion))
+                {
+                    if (inicioReunion < DateTime.Now.AddMinutes(55))
+                    {
+                        TempData["Error"] = "Operación rechazada: La reunión debe agendarse con al menos 1 hora de anticipación.";
+                        CargarDatosFormulario(); return View(model);
+                    }
+                }
+
+                if (TimeSpan.TryParse(model.HoraFin, out TimeSpan horaFinLimite))
+                {
+                    if (horaFinLimite > new TimeSpan(22, 0, 0))
+                    {
+                        TempData["Error"] = "Operación rechazada: Las reuniones no pueden extenderse más allá de las 10:00 p.m.";
+                        CargarDatosFormulario(); return View(model);
+                    }
+                }
+
                 if (model.InvestigadoresConvocados == null) model.InvestigadoresConvocados = new List<InvestigadorConvocado>();
 
                 if (DateTime.TryParse(model.FechaReunion, out DateTime fecha) && fecha.DayOfWeek == DayOfWeek.Sunday)
@@ -232,7 +245,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 model.IdReunion = (ultimo != null && ultimo.IdReunion >= 600) ? ultimo.IdReunion + 1 : 600;
                 model.EstadoReunion = "Programada";
 
-                // Ya no forzamos model.IdLider = Session["IdUsuario"], ahora el modelo lo toma directo del Dropdown en la vista.
+                if (Session["Rol"].ToString() == "Líder") model.IdLider = (int)Session["IdUsuario"];
 
                 coleccion.InsertOne(model);
                 TempData["Exito"] = "Reunión creada y agendada correctamente.";
@@ -241,8 +254,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "Error crítico de base de datos: " + ex.Message;
-                CargarDatosFormulario();
-                return View(model);
+                CargarDatosFormulario(); return View(model);
             }
         }
 
@@ -270,6 +282,24 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         {
             try
             {
+                if (DateTime.TryParse(model.FechaReunion + " " + model.HoraInicio, out DateTime inicioReunion))
+                {
+                    if (inicioReunion < DateTime.Now.AddMinutes(55))
+                    {
+                        TempData["Error"] = "Operación rechazada: La reunión debe agendarse con al menos 1 hora de anticipación.";
+                        CargarDatosModificar(model); return View(model);
+                    }
+                }
+
+                if (TimeSpan.TryParse(model.HoraFin, out TimeSpan horaFinLimite))
+                {
+                    if (horaFinLimite > new TimeSpan(22, 0, 0))
+                    {
+                        TempData["Error"] = "Operación rechazada: Las reuniones no pueden extenderse más allá de las 10:00 p.m.";
+                        CargarDatosModificar(model); return View(model);
+                    }
+                }
+
                 if (string.IsNullOrWhiteSpace(model.LugarReunion))
                 {
                     TempData["Error"] = "Operación rechazada: El lugar de la reunión es estrictamente obligatorio.";
@@ -323,6 +353,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     }
                 }
 
+                if (Session["Rol"].ToString() == "Líder") model.IdLider = (int)Session["IdUsuario"];
+
                 coleccion.ReplaceOne(r => r.IdReunion == model.IdReunion, model);
 
                 TempData["Exito"] = "Reunión actualizada exitosamente.";
@@ -373,6 +405,50 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             {
                 return Json(new { success = false, message = "Error del servidor: " + ex.Message });
             }
+        }
+
+        // ==========================================================
+        // MÉTODO ELIMINAR A PRUEBA DE FALLOS
+        // ==========================================================
+        public ActionResult Eliminar(int id)
+        {
+            if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+            string rolUsuario = Session["Rol"].ToString();
+
+            if (rolUsuario != "Administrador" && rolUsuario != "Admin")
+            {
+                TempData["Error"] = "Solo los Administradores tienen permiso para eliminar reuniones permanentemente.";
+                return RedirectToAction("Index");
+            }
+
+            try
+            {
+                var coleccion = conexionDB.Database.GetCollection<DatosReunion>("Reuniones");
+
+                var reunionExiste = coleccion.Find(r => r.IdReunion == id).FirstOrDefault();
+                if (reunionExiste == null)
+                {
+                    TempData["Error"] = $"No se encontró la reunión con el ID {id} en la base de datos.";
+                    return RedirectToAction("Index");
+                }
+
+                var resultado = coleccion.DeleteOne(r => r.IdReunion == id);
+
+                if (resultado.DeletedCount > 0)
+                {
+                    TempData["Exito"] = $"La reunión {id} ha sido eliminada permanentemente.";
+                }
+                else
+                {
+                    TempData["Error"] = "Hubo un problema y no se pudo borrar el registro.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error del sistema al eliminar: " + ex.Message;
+            }
+
+            return RedirectToAction("Index");
         }
 
         [HttpPost]

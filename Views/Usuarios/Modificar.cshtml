@@ -28,7 +28,14 @@
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Rol del Usuario</label>
-                            @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                            @if (ViewBag.RolUsuario == "Líder")
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
+                            }
                         </div>
                     </div>
 
@@ -57,7 +64,7 @@
 
                         <div class="col-md-6 mb-4">
                             <label class="form-label fw-semibold">Teléfono</label>
-                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", required = "required", id = "TelefonoUsuario" })
+                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", placeholder = "Ej: 3001234567", required = "required", id = "TelefonoUsuario" })
                         </div>
                     </div>
 
@@ -66,8 +73,8 @@
                             @if (ViewBag.RolUsuario == "Administrador" || ViewBag.RolUsuario == "Admin")
                             {
                                 <label class="form-label fw-semibold">Asignar Semillero</label>
-                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select" })
-                                <small class="text-muted">Nota: Si estás creando otro Administrador, puedes dejar esto en blanco.</small>
+                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select", id = "IdSemillero" })
+                                <small class="text-muted">Nota: Si el rol es Administrador, esta caja se desactivará automáticamente.</small>
                             }
                             else if (ViewBag.RolUsuario == "Líder")
                             {
@@ -102,6 +109,22 @@
                 Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
             }
 
+            // =======================================================
+            // BLOQUEO DE SEMILLERO PARA ADMINISTRADORES (USANDO JQUERY)
+            // =======================================================
+            $('#RolUsuario').on('change', function() {
+                var rolSeleccionado = $(this).val();
+                if (rolSeleccionado === "Administrador" || rolSeleccionado === "Admin") {
+                    $('#IdSemillero').val('');
+                    $('#IdSemillero').prop('disabled', true);
+                    $('#IdSemillero').css('background-color', '#e9ecef');
+                } else {
+                    $('#IdSemillero').prop('disabled', false);
+                    $('#IdSemillero').css('background-color', '#ffffff');
+                }
+            });
+            $('#RolUsuario').trigger('change');
+
             const btnVolver = document.getElementById('btn-volver');
             if (btnVolver) {
                 btnVolver.addEventListener('click', function (e) {
@@ -135,10 +158,14 @@
             if (txtNumerotelefonico) {
                 txtNumerotelefonico.addEventListener('input', function () {
                     this.value = this.value.replace(/[^0-9]/g, '');
+                    if(this.value.length > 0 && !this.value.startsWith('3')) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
                 });
             }
 
-            // AQUÍ ATRAPAMOS EL CLIC PARA PREGUNTAR ANTES DE ACTUALIZAR
             const btnGuardar = document.getElementById('btnGuardar');
             const formUsuario = document.getElementById('form-usuario');
 
@@ -148,6 +175,14 @@
                         formUsuario.reportValidity();
                         return;
                     }
+
+                    let tel = txtNumerotelefonico.value;
+                    if(tel.length !== 10 || !tel.startsWith('3')) {
+                        Swal.fire('Error en Celular', 'El número de teléfono en Colombia debe tener exactamente 10 dígitos y empezar con el número 3.', 'error');
+                        return;
+                    }
+
+                    $('#IdSemillero').prop('disabled', false);
 
                     Swal.fire({
                         title: '¿Actualizar Usuario?',
@@ -167,6 +202,8 @@
                                 didOpen: () => { Swal.showLoading(); }
                             });
                             formUsuario.submit();
+                        } else {
+                            $('#RolUsuario').trigger('change');
                         }
                     });
                 });

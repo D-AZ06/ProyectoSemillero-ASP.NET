@@ -30,11 +30,11 @@
                             <label class="form-label fw-semibold">Rol del Usuario</label>
                             @if (ViewBag.RolUsuario == "Líder")
                             {
-                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
                             }
                             else
                             {
-                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required" })
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
                             }
                         </div>
                     </div>
@@ -73,8 +73,8 @@
                             @if (ViewBag.RolUsuario == "Administrador" || ViewBag.RolUsuario == "Admin")
                             {
                                 <label class="form-label fw-semibold">Asignar Semillero</label>
-                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select" })
-                                <small class="text-muted">Nota: Si estás creando otro Administrador, puedes dejar esto en blanco.</small>
+                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select", id = "IdSemillero" })
+                                <small class="text-muted">Nota: Si el rol es Administrador, esta caja se desactivará automáticamente.</small>
                             }
                             else if (ViewBag.RolUsuario == "Líder")
                             {
@@ -109,6 +109,22 @@
                 Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
             }
 
+            // =======================================================
+            // BLOQUEO DE SEMILLERO PARA ADMINISTRADORES (USANDO JQUERY)
+            // =======================================================
+            $('#RolUsuario').on('change', function() {
+                var rolSeleccionado = $(this).val();
+                if (rolSeleccionado === "Administrador" || rolSeleccionado === "Admin") {
+                    $('#IdSemillero').val('');
+                    $('#IdSemillero').prop('disabled', true);
+                    $('#IdSemillero').css('background-color', '#e9ecef');
+                } else {
+                    $('#IdSemillero').prop('disabled', false);
+                    $('#IdSemillero').css('background-color', '#ffffff');
+                }
+            });
+            $('#RolUsuario').trigger('change');
+
             const btnVolver = document.getElementById('btn-volver');
             if (btnVolver) {
                 btnVolver.addEventListener('click', function (e) {
@@ -142,7 +158,6 @@
             if (txtNumerotelefonico) {
                 txtNumerotelefonico.addEventListener('input', function () {
                     this.value = this.value.replace(/[^0-9]/g, '');
-                    // Forzamos a que si escriben algo que no empieza en 3, se ponga en rojo temporalmente
                     if(this.value.length > 0 && !this.value.startsWith('3')) {
                         this.classList.add('is-invalid');
                     } else {
@@ -161,12 +176,14 @@
                         return;
                     }
 
-                    // Validación en vivo antes del servidor
                     let tel = txtNumerotelefonico.value;
                     if(tel.length !== 10 || !tel.startsWith('3')) {
                         Swal.fire('Error en Celular', 'El número de teléfono en Colombia debe tener exactamente 10 dígitos y empezar con el número 3.', 'error');
                         return;
                     }
+
+                    // Habilitar antes de enviar para que no haya conflictos en ASP.NET
+                    $('#IdSemillero').prop('disabled', false);
 
                     Swal.fire({
                         title: '¿Registrar Usuario?',
@@ -186,6 +203,8 @@
                                 didOpen: () => { Swal.showLoading(); }
                             });
                             formUsuario.submit();
+                        } else {
+                            $('#RolUsuario').trigger('change'); // Volver a bloquear si cancela
                         }
                     });
                 });

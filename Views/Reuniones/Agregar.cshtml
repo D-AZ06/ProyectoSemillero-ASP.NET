@@ -110,7 +110,7 @@
                                     }
                                     else if (rolActual == "Administrador" || rolActual == "Admin")
                                     {
-                                        <div class="text-muted fst-italic p-2 text-center mt-3"><i class="bi bi-arrow-up-circle d-block fs-3 mb-1"></i>Selecciona un semillero arriba.</div>
+                                        <div class="text-muted fst-italic p-2 text-center mt-3"><i class="bi bi-arrow-up-circle d-block fs-3 mb-1"></i>Selecciona un semillero arriba para cargar su personal.</div>
                                     }
                                 }
                             </div>
@@ -150,7 +150,6 @@
                 Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
             }
 
-            // Cambiar ID visible cuando un Líder elige a otro Líder
             const selectLider = document.getElementById('SelectLider');
             const inputIdLider = document.getElementById('InputIdLider');
             if (selectLider) {
@@ -205,13 +204,62 @@
                                 `;
                             });
                         }
-
                         validarDisponibilidad();
                     }).fail(function() {
                         Swal.fire('Error', 'No se pudieron cargar los datos del semillero.', 'error');
                     });
                 });
             }
+
+            // ==========================================
+            // RELOJ EN VIVO CON BLOQUEO NOCTURNO
+            // ==========================================
+            setInterval(function() {
+                if (!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+
+                let [año, mes, dia] = txtFecha.value.split('-');
+                let [horaI, minI] = txtInicio.value.split(':');
+                let fechaSeleccionada = new Date(año, mes - 1, dia, horaI, minI);
+
+                let ahora = new Date();
+                let limiteEstricto = new Date(ahora.getTime() + 55 * 60000);
+
+                if (fechaSeleccionada.toDateString() === ahora.toDateString() && fechaSeleccionada < limiteEstricto) {
+
+                    let limiteMinutos = limiteEstricto.getHours() * 60 + limiteEstricto.getMinutes();
+                    if (limiteMinutos > 1290) { // 1290 = 21:30
+                        Swal.fire('Día Finalizado', 'Ya es muy tarde para programar una reunión el día de hoy. Se moverá a mañana.', 'warning');
+                        let mañana = new Date(ahora);
+                        mañana.setDate(mañana.getDate() + 1);
+                        if (mañana.getDay() === 0) mañana.setDate(mañana.getDate() + 1);
+
+                        txtFecha.value = mañana.toISOString().split('T')[0];
+                        txtInicio.value = "06:00";
+                        txtFin.value = "06:30";
+                        validarDisponibilidad();
+                        return;
+                    }
+
+                    txtInicio.value = String(limiteEstricto.getHours()).padStart(2, '0') + ":" + String(limiteEstricto.getMinutes()).padStart(2, '0');
+
+                    let [horaF, minF] = txtFin.value.split(':');
+                    let fechaFinVieja = new Date(año, mes - 1, dia, horaF, minF);
+                    let diferenciaOriginal = fechaFinVieja - fechaSeleccionada;
+
+                    let nuevaFin = new Date(limiteEstricto.getTime() + 30 * 60000);
+                    if (diferenciaOriginal >= 30 * 60000) {
+                        nuevaFin = new Date(limiteEstricto.getTime() + diferenciaOriginal);
+                    }
+
+                    if (nuevaFin.getHours() >= 22) {
+                        txtFin.value = "22:00";
+                    } else {
+                        txtFin.value = String(nuevaFin.getHours()).padStart(2, '0') + ":" + String(nuevaFin.getMinutes()).padStart(2, '0');
+                    }
+
+                    validarDisponibilidad();
+                }
+            }, 10000);
 
             function initTiempos() {
                 if (txtFecha.value) return;
@@ -248,40 +296,67 @@
                 validarDisponibilidad();
             });
 
+            // ==========================================
+            // CANDADO MATEMÁTICO INQUEBRANTABLE
+            // ==========================================
             function validarReglasHorario() {
-                if(!txtInicio.value || !txtFin.value) return false;
+                if(!txtFecha.value || !txtInicio.value || !txtFin.value) return false;
 
-                let minIni = parseInt(txtInicio.value.split(':')[0]) * 60 + parseInt(txtInicio.value.split(':')[1]);
+                let [año, mes, dia] = txtFecha.value.split('-');
+                let [horaI, minI] = txtInicio.value.split(':');
+                let fechaSeleccionada = new Date(año, mes - 1, dia, horaI, minI);
+
+                let limiteMinimo = new Date();
+                limiteMinimo.setMinutes(limiteMinimo.getMinutes() + 55);
+
+                if (fechaSeleccionada < limiteMinimo) {
+                    Swal.fire('Horario Inválido', 'Las reuniones deben programarse con al menos 1 hora de anticipación.', 'error');
+
+                    if (fechaSeleccionada.getDate() === new Date().getDate()) {
+                        let sugerida = new Date();
+                        sugerida.setHours(sugerida.getHours() + 1);
+                        txtInicio.value = String(sugerida.getHours()).padStart(2,'0') + ":" + String(sugerida.getMinutes()).padStart(2,'0');
+                    } else {
+                        txtInicio.value = "06:00";
+                    }
+                    horaI = txtInicio.value.split(':')[0];
+                    minI = txtInicio.value.split(':')[1];
+                }
+
+                let minIni = parseInt(horaI) * 60 + parseInt(minI);
                 let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
-                let duracion = minFin - minIni;
 
                 if (minIni < 360) {
                     Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
-                    txtInicio.value = "06:00"; return false;
-                }
-                if (minFin > 1320) {
-                    Swal.fire('Aviso', 'La reunión no puede extenderse más allá de las 10:00 p.m.', 'info');
-                    txtFin.value = "22:00"; return false;
+                    minIni = 360;
+                    txtInicio.value = "06:00";
                 }
 
-                if (duracion < 0) {
-                    Swal.fire('Error de Lógica', 'La hora de fin no puede ser ANTES de la hora de inicio.', 'error');
-                    let newMin = minIni + 30;
-                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
-                    return false;
+                if (minIni > 1290) {
+                    Swal.fire('Límite', 'La hora máxima para iniciar una reunión es a las 9:30 p.m. para cumplir el mínimo de 30 mins.', 'warning');
+                    minIni = 1290;
+                    txtInicio.value = "21:30";
                 }
-                else if (duracion < 30) {
-                    Swal.fire('Aviso', 'La duración mínima de una reunión es de 30 minutos.', 'info');
-                    let newMin = minIni + 30;
-                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
-                    return false;
-                }
-                else if (duracion > 300) {
+
+                let duracion = minFin - minIni;
+
+                if (duracion < 30) {
+                    if (duracion < 0) Swal.fire('Ajuste', 'La hora de fin se ajustó automáticamente.', 'info');
+                    minFin = minIni + 30;
+                } else if (duracion > 300) {
                     Swal.fire('Aviso', 'La duración máxima de una reunión es de 5 horas.', 'info');
-                    let newMin = minIni + 300;
-                    txtFin.value = `${String(Math.floor(newMin/60)).padStart(2,'0')}:${String(newMin%60).padStart(2,'0')}`;
-                    return false;
+                    minFin = minIni + 300;
                 }
+
+                if (minFin > 1320) {
+                    minFin = 1320;
+                    if (minFin - minIni < 30) {
+                        minIni = minFin - 30;
+                        txtInicio.value = `${String(Math.floor(minIni/60)).padStart(2,'0')}:${String(minIni%60).padStart(2,'0')}`;
+                    }
+                }
+
+                txtFin.value = `${String(Math.floor(minFin/60)).padStart(2,'0')}:${String(minFin%60).padStart(2,'0')}`;
 
                 validarDisponibilidad();
                 return true;
@@ -298,7 +373,8 @@
                 let parametros = {
                     fecha: txtFecha.value,
                     horaInicio: txtInicio.value,
-                    horaFin: txtFin.value
+                    horaFin: txtFin.value,
+                    idIgnorar: typeof idReunionJS !== 'undefined' ? idReunionJS : 0
                 };
 
                 $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {

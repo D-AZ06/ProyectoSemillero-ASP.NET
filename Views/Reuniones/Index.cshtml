@@ -86,10 +86,8 @@
             {
                 foreach (var r in Model)
                 {
-                    // Soporte para variaciones gramaticales de la BD antigua y nueva
                     bool estadoValido = (r.EstadoReunion == "Programada" || r.EstadoReunion == "Reprogramada" || r.EstadoReunion == "Reprogramado");
 
-                    // Blindaje contra datos viejos ("Confirmado") y nuevos ("Confirmada")
                     bool tieneAsistencias = r.InvestigadoresConvocados != null && r.InvestigadoresConvocados.Any(i => i.EstadoAsistencia == "Confirmada" || i.EstadoAsistencia == "Confirmado");
 
                     bool faltanMenosDe2Horas = false;
@@ -102,7 +100,6 @@
                         if (diffHoras < 0) { yaPasoOEmpezo = true; }
                     }
 
-                    // Regla de negocio: si alguien confirmó, o el tiempo expiró, el líder no puede alterar la reunión
                     bool puedeModificar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas && !yaPasoOEmpezo;
                     bool puedeCancelar = estadoValido && !tieneAsistencias && !faltanMenosDe2Horas && !yaPasoOEmpezo;
 
@@ -225,6 +222,19 @@
 
 @section Scripts {
     <script>
+        // ==========================================
+        // MOSTRAR ALERTAS DEL SERVIDOR
+        // ==========================================
+        var mensajeError = '@Html.Raw(TempData["Error"])';
+        if (mensajeError && mensajeError !== '') {
+            Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        var mensajeExito = '@Html.Raw(TempData["Exito"])';
+        if (mensajeExito && mensajeExito !== '') {
+            Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
+        }
+
         const datosAutocompletado = {
             idReunion: [...new Set(Array.from(document.querySelectorAll('.data-idReunion')).map(el => el.textContent.trim()))],
             motivoReunion: [...new Set(Array.from(document.querySelectorAll('.data-motivoReunion')).map(el => el.textContent.trim()))],
@@ -400,6 +410,27 @@
                         console.error("Fallo de red o servidor:", error);
                         Swal.fire({ icon: 'error', title: 'Error de Conexión', text: 'Hubo un problema comunicándose con el servidor.', confirmButtonColor: '#dc3545' });
                     });
+                }
+            });
+        }
+
+        // ==========================================
+        // ELIMINAR REUNIÓN PERMANENTEMENTE (ADMIN)
+        // ==========================================
+        function confirmarEliminacion(id) {
+            Swal.fire({
+                title: '¿Eliminar permanentemente?',
+                text: "Esta acción borrará la reunión de la base de datos de forma irreversible. ¿Deseas continuar?",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="bi bi-trash"></i> Sí, eliminar por completo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Eliminando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    window.location.href = '@Url.Action("Eliminar", "Reuniones")?id=' + id;
                 }
             });
         }
