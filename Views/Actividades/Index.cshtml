@@ -40,6 +40,8 @@
                         <option value="tituloProyecto">Título del Proyecto</option>
                         <option value="fechaEntregaActividad">Fecha Exacta de Entrega</option>
                         <option value="mesEntregaActividad">Mes de Entrega</option>
+                        <option value="estadoActividad">Estado de la Actividad</option>
+                        <option value="investigadorResponsable">Investigador Responsable</option>
                     </select>
                 </div>
 
@@ -77,6 +79,8 @@
                 <th scope="col" class="py-3">Proyecto</th>
                 <th scope="col" class="py-3">Duración</th>
                 <th scope="col" class="py-3">Fecha Entrega</th>
+                <th scope="col" class="py-3">Estado</th>
+                <th scope="col" class="py-3">Investigador Responsable</th>
                 <th scope="col" class="py-3 text-center" style="min-width: 160px;">Acciones</th>
             </tr>
         </thead>
@@ -100,6 +104,32 @@
                         <td>@actividad.DuracionActividad</td>
 
                         <td class="data-fechaEntregaActividad">@actividad.FechaEntregaActividad</td>
+
+                        <td class="data-estadoActividad">
+                            @{
+                                string colorBadge = "bg-warning text-dark"; // Por defecto Pendiente
+                                if (actividad.EstadoActividad == "En Progreso") { colorBadge = "bg-primary"; }
+                                else if (actividad.EstadoActividad == "Finalizado") { colorBadge = "bg-success"; }
+                            }
+                            <span class="badge @colorBadge shadow-sm">@actividad.EstadoActividad</span>
+                        </td>
+
+                        <td>
+                            @if (actividad.NombresInvestigadores != null && actividad.NombresInvestigadores.Any())
+                            {
+                                <ul class="mb-0 ps-3 small text-secondary fw-bold" style="list-style-type: square;">
+                                    @foreach (var nombre in actividad.NombresInvestigadores)
+                                    {
+                                        <!-- LA CLASE data-investigador VA EN EL LI -->
+                                        <li class="data-investigador">@nombre</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span class="text-muted small fst-italic"><i class="bi bi-person-x"></i> Sin asignar</span>
+                            }
+                        </td>
 
                         <td class="text-center">
 
@@ -140,7 +170,9 @@
             idActividad: [...new Set(Array.from(document.querySelectorAll('.data-idActividad')).map(el => el.textContent.trim()))],
             nombreActividad: [...new Set(Array.from(document.querySelectorAll('.data-nombreActividad')).map(el => el.textContent.trim()))],
             idProyecto: [...new Set(Array.from(document.querySelectorAll('.data-idProyecto')).map(el => el.textContent.replace('ID: ', '').trim()))],
-            tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))]
+            tituloProyecto: [...new Set(Array.from(document.querySelectorAll('.data-tituloProyecto')).map(el => el.textContent.trim()))],
+            estadoActividad: [...new Set(Array.from(document.querySelectorAll('.data-estadoActividad')).map(el => el.textContent.trim()))],
+            investigadorResponsable: [...new Set(Array.from(document.querySelectorAll('.data-investigador')).map(el => el.textContent.trim()))]
         };
 
         const selectFiltro = document.getElementById('selectFiltro');
@@ -166,6 +198,15 @@
             }
             else if (filtroSeleccionado === 'mesEntregaActividad') {
                 nuevoInput = `<input type="month" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
+            }
+            else if (filtroSeleccionado === 'estadoActividad') {
+                nuevoInput = `
+            <select class="form-select border-info fw-bold text-secondary" id="inputValor" name="valorFiltro" required>
+                <option value="">-- Seleccione el estado --</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Progreso">En Progreso</option>
+                <option value="Finalizado">Finalizado</option>
+            </select>`;
             }
             else {
                 let esNumero = (filtroSeleccionado === 'idProyecto' || filtroSeleccionado === 'idActividad');
@@ -202,7 +243,7 @@
                     return;
                 }
 
-                if (['tituloProyecto', 'idProyecto', 'idActividad', 'nombreActividad'].includes(filtro)) {
+                if (['tituloProyecto', 'idProyecto', 'idActividad', 'nombreActividad', 'investigadorResponsable'].includes(filtro)) {
                     if (!datosAutocompletado[filtro].includes(valor)) {
                         e.preventDefault();
                         Swal.fire({ icon: 'error', title: 'Dato no válido', text: 'El valor ingresado no coincide con ningún registro existente en pantalla.', confirmButtonColor: '#dc3545' });

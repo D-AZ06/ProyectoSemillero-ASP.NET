@@ -61,6 +61,30 @@
                                     <label class="form-label fw-semibold">Fecha de Fin</label>
                                     @Html.TextBoxFor(m => m.FechaFinProyecto, new { @class = "form-control", type = "date", id = "fechaFin", required = "required" })
                                 </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Estado del Proyecto</label>
+                                    <select name="Estado" class="form-select" required>
+                                        <!-- Mostramos el estado actual por defecto -->
+                                        <option value="@Model.Estado" selected>@Model.Estado (Actual)</option>
+
+                                        <!-- Solo permitimos cambios manuales si no está en un estado terminal -->
+                                        @if (Model.Estado != "Finalizado" && Model.Estado != "Cancelado")
+                                        {
+                                            <option value="Finalizado">Forzar: Finalizado (Terminado antes de tiempo)</option>
+                                            <option value="Cancelado">Forzar: Cancelado</option>
+                                            <option value="Pausado">Pausado</option>
+
+                                            // Si está pausado, debe poder reanudarlo (que evaluará la fecha nuevamente)
+                                            if (Model.Estado == "Pausado")
+                                            {
+                                                <option value="Reanudar">Reanudar Automáticamente</option>
+                                            }
+                                        }
+                                    </select>
+                                    <small class="text-muted"><i class="bi bi-info-circle"></i> Las fechas controlan el progreso automáticamente.</small>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -83,21 +107,126 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
 
+            const btnGuardar = document.querySelector('#form-proyecto button[type="submit"]');
             const fechaInicio = document.getElementById('fechaInicio');
             const fechaFin = document.getElementById('fechaFin');
 
-            // 1. Validaciones visuales automáticas para las fechas
-            if (fechaInicio && fechaFin) {
-                if (fechaInicio.value) {
-                    fechaFin.setAttribute('min', fechaInicio.value);
+            function validarTextosProyecto(e) {
+                const inputTitulo = document.getElementById('TituloProyecto');
+                const inputObjetivo = document.getElementById('ObjetivoProyecto');
+                const inputDescripcion = document.getElementById('DescripcionProyecto');
+
+                // A. Validar espacios en blanco
+                if (inputTitulo && inputTitulo.value.trim().length === 0) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Título Inválido', text: 'El título no puede estar vacío ni contener solo espacios.', confirmButtonColor: '#0284c7' });
+                    inputTitulo.value = ''; inputTitulo.focus();
+                    return false;
+                }
+                if (inputObjetivo && inputObjetivo.value.trim().length === 0) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Objetivo Inválido', text: 'El objetivo no puede contener solo espacios.', confirmButtonColor: '#0284c7' });
+                    inputObjetivo.value = ''; inputObjetivo.focus();
+                    return false;
+                }
+                if (inputDescripcion && inputDescripcion.value.trim().length === 0) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Descripción Inválida', text: 'La descripción no puede estar vacía.', confirmButtonColor: '#0284c7' });
+                    inputDescripcion.value = ''; inputDescripcion.focus();
+                    return false;
                 }
 
-                fechaInicio.addEventListener('change', function () {
-                    fechaFin.setAttribute('min', this.value);
-                    if (fechaFin.value && fechaFin.value < this.value) {
-                        fechaFin.value = ''; // Limpiamos el campo si quedó obsoleto
+                // B. Límite de caracteres
+                if (inputTitulo && inputTitulo.value.trim().length > 150) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Título muy largo', text: 'El título excede el límite permitido (Máximo 150 caracteres).', confirmButtonColor: '#dc3545' });
+                    return false;
+                }
+
+                // ── LONGITUD MÍNIMA ──────────────────────────────────────────
+                if (inputTitulo && inputTitulo.value.trim().length < 5) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Título muy corto', text: 'El título debe tener al menos 5 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputTitulo.focus();
+                    return;
+                }
+                if (inputObjetivo && inputObjetivo.value.trim().length < 10) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Objetivo muy corto', text: 'El objetivo debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputObjetivo.focus();
+                    return;
+                }
+                if (inputDescripcion && inputDescripcion.value.trim().length < 10) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Descripción muy corta', text: 'La descripción debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputDescripcion.focus();
+                    return;
+                }
+
+                // ── CARACTERES ESPECIALES PELIGROSOS ─────────────────────────
+                const patronInvalido = /[<>"';]/;
+                if (inputTitulo && patronInvalido.test(inputTitulo.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El título contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputTitulo.focus();
+                    return;
+                }
+                if (inputObjetivo && patronInvalido.test(inputObjetivo.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El objetivo contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputObjetivo.focus();
+                    return;
+                }
+                if (inputDescripcion && patronInvalido.test(inputDescripcion.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'La descripción contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputDescripcion.focus();
+                    return;
+                }
+
+                // Si pasa todas las pruebas, retorna verdadero
+                return true;
+            }
+
+            // 1. Validaciones visuales automáticas para las fechas
+            function actualizarMinimoFin() {
+                if (fechaInicio.value) {
+                    let partes = fechaInicio.value.split('-');
+                    let año = parseInt(partes[0]);
+                    let mes = parseInt(partes[1]) - 1;
+                    let dia = parseInt(partes[2]);
+
+                    let dateInst = new Date(año, mes, dia);
+
+                    // Sumar exactamente 1 mes
+                    dateInst.setMonth(dateInst.getMonth() + 1);
+
+                    let yyyy = dateInst.getFullYear();
+                    let mm = String(dateInst.getMonth() + 1).padStart(2, '0');
+                    let dd = String(dateInst.getDate()).padStart(2, '0');
+                    let fechaMinimaFin = `${yyyy}-${mm}-${dd}`;
+
+                    // Bloquear días inferiores al mes requerido
+                    fechaFin.setAttribute('min', fechaMinimaFin);
+
+                    // Si el usuario mueve la fecha de inicio hacia el futuro y vuelve inválida la fecha fin actual, la desplazamos
+                    if (fechaFin.value && fechaFin.value < fechaMinimaFin) {
+                        fechaFin.value = fechaMinimaFin;
                     }
-                });
+                }
+            }
+
+            if (fechaInicio && fechaFin) {
+                // Aplicar mínimo de hoy al campo de inicio (no se puede poner fecha pasada al modificar)
+                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+                const hoy = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+                fechaInicio.setAttribute('min', hoy);
+
+                // 1. Se ejecuta inmediatamente al cargar la vista con los datos guardados de la BD
+                actualizarMinimoFin();
+
+                // 2. Se ejecuta cada vez que el usuario altere la fecha de inicio
+                fechaInicio.addEventListener('change', actualizarMinimoFin);
             }
 
             // 2. Botón volver con advertencia

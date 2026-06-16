@@ -61,30 +61,37 @@
                 <input type="hidden" name="vinoDesdeProyecto" value="@(proyectoFijo ? "true" : "false")" />
                 <input type="hidden" name="flujoSecuencial" value="@(flujoSecuencial ? "true" : "false")" />
 
-                <div class="mb-4">
-                    <label class="form-label fw-bold text-secondary"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                <div class="row">
+                    <div class="col-12 col-md-8 mb-4">
+                        <label class="form-label fw-bold text-secondary"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
 
-                    @if (proyectoFijo)
-                    {
-                        <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
-                        <div class="input-group">
-                            <span class="input-group-text bg-light text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
-                            <input type="text" class="form-control bg-light text-muted fw-semibold border-secondary-subtle" value="@ViewBag.TituloProyecto" readonly disabled />
-                        </div>
-                    }
-                    else
-                    {
-                        <select class="form-select border-info fw-medium" name="idProyecto" id="selectProyectoForm" required>
-                            <option value="">-- Seleccione el proyecto de destino --</option>
-                            @if (proyectosCombobox != null)
-                            {
-                                foreach (var proj in proyectosCombobox)
+                        @if (proyectoFijo)
+                        {
+                            <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
+                                <input type="text" class="form-control bg-light text-muted fw-semibold border-secondary-subtle" value="@ViewBag.TituloProyecto" readonly disabled />
+                            </div>
+                        }
+                        else
+                        {
+                            <select class="form-select border-info fw-medium" name="idProyecto" id="selectProyectoForm" required>
+                                <option value="" data-inicio="" data-fin="">-- Seleccione el proyecto de destino --</option>
+                                @if (proyectosCombobox != null)
                                 {
-                                    <option value="@proj.IdProyecto">ID: @proj.IdProyecto - @proj.TituloProyecto</option>
+                                    foreach (var proj in proyectosCombobox)
+                                    {
+                                        <option value="@proj.IdProyecto" data-inicio="@proj.FechaInicioProyecto" data-fin="@proj.FechaFinProyecto">ID: @proj.IdProyecto - @proj.TituloProyecto</option>
+                                    }
                                 }
-                            }
-                        </select>
-                    }
+                            </select>
+                        }
+                    </div>
+
+                    <div class="col-12 col-md-4 mb-4">
+                        <label class="form-label fw-bold text-secondary"><i class="bi bi-hash me-1"></i> ID Actividad</label>
+                        <input type="text" class="form-control bg-light text-muted fw-bold border-secondary-subtle" value="Cód: @(ViewBag.SiguienteId ?? "40X")" readonly disabled title="Este ID se genera automáticamente" />
+                    </div>
                 </div>
 
                 <hr class="text-muted my-3" />
@@ -92,6 +99,56 @@
                 <div class="mb-3">
                     <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
                     <input type="text" class="form-control border-secondary-subtle" id="nombreActividad" name="nombreActividad" placeholder="Ej. Diseño de la Base de Datos" maxlength="150" required autocomplete="off" />
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="estadoActividad" class="form-label fw-bold text-secondary"><i class="bi bi-activity me-1"></i> Estado Inicial</label>
+                        <select class="form-select border-secondary-subtle fw-semibold" id="estadoActividad" name="estadoActividad" required>
+                            <option value="Pendiente" selected>Pendiente</option>
+                            <option value="En Progreso">En Progreso</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-8 mb-3">
+                        <label class="form-label fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i> Asignar Investigadores (Máx 2)</label>
+                        <div class="card border-secondary-subtle shadow-sm p-3 bg-light" style="max-height: 140px; overflow-y: auto;" id="contenedorCheckboxes">
+
+                            @{
+                                string rolActual = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+                                bool esLider = rolActual == "Lider" || rolActual == "Líder";
+                                bool mostrarDeInmediato = proyectoFijo || esLider;
+                            }
+
+                            @if (mostrarDeInmediato)
+                            {
+                                if (ViewBag.Investigadores != null && ViewBag.Investigadores.Count > 0)
+                                {
+                                    foreach (var inv in ViewBag.Investigadores)
+                                    {
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input chk-investigador border-secondary" type="checkbox" name="investigadoresResponsables" value="@inv.IdUsuario" id="chk_@inv.IdUsuario">
+                                            <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                @inv.NombreUsuario
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small fst-italic">El semillero de este proyecto no tiene investigadores registrados.</span>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted small mt-3" id="mensajeEsperaCheck">
+                                    <i class="bi bi-arrow-up-circle fs-4 d-block mb-1"></i>
+                                    Seleccione un proyecto para cargar los investigadores disponibles.
+                                </div>
+                            }
+
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row">
@@ -138,7 +195,7 @@
         @if (flujoSecuencial)
         {
             <text>
-            // Usamos JavaScript puro para evitar conflictos de carga con jQuery
+            // Usamos JavaScript puro para evitar conflictos de carga
             document.addEventListener("DOMContentLoaded", function() {
                 // Bloquear el retroceso del navegador
                 window.history.pushState(null, "", window.location.href);
@@ -149,14 +206,20 @@
             </text>
         }
 
-        // --- LÓGICA DE CÁLCULO DE FECHAS ---
+        // --- DECLARACIÓN DE VARIABLES GLOBALES ---
         const txtValor = document.getElementById('duracionValor');
         const cboUnidad = document.getElementById('duracionUnidad');
         const txtFecha = document.getElementById('fechaEntregaActividad');
         const ayudaFecha = document.getElementById('ayudaFecha');
 
+        const selectProyecto = document.getElementById('selectProyectoForm');
+        const contenedorCheckboxes = document.getElementById('contenedorCheckboxes');
+
+        const urlObtenerInvestigadores = '@Url.Action("ObtenerInvestigadoresPorProyecto", "Actividades")';
+
+        // --- LÓGICA DE CÁLCULO DE FECHAS ---
         function establecerMinimoAbsoluto() {
-            if (!txtFecha) return; // Validación de seguridad
+            if (!txtFecha) return;
 
             let mañana = new Date();
             mañana.setDate(mañana.getDate() + 1);
@@ -170,7 +233,7 @@
         }
 
         function calcularFechaProyectada() {
-            if (!txtValor || !cboUnidad || !txtFecha) return; // Validación de seguridad
+            if (!txtValor || !cboUnidad || !txtFecha) return;
 
             const valor = parseInt(txtValor.value) || 0;
             const unidad = cboUnidad.value;
@@ -198,15 +261,53 @@
 
             txtFecha.value = formatoFinal;
             txtFecha.min = formatoFinal;
-            if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Bloqueado: Fecha mínima calculada según duración del desarrollo.`;
+            if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Bloqueado: Fecha calculada según duración estimada.`;
         }
 
-        // Enlazamos los eventos solo si los elementos existen
+        // --- NUEVA VALIDACIÓN ESTRICTA DE FECHAS EN TIEMPO REAL ---
+        function validarLimitesFecha() {
+            if (!txtFecha || !txtFecha.value) return;
+
+            let limiteInicio = '@(ViewBag.FechaInicioProyecto ?? "")';
+            let limiteFin = '@(ViewBag.FechaFinProyecto ?? "")';
+
+            if (selectProyecto && selectProyecto.value) {
+                const opt = selectProyecto.options[selectProyecto.selectedIndex];
+                limiteInicio = opt.getAttribute('data-inicio') || '';
+                limiteFin = opt.getAttribute('data-fin') || '';
+            }
+
+            if (!limiteInicio || !limiteFin) return;
+
+            const fechaIngresada = new Date(txtFecha.value + 'T00:00:00');
+            const fechaMax = new Date(limiteFin + 'T00:00:00');
+            const fechaMin = new Date(limiteInicio + 'T00:00:00');
+
+            if (fechaIngresada > fechaMax) {
+                Swal.fire({ icon: 'warning', title: 'Límite Excedido', text: `La actividad no puede entregarse después de la fecha límite del proyecto (${limiteFin}).`, confirmButtonColor: '#ffc107' });
+                txtFecha.value = limiteFin;
+                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Fecha ajustada al límite del proyecto.`;
+            } else if (fechaIngresada < fechaMin) {
+                Swal.fire({ icon: 'warning', title: 'Fecha Inválida', text: `La actividad no puede ser anterior a la fecha de inicio del proyecto (${limiteInicio}).`, confirmButtonColor: '#ffc107' });
+                txtFecha.value = limiteInicio;
+                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Fecha ajustada al inicio del proyecto.`;
+            }
+        }
+
+        // Enlazamos las validaciones en cadena
+        const originalCalcularFecha = calcularFechaProyectada;
+        calcularFechaProyectada = function() {
+            originalCalcularFecha();
+            validarLimitesFecha();
+        };
+
         if (txtValor) txtValor.addEventListener('input', calcularFechaProyectada);
         if (cboUnidad) cboUnidad.addEventListener('change', calcularFechaProyectada);
+        if (txtFecha) txtFecha.addEventListener('change', validarLimitesFecha);
+
         document.addEventListener('DOMContentLoaded', establecerMinimoAbsoluto);
 
-        // --- ANIMACIÓN DE CARGA AL ENVIAR FORMULARIO ---
+        // --- ANIMACIÓN AL GUARDAR LA ACTIVIDAD ---
         const formActividad = document.getElementById('formAgregarActividad');
         if (formActividad) {
             formActividad.addEventListener('submit', function () {
@@ -216,6 +317,76 @@
                         btn.disabled = true;
                         btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...`;
                     }, 50);
+                }
+            });
+        }
+
+        // --- LÓGICA AJAX PARA EL ADMINISTRADOR ---
+        if (selectProyecto && contenedorCheckboxes) {
+            selectProyecto.addEventListener('change', function () {
+                const idProyectoSeleccionado = this.value;
+
+                // Re-disparar cálculo de fechas por si cambiaron los límites del nuevo proyecto
+                if(txtValor.value) calcularFechaProyectada();
+
+                if (!idProyectoSeleccionado) {
+                    contenedorCheckboxes.innerHTML = `
+                        <div class="text-center text-muted small mt-3">
+                            <i class="bi bi-arrow-up-circle fs-4 d-block mb-1"></i>
+                            Seleccione un proyecto para cargar los investigadores disponibles.
+                        </div>`;
+                    return;
+                }
+
+                // Loader visual mientras busca
+                contenedorCheckboxes.innerHTML = '<div class="text-center text-primary mt-3"><div class="spinner-border spinner-border-sm" role="status"></div> Cargando equipo...</div>';
+
+                fetch(`${urlObtenerInvestigadores}?idProyecto=${idProyectoSeleccionado}`)
+                    .then(response => response.json())
+                    .then(resultado => {
+                        if (resultado.exito) {
+                            if (resultado.data.length > 0) {
+                                let htmlCheckboxes = '';
+                                resultado.data.forEach(inv => {
+                                    htmlCheckboxes += `
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input chk-investigador border-secondary" type="checkbox" name="investigadoresResponsables" value="${inv.IdUsuario}" id="chk_${inv.IdUsuario}">
+                                            <label class="form-check-label text-dark fw-medium" for="chk_${inv.IdUsuario}">
+                                                ${inv.NombreUsuario}
+                                            </label>
+                                        </div>
+                                    `;
+                                });
+                                contenedorCheckboxes.innerHTML = htmlCheckboxes;
+                            } else {
+                                contenedorCheckboxes.innerHTML = '<span class="text-muted small fst-italic">El semillero de este proyecto no tiene investigadores registrados.</span>';
+                            }
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: resultado.mensaje });
+                            contenedorCheckboxes.innerHTML = '<span class="text-danger small"><i class="bi bi-x-circle"></i> Error al cargar datos.</span>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error AJAX:', error);
+                        contenedorCheckboxes.innerHTML = '<span class="text-danger small">Error de conexión con el servidor.</span>';
+                    });
+            });
+        }
+
+        // --- VALIDACIÓN DE LÍMITE DE CHECKBOXES (MÁXIMO 2) ---
+        if (contenedorCheckboxes) {
+            contenedorCheckboxes.addEventListener('change', function (e) {
+                if (e.target && e.target.classList.contains('chk-investigador')) {
+                    const checkeados = document.querySelectorAll('.chk-investigador:checked');
+                    if (checkeados.length > 2) {
+                        e.target.checked = false; // Desmarca el tercer intento
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Límite alcanzado',
+                            text: 'Solo puedes asignar un máximo de 2 investigadores a esta actividad.',
+                            confirmButtonColor: '#ffc107'
+                        });
+                    }
                 }
             });
         }

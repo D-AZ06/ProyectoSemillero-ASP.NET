@@ -13,5 +13,10 @@ namespace ProyectoSemillero_ASP.NET.Models
         public string NombreActividad { get; set; }
         public string DuracionActividad { get; set; }
         public string FechaEntregaActividad { get; set; }
+        public string EstadoActividad { get; set; }
+        public List<int> InvestigadoresResponsables { get; set; }
+
+        // Campo auxiliar exclusivo para mostrar los nombres en el Index (Frontend)
+        public List<string> NombresInvestigadores { get; set; } = new List<string>();
     }
 }

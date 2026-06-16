@@ -34,6 +34,9 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("fechaFinProyecto")]
         public string FechaFinProyecto { get; set; }
 
+        [BsonElement("estadoProyecto")]
+        public string Estado { get; set; } = "Planeado";
+
         // Aquí se mapea el array de actividades de MongoDB
         [BsonElement("actividades")]
         public List<Actividad> Actividades { get; set; } = new List<Actividad>();
@@ -52,6 +55,12 @@ namespace ProyectoSemillero_ASP.NET.Models
 
         [BsonElement("fechaEntregaActividad")]
         public string FechaEntregaActividad { get; set; }
+
+        [BsonElement("estadoActividad")]
+        public string EstadoActividad { get; set; } = "Pendiente";
+
+        [BsonElement("investigadoresResponsables")]
+        public List<int> InvestigadoresResponsables { get; set; } = new List<int>();
 
         // Aquí se mapea el array de fases dentro de cada actividad
         [BsonElement("fases")]
