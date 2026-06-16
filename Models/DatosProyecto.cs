@@ -56,6 +56,12 @@ namespace ProyectoSemillero_ASP.NET.Models
         [BsonElement("fechaEntregaActividad")]
         public string FechaEntregaActividad { get; set; }
 
+        [BsonElement("estadoActividad")]
+        public string EstadoActividad { get; set; } = "Pendiente";
+
+        [BsonElement("investigadoresResponsables")]
+        public List<int> InvestigadoresResponsables { get; set; } = new List<int>();
+
         // Aquí se mapea el array de fases dentro de cada actividad
         [BsonElement("fases")]
         public List<Fase> Fases { get; set; } = new List<Fase>();

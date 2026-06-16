@@ -143,6 +143,47 @@
                     return false;
                 }
 
+                // ── LONGITUD MÍNIMA ──────────────────────────────────────────
+                if (inputTitulo && inputTitulo.value.trim().length < 5) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Título muy corto', text: 'El título debe tener al menos 5 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputTitulo.focus();
+                    return;
+                }
+                if (inputObjetivo && inputObjetivo.value.trim().length < 10) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Objetivo muy corto', text: 'El objetivo debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputObjetivo.focus();
+                    return;
+                }
+                if (inputDescripcion && inputDescripcion.value.trim().length < 10) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'warning', title: 'Descripción muy corta', text: 'La descripción debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                    inputDescripcion.focus();
+                    return;
+                }
+
+                // ── CARACTERES ESPECIALES PELIGROSOS ─────────────────────────
+                const patronInvalido = /[<>"';]/;
+                if (inputTitulo && patronInvalido.test(inputTitulo.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El título contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputTitulo.focus();
+                    return;
+                }
+                if (inputObjetivo && patronInvalido.test(inputObjetivo.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El objetivo contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputObjetivo.focus();
+                    return;
+                }
+                if (inputDescripcion && patronInvalido.test(inputDescripcion.value)) {
+                    e.preventDefault();
+                    Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'La descripción contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                    inputDescripcion.focus();
+                    return;
+                }
+
                 // Si pasa todas las pruebas, retorna verdadero
                 return true;
             }
@@ -176,6 +217,11 @@
             }
 
             if (fechaInicio && fechaFin) {
+                // Aplicar mínimo de hoy al campo de inicio (no se puede poner fecha pasada al modificar)
+                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+                const hoy = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+                fechaInicio.setAttribute('min', hoy);
+
                 // 1. Se ejecuta inmediatamente al cargar la vista con los datos guardados de la BD
                 actualizarMinimoFin();
 

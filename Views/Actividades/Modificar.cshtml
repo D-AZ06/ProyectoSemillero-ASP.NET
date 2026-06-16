@@ -75,6 +75,42 @@
 
                 <hr class="text-muted my-3" />
 
+                <div class="row mt-3">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="estadoActividad" class="form-label fw-bold text-secondary"><i class="bi bi-activity me-1"></i> Estado de la Actividad</label>
+                        <select class="form-select border-secondary-subtle fw-semibold" id="estadoActividad" name="estadoActividad" required>
+                            <option value="Pendiente" @(Model.EstadoActividad == "Pendiente" ? "selected" : "")>Pendiente</option>
+                            <option value="En Progreso" @(Model.EstadoActividad == "En Progreso" ? "selected" : "")>En Progreso</option>
+                            <option value="Finalizado" @(Model.EstadoActividad == "Finalizado" ? "selected" : "")>Finalizado</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-8 mb-3">
+                        <label class="form-label fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i> Investigadores Responsables (Máx 2)</label>
+                        <div class="card border-secondary-subtle shadow-sm p-3 bg-light" style="max-height: 140px; overflow-y: auto;" id="contenedorCheckboxesModificar">
+                            @if (ViewBag.InvestigadoresSemillero != null)
+                            {
+                                foreach (var inv in ViewBag.InvestigadoresSemillero)
+                                {
+                                    // Verificamos si el ID del investigador ya está guardado en la lista de la actividad
+                                    bool yaAsignado = Model.InvestigadoresResponsables != null && Model.InvestigadoresResponsables.Contains(inv.IdUsuario);
+
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input chk-investigador border-secondary" type="checkbox" name="investigadoresResponsables" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaAsignado ? "checked" : "")>
+                                        <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                            @inv.NombreUsuario
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted small fst-italic">No hay investigadores asignados al semillero de este proyecto.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
                     <input type="text" class="form-control border-secondary-subtle" id="nombreActividad" name="nombreActividad" value="@Model.NombreActividad" maxlength="150" required autocomplete="off" />
@@ -152,5 +188,23 @@
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sincronizando...`;
         });
+
+        const contenedorCheckboxes = document.getElementById('contenedorCheckboxesModificar');
+        if (contenedorCheckboxes) {
+            contenedorCheckboxes.addEventListener('change', function (e) {
+                if (e.target && e.target.classList.contains('chk-investigador')) {
+                    const checkeados = document.querySelectorAll('.chk-investigador:checked');
+                    if (checkeados.length > 2) {
+                        e.target.checked = false; // Revierte el checkeo inmediatamente
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Límite alcanzado',
+                            text: 'Solo puedes asignar un máximo de 2 investigadores a esta actividad.',
+                            confirmButtonColor: '#ffc107'
+                        });
+                    }
+                }
+            });
+        }
     </script>
 }

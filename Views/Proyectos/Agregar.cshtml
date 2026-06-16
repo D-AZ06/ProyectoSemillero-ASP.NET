@@ -108,38 +108,26 @@
             const fechaFin = document.getElementById('fechaFin');
 
             if (fechaInicio && fechaFin) {
-                // Obtener fecha actual en formato YYYY-MM-DD compensando la zona horaria local
+                // ✅ Fecha mínima: hoy (compensando zona horaria local)
                 const tzOffset = (new Date()).getTimezoneOffset() * 60000;
                 const hoy = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
 
-                // Bloquear días anteriores a hoy en ambos campos
                 fechaInicio.setAttribute('min', hoy);
                 fechaFin.setAttribute('min', hoy);
 
-                // Evitar que la fecha fin sea anterior a la fecha de inicio seleccionada
                 fechaInicio.addEventListener('change', function () {
                     if (this.value) {
-                        // Parsear la fecha seleccionada de forma segura
                         let partes = this.value.split('-');
-                        let año = parseInt(partes[0]);
-                        let mes = parseInt(partes[1]) - 1; // Los meses en JS van de 0 a 11
-                        let dia = parseInt(partes[2]);
-
-                        let dateInst = new Date(año, mes, dia);
-
-                        // Sumar exactamente 1 mes
+                        let dateInst = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
                         dateInst.setMonth(dateInst.getMonth() + 1);
 
-                        // Formatear la nueva fecha a formato YYYY-MM-DD
                         let yyyy = dateInst.getFullYear();
                         let mm = String(dateInst.getMonth() + 1).padStart(2, '0');
                         let dd = String(dateInst.getDate()).padStart(2, '0');
                         let fechaMinimaFin = `${yyyy}-${mm}-${dd}`;
 
-                        // 1. Bloquear el calendario para que no deje elegir una fecha menor a esa
                         fechaFin.setAttribute('min', fechaMinimaFin);
 
-                        // 2. Desplazar automáticamente el valor si está vacío o si es menor al mes requerido
                         if (!fechaFin.value || fechaFin.value < fechaMinimaFin) {
                             fechaFin.value = fechaMinimaFin;
                         }
@@ -147,10 +135,11 @@
                 });
             }
 
+            // ✅ ÚNICO listener de submit (antes había dos, lo que causaba el bug)
             if (formProyecto) {
                 formProyecto.addEventListener('submit', function (e) {
 
-                    // A. Evitar textos que solo sean espacios en blanco
+                    // A. Validar espacios en blanco
                     if (inputTitulo && inputTitulo.value.trim().length === 0) {
                         e.preventDefault();
                         Swal.fire({ icon: 'warning', title: 'Título Inválido', text: 'El título no puede estar vacío ni contener solo espacios.', confirmButtonColor: '#0284c7' });
@@ -170,27 +159,66 @@
                         return;
                     }
 
-                    // B. Prevenir textos absurdamente largos que rompan la tabla
+                    // B. Límite de caracteres
                     if (inputTitulo && inputTitulo.value.trim().length > 150) {
                         e.preventDefault();
                         Swal.fire({ icon: 'error', title: 'Título muy largo', text: 'El título excede el límite permitido (Máximo 150 caracteres).', confirmButtonColor: '#dc3545' });
                         return;
                     }
 
-                    // C. Prevención de Múltiples Envíos (Doble Clic)
+                    // C. Anti doble clic
                     if (btnGuardar) {
                         btnGuardar.disabled = true;
                         btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
                     }
 
-                    // D. Alerta visual de procesamiento
+                    // ── LONGITUD MÍNIMA ──────────────────────────────────────────
+                    if (inputTitulo && inputTitulo.value.trim().length < 5) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Título muy corto', text: 'El título debe tener al menos 5 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && inputObjetivo.value.trim().length < 10) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Objetivo muy corto', text: 'El objetivo debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && inputDescripcion.value.trim().length < 10) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Descripción muy corta', text: 'La descripción debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputDescripcion.focus();
+                        return;
+                    }
+
+                    // ── CARACTERES ESPECIALES PELIGROSOS ─────────────────────────
+                    const patronInvalido = /[<>"';]/;
+                    if (inputTitulo && patronInvalido.test(inputTitulo.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El título contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && patronInvalido.test(inputObjetivo.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El objetivo contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && patronInvalido.test(inputDescripcion.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'La descripción contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputDescripcion.focus();
+                        return;
+                    }
+
+                    // D. Alerta de procesamiento
                     Swal.fire({
                         title: 'Procesando Proyecto...',
                         text: 'Guardando en la base de datos de GesSi.',
                         allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
+                        didOpen: () => { Swal.showLoading(); }
                     });
                 });
             }
@@ -201,7 +229,6 @@
                 btnVolver.addEventListener('click', function (e) {
                     e.preventDefault();
                     const urlDestino = this.getAttribute('href');
-
                     Swal.fire({
                         title: '¿Estás seguro de salir?',
                         text: "Si regresas, perderás los datos del proyecto que no hayas guardado.",
@@ -214,21 +241,6 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             window.location.href = urlDestino;
-                        }
-                    });
-                });
-            }
-
-            // --- ALERTA DE CARGA AL ENVIAR EL FORMULARIO ---
-            const formProyecto = document.getElementById('form-proyecto');
-            if (formProyecto) {
-                formProyecto.addEventListener('submit', function () {
-                    Swal.fire({
-                        title: 'Guardando Proyecto...',
-                        text: 'Por favor espera mientras se registra en la base de datos.',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
                         }
                     });
                 });

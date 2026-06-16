@@ -22,6 +22,11 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 string rolUsuario = Session["Rol"].ToString();
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
 
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                var dictInvestigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador")
+                                                          .ToList()
+                                                          .ToDictionary(u => u.IdUsuario, u => u.NombreUsuario);
+
                 var builder = Builders<DatosProyecto>.Filter;
                 FilterDefinition<DatosProyecto> filtroSeguridad;
 
@@ -54,7 +59,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         IdActividad = a.IdActividad,
                         NombreActividad = a.NombreActividad,
                         DuracionActividad = a.DuracionActividad,
-                        FechaEntregaActividad = a.FechaEntregaActividad
+                        FechaEntregaActividad = a.FechaEntregaActividad,
+
+                        // Nuevos campos mapeados
+                        EstadoActividad = a.EstadoActividad ?? "Pendiente",
+                        InvestigadoresResponsables = a.InvestigadoresResponsables,
+                        NombresInvestigadores = a.InvestigadoresResponsables != null
+                            ? a.InvestigadoresResponsables.Select(id => dictInvestigadores.ContainsKey(id) ? dictInvestigadores[id] : "Desconocido").ToList()
+                            : new List<string>()
                     }))
                     .ToList();
 
@@ -84,6 +96,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                             // Evalúa si la fecha comienza con el patrón "YYYY-MM" del input
                             listaActividades = listaActividades.Where(a => !string.IsNullOrEmpty(a.FechaEntregaActividad) && a.FechaEntregaActividad.StartsWith(valorFiltro)).ToList();
                             break;
+                        case "estadoActividad":
+                            listaActividades = listaActividades.Where(a => a.EstadoActividad.ToLower() == valorFiltro).ToList();
+                            break;
+
+                        case "investigadorResponsable":
+                            listaActividades = listaActividades.Where(a => a.NombresInvestigadores != null &&
+                                                                           a.NombresInvestigadores.Any(n => n.ToLower().Contains(valorFiltro))).ToList();
+                            break;
                     }
                 }
 
@@ -96,6 +116,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
+        // GET: Actividades/PorProyecto
         public ActionResult PorProyecto(int idProyecto)
         {
             try
@@ -104,6 +125,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+
+                // NUEVO: Traer usuarios para traducir los IDs a nombres en la vista
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                var dictInvestigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador")
+                                                          .ToList()
+                                                          .ToDictionary(u => u.IdUsuario, u => u.NombreUsuario);
 
                 // Buscamos el proyecto específico por su ID
                 var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
@@ -130,7 +157,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         IdActividad = a.IdActividad,
                         NombreActividad = a.NombreActividad,
                         DuracionActividad = a.DuracionActividad,
-                        FechaEntregaActividad = a.FechaEntregaActividad
+                        FechaEntregaActividad = a.FechaEntregaActividad,
+
+                        // NUEVO: Mapeo de estado e investigadores
+                        EstadoActividad = a.EstadoActividad ?? "Pendiente",
+                        InvestigadoresResponsables = a.InvestigadoresResponsables,
+                        NombresInvestigadores = a.InvestigadoresResponsables != null
+                            ? a.InvestigadoresResponsables.Select(id => dictInvestigadores.ContainsKey(id) ? dictInvestigadores[id] : "Desconocido").ToList()
+                            : new List<string>()
                     }).ToList();
                 }
 
@@ -143,19 +177,21 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             }
         }
 
-        // GET: Actividades/Agregar?idProyecto=X&flujoSecuencial=true
+        // GET: Actividades/Agregar
         [HttpGet]
-        public ActionResult Agregar(int? idProyecto, bool flujoSecuencial = false) // <-- El 'int?' permite que sea nulo sin dar error
+        public ActionResult Agregar(int? idProyecto, bool flujoSecuencial = false)
         {
             if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
+            string rolUsuario = Session["Rol"].ToString();
             var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+            var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
 
-            // Escenario 1: Viene con un proyecto asignado (Flujo secuencial o desde dentro de un proyecto)
+            ViewBag.Investigadores = new List<DatosUsuario>();
+
             if (idProyecto.HasValue)
             {
                 var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto.Value).FirstOrDefault();
-
                 if (proyecto == null)
                 {
                     TempData["Error"] = "El proyecto especificado no existe.";
@@ -165,27 +201,84 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 ViewBag.IdProyecto = idProyecto.Value;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
                 ViewBag.ProyectoFijo = true;
+
+                // NUEVO: Pasamos las fechas del proyecto a la vista
+                ViewBag.FechaInicioProyecto = proyecto.FechaInicioProyecto;
+                ViewBag.FechaFinProyecto = proyecto.FechaFinProyecto;
+
+                ViewBag.Investigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador" && u.IdSemillero == proyecto.IdSemillero).ToList();
             }
-            // Escenario 2: Entró por "Gestionar Actividades" (Flujo general libre)
             else
             {
                 ViewBag.ProyectoFijo = false;
-
-                // Cargamos todos los proyectos para llenar el combobox (select) de la vista
                 var listaProyectos = coleccionProyectos.Find(new MongoDB.Bson.BsonDocument()).ToList();
                 ViewBag.ProyectosMapeados = listaProyectos;
+
+                if ((rolUsuario == "Lider" || rolUsuario == "Líder") && Session["IdSemillero"] != null)
+                {
+                    int idSemilleroLider = (int)Session["IdSemillero"];
+                    ViewBag.Investigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador" && u.IdSemillero == idSemilleroLider).ToList();
+                }
             }
 
             ViewBag.FlujoSecuencial = flujoSecuencial;
-
-            // Mensajes para la alerta flotante de la vista
             if (flujoSecuencial)
             {
                 ViewBag.MensajeExitoProyecto = "¡Proyecto creado con éxito!";
                 ViewBag.MensajeInstruccion = "Para continuar con el proceso, es obligatorio registrar la primera actividad de este proyecto.";
             }
 
+            int proximoId = 401;
+            var todasLasActividades = coleccionProyectos.Find(_ => true).ToList()
+                .Where(p => p.Actividades != null && p.Actividades.Any())
+                .SelectMany(p => p.Actividades).ToList();
+
+            if (todasLasActividades.Any())
+            {
+                int maxSecuencia = 0;
+                foreach (var act in todasLasActividades)
+                {
+                    string idStr = act.IdActividad.ToString();
+                    if (idStr.StartsWith("40") && idStr.Length >= 3 && int.TryParse(idStr.Substring(2), out int seq))
+                    {
+                        if (seq > maxSecuencia) maxSecuencia = seq;
+                    }
+                }
+                proximoId = int.Parse("40" + (maxSecuencia + 1));
+            }
+            ViewBag.SiguienteId = proximoId;
+
             return View();
+        }
+
+        [HttpGet]
+        public JsonResult ObtenerInvestigadoresPorProyecto(int idProyecto)
+        {
+            try
+            {
+                var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+
+                if (proyecto == null)
+                {
+                    return Json(new { exito = false, mensaje = "Proyecto no encontrado." }, JsonRequestBehavior.AllowGet);
+                }
+
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                var investigadores = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador" && u.IdSemillero == proyecto.IdSemillero).ToList();
+
+                // CORRECCIÓN: Usar NombreUsuario para coincidir con tu modelo y la vista
+                var listaLimpiada = investigadores.Select(i => new {
+                    IdUsuario = i.IdUsuario,
+                    NombreUsuario = i.NombreUsuario
+                }).ToList();
+
+                return Json(new { exito = true, data = listaLimpiada }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { exito = false, mensaje = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
         }
 
         // MODIFICADO: Agregamos el parámetro opcional 'desdeProyecto'
@@ -215,11 +308,9 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             return RedirectToAction("Index");
         }
 
-        
-
         // POST: Actividades/Agregar
         [HttpPost]
-        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, bool flujoSecuencial = false)
+        public ActionResult Agregar(int idProyecto, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, bool flujoSecuencial = false, string estadoActividad = "Pendiente", int[] investigadoresResponsables = null)
         {
             try
             {
@@ -235,12 +326,43 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return RedirectToAction("Index");
                 }
 
+                if (investigadoresResponsables != null && investigadoresResponsables.Length > 2)
+                {
+                    TempData["Error"] = "Operación rechazada: Solo puedes asignar un máximo de 2 investigadores.";
+                    return RedirectToAction("Index");
+                }
+
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
                 var proyectoPadre = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
 
                 if (proyectoPadre == null)
                 {
                     TempData["Error"] = "Error: El proyecto seleccionado ya no existe.";
+                    return RedirectToAction("Index");
+                }
+
+                if (fechaEntrega < limiteMinimoEnServidor)
+                {
+                    TempData["Error"] = "Operación rechazada: La fecha de entrega debe ser estrictamente posterior al día de hoy.";
+                    return RedirectToAction("Index");
+                }
+
+                if (!string.IsNullOrEmpty(proyectoPadre.FechaInicioProyecto) && !string.IsNullOrEmpty(proyectoPadre.FechaFinProyecto))
+                {
+                    DateTime inicioProyecto = DateTime.Parse(proyectoPadre.FechaInicioProyecto).Date;
+                    DateTime finProyecto = DateTime.Parse(proyectoPadre.FechaFinProyecto).Date;
+
+                    if (fechaEntrega > finProyecto || fechaEntrega < inicioProyecto)
+                    {
+                        TempData["Error"] = $"Operación rechazada: La fecha de la actividad debe estar entre el inicio ({inicioProyecto.ToShortDateString()}) y el fin del proyecto ({finProyecto.ToShortDateString()}).";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                // 4. VALIDACIÓN ANTI-DUPLICADOS
+                if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any(a => a.NombreActividad.ToLower().Trim() == nombreActividad.ToLower().Trim()))
+                {
+                    TempData["Error"] = "Operación rechazada: Ya existe una actividad con este mismo nombre en el proyecto.";
                     return RedirectToAction("Index");
                 }
 
@@ -282,6 +404,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     NombreActividad = nombreActividad.Trim(),
                     DuracionActividad = duracionCompuesta,
                     FechaEntregaActividad = fechaEntregaActividad,
+                    EstadoActividad = estadoActividad,
+                    InvestigadoresResponsables = investigadoresResponsables != null ? investigadoresResponsables.ToList() : new List<int>(),
                     Fases = new List<Fase>()
                 };
 
@@ -311,7 +435,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         }
 
 
-        // GET: Actividades/Modificar?idProyecto=X&idActividad=Y&desdeProyecto=true
+        // GET: Actividades/Modificar
         [HttpGet]
         public ActionResult Modificar(int idProyecto, int idActividad, bool desdeProyecto = false)
         {
@@ -327,8 +451,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 }
 
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
-
                 var proyecto = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+
                 if (proyecto == null)
                 {
                     TempData["Error"] = "El proyecto especificado no existe.";
@@ -342,10 +466,16 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return desdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
                 }
 
-                // Usamos el mismo nombre de ViewBag que usaste en Agregar
+                var coleccionUsuarios = conexionDB.Database.GetCollection<DatosUsuario>("Usuarios");
+                ViewBag.InvestigadoresSemillero = coleccionUsuarios.Find(u => u.RolUsuario == "Investigador" && u.IdSemillero == proyecto.IdSemillero).ToList();
+
                 ViewBag.ProyectoFijo = desdeProyecto;
                 ViewBag.IdProyecto = proyecto.IdProyecto;
                 ViewBag.TituloProyecto = proyecto.TituloProyecto;
+
+                // NUEVO: Pasamos las fechas del proyecto a la vista
+                ViewBag.FechaInicioProyecto = proyecto.FechaInicioProyecto;
+                ViewBag.FechaFinProyecto = proyecto.FechaFinProyecto;
 
                 return View(actividad);
             }
@@ -358,13 +488,52 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
         // POST: Actividades/Modificar
         [HttpPost]
-        public ActionResult Modificar(int idProyecto, int idActividad, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto) // <- ¡Aquí está la magia!
+        public ActionResult Modificar(int idProyecto, int idActividad, string nombreActividad, int duracionValor, string duracionUnidad, string fechaEntregaActividad, bool vinoDesdeProyecto, string estadoActividad, int[] investigadoresResponsables = null)
         {
             try
             {
                 if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
 
+                // 1. Validación de investigadores
+                if (investigadoresResponsables != null && investigadoresResponsables.Length > 2)
+                {
+                    TempData["Error"] = "Operación rechazada: Solo puedes asignar un máximo de 2 investigadores.";
+                    return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                }
+
+                // 2. BUSCAR EL PROYECTO PARA LAS VALIDACIONES
                 var coleccionProyectos = conexionDB.Database.GetCollection<DatosProyecto>("Proyectos");
+                var proyectoPadre = coleccionProyectos.Find(p => p.IdProyecto == idProyecto).FirstOrDefault();
+
+                if (proyectoPadre == null)
+                {
+                    TempData["Error"] = "Error: El proyecto seleccionado ya no existe.";
+                    return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                }
+
+                // 3. VALIDAR LÍMITES DE FECHA DEL PROYECTO
+                DateTime fechaEntrega = DateTime.Parse(fechaEntregaActividad).Date;
+
+                if (!string.IsNullOrEmpty(proyectoPadre.FechaInicioProyecto) && !string.IsNullOrEmpty(proyectoPadre.FechaFinProyecto))
+                {
+                    DateTime inicioProyecto = DateTime.Parse(proyectoPadre.FechaInicioProyecto).Date;
+                    DateTime finProyecto = DateTime.Parse(proyectoPadre.FechaFinProyecto).Date;
+
+                    if (fechaEntrega > finProyecto || fechaEntrega < inicioProyecto)
+                    {
+                        TempData["Error"] = $"Operación rechazada: La fecha de la actividad debe estar entre el inicio ({inicioProyecto.ToShortDateString()}) y el fin del proyecto ({finProyecto.ToShortDateString()}).";
+                        return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                    }
+                }
+
+                // 4. VALIDACIÓN ANTI-DUPLICADOS (Ignorando la actividad actual que estamos modificando)
+                if (proyectoPadre.Actividades != null && proyectoPadre.Actividades.Any(a => a.IdActividad != idActividad && a.NombreActividad.ToLower().Trim() == nombreActividad.ToLower().Trim()))
+                {
+                    TempData["Error"] = "Operación rechazada: Ya existe otra actividad con este mismo nombre en el proyecto.";
+                    return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
+                }
+
+                // 5. ACTUALIZAR EN MONGODB
                 string duracionCompuesta = $"{duracionValor} {duracionUnidad.ToLower()}";
 
                 var filtro = Builders<DatosProyecto>.Filter.And(
@@ -375,13 +544,14 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 var actualizacion = Builders<DatosProyecto>.Update
                     .Set("actividades.$.nombreActividad", nombreActividad.Trim())
                     .Set("actividades.$.duracionActividad", duracionCompuesta)
-                    .Set("actividades.$.fechaEntregaActividad", fechaEntregaActividad);
+                    .Set("actividades.$.fechaEntregaActividad", fechaEntregaActividad)
+                    .Set("actividades.$.estadoActividad", estadoActividad)
+                    .Set("actividades.$.investigadoresResponsables", investigadoresResponsables != null ? investigadoresResponsables.ToList() : new List<int>());
 
                 coleccionProyectos.UpdateOne(filtro, actualizacion);
 
                 TempData["Exito"] = "Actividad modificada correctamente.";
 
-                // Redirección inteligente igual que en Agregar
                 if (vinoDesdeProyecto)
                 {
                     return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
@@ -391,11 +561,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             catch (Exception ex)
             {
                 TempData["Error"] = "Error al guardar las modificaciones: " + ex.Message;
-                if (vinoDesdeProyecto)
-                {
-                    return RedirectToAction("PorProyecto", new { idProyecto = idProyecto });
-                }
-                return RedirectToAction("Index");
+                return vinoDesdeProyecto ? RedirectToAction("PorProyecto", new { idProyecto = idProyecto }) : RedirectToAction("Index");
             }
         }
     }

@@ -214,7 +214,10 @@
             btnConsultar.disabled = false;
             let nuevoInput = '';
 
+            const hoy = new Date().toISOString().split('T')[0];
+
             if (filtroSeleccionado === 'fechaInicioProyecto' || filtroSeleccionado === 'fechaFinProyecto') {
+                // Para búsqueda en Index no aplicamos min; son filtros de consulta, no de creación
                 nuevoInput = `<input type="date" class="form-control border-info" id="inputValor" name="valorFiltro" required>`;
             }
             else if (filtroSeleccionado === 'mesInicioProyecto' || filtroSeleccionado === 'mesFinProyecto') {

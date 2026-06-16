@@ -56,7 +56,9 @@
                     <th scope="col" class="py-3 ps-4" style="width: 100px;">ID Act.</th>
                     <th scope="col" class="py-3">Nombre de Actividad</th>
                     <th scope="col" class="py-3" style="width: 150px;">Duración</th>
-                    <th scope="col" class="py-3" style="width: 200px;">Fecha Entrega</th>
+                    <th scope="col" class="py-3" style="width: 150px;">Fecha Entrega</th>
+                    <th scope="col" class="py-3" style="width: 130px;">Estado</th>
+                    <th scope="col" class="py-3" style="width: 200px;">Investigadores</th>
                     <th scope="col" class="py-3 text-center" style="width: 150px;">Acciones</th>
                 </tr>
             </thead>
@@ -74,6 +76,32 @@
                             <td>
                                 <span class="text-secondary"><i class="bi bi-calendar-event me-2"></i>@actividad.FechaEntregaActividad</span>
                             </td>
+
+                            <td>
+                                @{
+                                    string colorBadge = "bg-warning text-dark"; // Por defecto Pendiente
+                                    if (actividad.EstadoActividad == "En Progreso") { colorBadge = "bg-primary"; }
+                                    else if (actividad.EstadoActividad == "Finalizado") { colorBadge = "bg-success"; }
+                                }
+                                <span class="badge @colorBadge shadow-sm">@actividad.EstadoActividad</span>
+                            </td>
+
+                            <td>
+                                @if (actividad.NombresInvestigadores != null && actividad.NombresInvestigadores.Any())
+                                {
+                                    <ul class="mb-0 ps-3 small text-secondary fw-bold" style="list-style-type: square;">
+                                        @foreach (var nombre in actividad.NombresInvestigadores)
+                                        {
+                                            <li>@nombre</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small fst-italic"><i class="bi bi-person-x"></i> Sin asignar</span>
+                                }
+                            </td>
+
                             <td class="text-center">
                                 <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = idProyecto, idActividad = actividad.IdActividad })" class="btn btn-sm btn-outline-secondary me-1" title="Ver Fases">
                                     <i class="bi bi-diagram-3"></i>
@@ -95,7 +123,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                             Este proyecto no cuenta con actividades registradas actualmente.
                         </td>
