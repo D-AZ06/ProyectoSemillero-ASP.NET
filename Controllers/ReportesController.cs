@@ -194,7 +194,7 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                         tituloReporte = "Reporte de Fases - GesSi";
                         // 6 Campos llenos. 
                         encabezados = MapearColumnas(new Dictionary<int, string> {
-                            { 0, "ID Fase" }, { 1, "Contexto (Proy / Act)" }, { 2, "Nombre Fase" }, { 3, "Fechas (Inicio - Fin)" }, { 4, "Duración" }, { 5, "Estado" }
+                            { 0, "ID Fase" }, { 1, "Proy Y Act)" }, { 2, "Nombre Fase" }, { 3, "Fechas (Inicio - Fin)" }, { 4, "Duración" }, { 5, "Estado" }
                         });
 
                         var proyectosFiltrados = esAdmin
