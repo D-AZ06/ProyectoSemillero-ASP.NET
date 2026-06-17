@@ -291,10 +291,6 @@ namespace ProyectoSemillero_ASP.NET {
             
             private global::System.Data.DataColumn columnColumna6;
             
-            private global::System.Data.DataColumn columnColumna7;
-            
-            private global::System.Data.DataColumn columnColumna8;
-            
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
             public TablaGenericaDataTable() {
@@ -378,22 +374,6 @@ namespace ProyectoSemillero_ASP.NET {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public global::System.Data.DataColumn Columna7Column {
-                get {
-                    return this.columnColumna7;
-                }
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public global::System.Data.DataColumn Columna8Column {
-                get {
-                    return this.columnColumna8;
-                }
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
             [global::System.ComponentModel.Browsable(false)]
             public int Count {
                 get {
@@ -429,7 +409,7 @@ namespace ProyectoSemillero_ASP.NET {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public TablaGenericaRow AddTablaGenericaRow(string Columna1, string Columna2, string Columna3, string Columna4, string Columna5, string Columna6, string Columna7, string Columna8) {
+            public TablaGenericaRow AddTablaGenericaRow(string Columna1, string Columna2, string Columna3, string Columna4, string Columna5, string Columna6) {
                 TablaGenericaRow rowTablaGenericaRow = ((TablaGenericaRow)(this.NewRow()));
                 object[] columnValuesArray = new object[] {
                         Columna1,
@@ -437,9 +417,7 @@ namespace ProyectoSemillero_ASP.NET {
                         Columna3,
                         Columna4,
                         Columna5,
-                        Columna6,
-                        Columna7,
-                        Columna8};
+                        Columna6};
                 rowTablaGenericaRow.ItemArray = columnValuesArray;
                 this.Rows.Add(rowTablaGenericaRow);
                 return rowTablaGenericaRow;
@@ -468,8 +446,6 @@ namespace ProyectoSemillero_ASP.NET {
                 this.columnColumna4 = base.Columns["Columna4"];
                 this.columnColumna5 = base.Columns["Columna5"];
                 this.columnColumna6 = base.Columns["Columna6"];
-                this.columnColumna7 = base.Columns["Columna7"];
-                this.columnColumna8 = base.Columns["Columna8"];
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -487,10 +463,6 @@ namespace ProyectoSemillero_ASP.NET {
                 base.Columns.Add(this.columnColumna5);
                 this.columnColumna6 = new global::System.Data.DataColumn("Columna6", typeof(string), null, global::System.Data.MappingType.Element);
                 base.Columns.Add(this.columnColumna6);
-                this.columnColumna7 = new global::System.Data.DataColumn("Columna7", typeof(string), null, global::System.Data.MappingType.Element);
-                base.Columns.Add(this.columnColumna7);
-                this.columnColumna8 = new global::System.Data.DataColumn("Columna8", typeof(string), null, global::System.Data.MappingType.Element);
-                base.Columns.Add(this.columnColumna8);
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -729,38 +701,6 @@ namespace ProyectoSemillero_ASP.NET {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public string Columna7 {
-                get {
-                    try {
-                        return ((string)(this[this.tableTablaGenerica.Columna7Column]));
-                    }
-                    catch (global::System.InvalidCastException e) {
-                        throw new global::System.Data.StrongTypingException("El valor de la columna \'Columna7\' de la tabla \'TablaGenerica\' es DBNull.", e);
-                    }
-                }
-                set {
-                    this[this.tableTablaGenerica.Columna7Column] = value;
-                }
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public string Columna8 {
-                get {
-                    try {
-                        return ((string)(this[this.tableTablaGenerica.Columna8Column]));
-                    }
-                    catch (global::System.InvalidCastException e) {
-                        throw new global::System.Data.StrongTypingException("El valor de la columna \'Columna8\' de la tabla \'TablaGenerica\' es DBNull.", e);
-                    }
-                }
-                set {
-                    this[this.tableTablaGenerica.Columna8Column] = value;
-                }
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
             public bool IsColumna1Null() {
                 return this.IsNull(this.tableTablaGenerica.Columna1Column);
             }
@@ -829,30 +769,6 @@ namespace ProyectoSemillero_ASP.NET {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
             public void SetColumna6Null() {
                 this[this.tableTablaGenerica.Columna6Column] = global::System.Convert.DBNull;
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public bool IsColumna7Null() {
-                return this.IsNull(this.tableTablaGenerica.Columna7Column);
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public void SetColumna7Null() {
-                this[this.tableTablaGenerica.Columna7Column] = global::System.Convert.DBNull;
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public bool IsColumna8Null() {
-                return this.IsNull(this.tableTablaGenerica.Columna8Column);
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "17.0.0.0")]
-            public void SetColumna8Null() {
-                this[this.tableTablaGenerica.Columna8Column] = global::System.Convert.DBNull;
             }
         }
         

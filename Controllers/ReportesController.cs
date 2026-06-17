@@ -17,59 +17,77 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         // GET: Reportes
         public ActionResult Index()
         {
+            if (Session["Rol"] == null) return RedirectToAction("IniciarSesion", "Home");
+
             return View();
         }
 
         public ActionResult Descargar(string modulo)
         {
             // 1. Sesión
-            string rolUsuario = Session["RolUsuario"]?.ToString() ?? "Admin";
+            // La llave real es "Rol" (la misma que usa el header de arriba),
+            // no "RolUsuario" como tenía antes -- por eso nunca llegaba el valor.
+            string rolUsuario = Session["Rol"]?.ToString() ?? "";
             int idSemilleroUsuario = Convert.ToInt32(Session["IdSemillero"] ?? 0);
 
-            // Cualquier rol distinto de Administrador queda restringido a su propio semillero.
-            // AJUSTAR si "Investigador" necesita una regla distinta a la de "Lider".
             bool esAdmin = rolUsuario.Equals("Admin", StringComparison.OrdinalIgnoreCase)
                         || rolUsuario.Equals("Administrador", StringComparison.OrdinalIgnoreCase);
 
-            // 2. DataSet y DataTable
+            // 2. DataSet y DataTable (AHORA DE 6 COLUMNAS)
             DataSet dsGenerico = new DataSet("DataSetGenerico");
             DataTable dtGenerico = new DataTable("TablaGenerica");
-            for (int i = 1; i <= 8; i++) { dtGenerico.Columns.Add($"Columna{i}", typeof(string)); }
+            for (int i = 1; i <= 6; i++) { dtGenerico.Columns.Add($"Columna{i}", typeof(string)); }
             dsGenerico.Tables.Add(dtGenerico);
 
             string tituloReporte = "";
-            string[] encabezados = new string[8] { "", "", "", "", "", "", "", "" };
+            string[] encabezados = new string[6] { "", "", "", "", "", "" };
 
             // 3. CONEXIÓN
             var conexion = new Conexion();
             var bd = conexion.Database;
-
-            // Se reutiliza en "proyecto", "actividades" y "fases": las actividades y
-            // fases no son colecciones propias, vienen anidadas dentro del proyecto.
             var colProyectos = bd.GetCollection<DatosProyecto>("Proyectos");
 
             switch (modulo.ToLower())
             {
                 case "usuarios":
                     {
-                        tituloReporte = "Reporte de Usuarios";
-                        encabezados = DistribuirColumnas("ID", "Nombre", "Correo", "Rol", "Edad", "Teléfono", "Semillero");
+                        tituloReporte = "Reporte de Usuarios - GesSi";
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID" }, { 1, "Nombre" }, { 2, "Rol" }, { 3, "Edad" }, { 4, "Contacto (Tel - Correo)" }, { 5, "Semillero (ID - Nombre)" }
+                        });
 
                         var colUsuarios = bd.GetCollection<DatosUsuario>("Usuarios");
                         var listaUsuarios = esAdmin
                             ? colUsuarios.Find(_ => true).ToList()
                             : colUsuarios.Find(u => u.IdSemillero == idSemilleroUsuario).ToList();
 
+                        // [NUEVO] Cargamos los semilleros en un diccionario para búsqueda rápida
+                        var colSemilleros = bd.GetCollection<DatosSemillero>("Semilleros");
+                        var dictSemilleros = colSemilleros.Find(_ => true).ToList()
+                            .ToDictionary(s => s.IdSemillero, s => s.nombreSemillero);
+
                         foreach (var user in listaUsuarios)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                user.IdUsuario.ToString(),
-                                user.NombreUsuario,
-                                user.CorreoUsuario,
-                                user.RolUsuario,
-                                user.EdadUsuario?.ToString() ?? "N/A",
-                                user.TelefonoUsuario?.ToString() ?? "N/A",
-                                user.IdSemillero?.ToString() ?? "N/A"));
+                            string tel = user.TelefonoUsuario?.ToString() ?? "N/A";
+                            string contacto = $"{tel} - {user.CorreoUsuario}";
+
+                            // [NUEVO] Concatenamos ID y Nombre del Semillero
+                            string semilleroInfo = "N/A";
+                            if (user.IdSemillero.HasValue)
+                            {
+                                semilleroInfo = dictSemilleros.ContainsKey(user.IdSemillero.Value)
+                                    ? $"{user.IdSemillero.Value} - {dictSemilleros[user.IdSemillero.Value]}"
+                                    : user.IdSemillero.Value.ToString();
+                            }
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, user.IdUsuario.ToString() },
+                                { 1, user.NombreUsuario },
+                                { 2, user.RolUsuario },
+                                { 3, user.EdadUsuario?.ToString() ?? "N/A" },
+                                { 4, contacto },
+                                { 5, semilleroInfo } // <-- Aquí pasamos el dato enriquecido
+                            }));
                         }
                         break;
                     }
@@ -77,7 +95,10 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "semillero":
                     {
                         tituloReporte = "Reporte de Semilleros - GesSi";
-                        encabezados = DistribuirColumnas("ID", "Nombre del Semillero", "Línea de Investigación", "Enfoque");
+                        // 4 Campos. Dejamos las posiciones 2 y 4 vacías para dar espacio a Nombre y Línea.
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID" }, { 1, "Nombre del Semillero" }, { 3, "Línea de Investigación" }, { 5, "Enfoque" }
+                        });
 
                         var colSemilleros = bd.GetCollection<DatosSemillero>("Semilleros");
                         var listaSemilleros = esAdmin
@@ -86,11 +107,12 @@ namespace ProyectoSemillero_ASP.NET.Controllers
 
                         foreach (var sem in listaSemilleros)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                sem.IdSemillero.ToString(),
-                                sem.nombreSemillero,
-                                sem.LineaSemillero,
-                                sem.EnfoqueSemillero));
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, sem.IdSemillero.ToString() },
+                                { 1, sem.nombreSemillero },
+                                { 3, sem.LineaSemillero },
+                                { 5, sem.EnfoqueSemillero }
+                            }));
                         }
                         break;
                     }
@@ -98,21 +120,35 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "proyecto":
                     {
                         tituloReporte = "Reporte de Proyectos - GesSi";
-                        encabezados = DistribuirColumnas("ID", "Semillero", "Título del Proyecto", "Fecha Inicio", "Fecha Fin", "Estado");
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID" }, { 1, "Título del Proyecto" }, { 3, "Fechas (Inicio - Fin)" }, { 4, "Semillero (ID - Nombre)" }, { 5, "Estado" }
+                        });
 
                         var listaProyectos = esAdmin
                             ? colProyectos.Find(_ => true).ToList()
                             : colProyectos.Find(p => p.IdSemillero == idSemilleroUsuario).ToList();
 
+                        // [NUEVO] Cargamos los semilleros en un diccionario
+                        var colSemilleros = bd.GetCollection<DatosSemillero>("Semilleros");
+                        var dictSemilleros = colSemilleros.Find(_ => true).ToList()
+                            .ToDictionary(s => s.IdSemillero, s => s.nombreSemillero);
+
                         foreach (var proy in listaProyectos)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                proy.IdProyecto.ToString(),
-                                proy.IdSemillero.ToString(),
-                                proy.TituloProyecto,
-                                proy.FechaInicioProyecto,
-                                proy.FechaFinProyecto,
-                                proy.Estado));
+                            string fechas = $"{proy.FechaInicioProyecto:dd/MM/yyyy} a {proy.FechaFinProyecto:dd/MM/yyyy}";
+
+                            // [NUEVO] Concatenamos ID y Nombre del Semillero
+                            string semilleroInfo = dictSemilleros.ContainsKey(proy.IdSemillero)
+                                ? $"{proy.IdSemillero} - {dictSemilleros[proy.IdSemillero]}"
+                                : proy.IdSemillero.ToString();
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, proy.IdProyecto.ToString() },
+                                { 1, proy.TituloProyecto },
+                                { 3, fechas },
+                                { 4, semilleroInfo }, // <-- Pasamos la información enriquecida
+                                { 5, proy.Estado }
+                            }));
                         }
                         break;
                     }
@@ -120,27 +156,35 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "actividades":
                     {
                         tituloReporte = "Reporte de Actividades - GesSi";
-                        encabezados = DistribuirColumnas("ID Proy.", "ID Act.", "Nombre Actividad", "Duración", "Fecha Inicio", "Fecha Entrega", "Estado");
+                        // 6 Campos llenos.
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID Act." }, { 1, "Proyecto (ID - Título)" }, { 2, "Nombre Actividad" }, { 3, "Fechas (Inicio - Entrega)" }, { 4, "Duración" }, { 5, "Estado" }
+                        });
 
                         var proyectosFiltrados = esAdmin
                             ? colProyectos.Find(_ => true).ToList()
                             : colProyectos.Find(p => p.IdSemillero == idSemilleroUsuario).ToList();
 
+                        // Almacenamos todo el objeto 'Proyecto' para poder acceder a su ID y Título
                         var listaActividades = proyectosFiltrados
                             .SelectMany(p => (p.Actividades ?? new List<Actividad>())
-                                .Select(a => new { IdProyecto = p.IdProyecto, Act = a }))
+                                .Select(a => new { Proyecto = p, Act = a }))
                             .ToList();
 
                         foreach (var item in listaActividades)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                item.IdProyecto.ToString(),
-                                item.Act.IdActividad.ToString(),
-                                item.Act.NombreActividad,
-                                item.Act.DuracionActividad,
-                                item.Act.FechaInicioActividad,
-                                item.Act.FechaEntregaActividad,
-                                item.Act.EstadoActividad));
+                            // Concatenamos el ID y el Título del proyecto
+                            string infoProyecto = $"{item.Proyecto.IdProyecto} - {item.Proyecto.TituloProyecto}";
+                            string fechas = $"{item.Act.FechaInicioActividad:dd/MM/yy} a {item.Act.FechaEntregaActividad:dd/MM/yy}";
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, item.Act.IdActividad.ToString() },
+                                { 1, infoProyecto },
+                                { 2, item.Act.NombreActividad },
+                                { 3, fechas },
+                                { 4, item.Act.DuracionActividad },
+                                { 5, item.Act.EstadoActividad }
+                            }));
                         }
                         break;
                     }
@@ -148,28 +192,37 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "fases":
                     {
                         tituloReporte = "Reporte de Fases - GesSi";
-                        encabezados = DistribuirColumnas("ID Proy.", "ID Fase", "Nombre Fase", "Duración", "Fecha Inicio", "Fecha Fin", "Estado");
+                        // 6 Campos llenos. 
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID Fase" }, { 1, "Contexto (Proy / Act)" }, { 2, "Nombre Fase" }, { 3, "Fechas (Inicio - Fin)" }, { 4, "Duración" }, { 5, "Estado" }
+                        });
 
                         var proyectosFiltrados = esAdmin
                             ? colProyectos.Find(_ => true).ToList()
                             : colProyectos.Find(p => p.IdSemillero == idSemilleroUsuario).ToList();
 
+                        // Almacenamos el Proyecto, la Actividad y la Fase
                         var listaFases = proyectosFiltrados
                             .SelectMany(p => (p.Actividades ?? new List<Actividad>())
                                 .SelectMany(a => (a.Fases ?? new List<Fase>())
-                                    .Select(f => new { IdProyecto = p.IdProyecto, FaseInfo = f })))
+                                    .Select(f => new { Proyecto = p, Act = a, FaseInfo = f })))
                             .ToList();
 
                         foreach (var item in listaFases)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                item.IdProyecto.ToString(),
-                                item.FaseInfo.IdFase.ToString(),
-                                item.FaseInfo.NombreFase,
-                                item.FaseInfo.DuracionFase,
-                                item.FaseInfo.FechaInicio.ToString("dd/MM/yyyy"),
-                                item.FaseInfo.FechaFin.ToString("dd/MM/yyyy"),
-                                item.FaseInfo.Estado));
+                            // Concatenamos el ID y el Nombre tanto del Proyecto como de la Actividad
+                            // Usamos " / " para separarlos visualmente. 
+                            string infoContexto = $"P:{item.Proyecto.IdProyecto} - {item.Proyecto.TituloProyecto} / A:{item.Act.IdActividad} - {item.Act.NombreActividad}";
+                            string fechas = $"{item.FaseInfo.FechaInicio:dd/MM/yy} a {item.FaseInfo.FechaFin:dd/MM/yy}";
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, item.FaseInfo.IdFase.ToString() },
+                                { 1, infoContexto },
+                                { 2, item.FaseInfo.NombreFase },
+                                { 3, fechas },
+                                { 4, item.FaseInfo.DuracionFase },
+                                { 5, item.FaseInfo.Estado }
+                            }));
                         }
                         break;
                     }
@@ -177,25 +230,38 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "reuniones":
                     {
                         tituloReporte = "Reporte de Reuniones - GesSi";
-                        encabezados = DistribuirColumnas("ID", "Fecha", "Hora Inicio", "Hora Fin", "Lugar", "Líder", "Estado", "Motivo");
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
 
-                        // AJUSTAR "Reuniones" si la colección real se llama distinto.
+                            { 0, "ID" }, { 1, "Fecha y Horario" }, { 2, "Lugar" }, { 3, "Motivo" }, { 4, "Líder (ID - Nombre)" }, { 5, "Estado" }
+                        });
+
                         var colReuniones = bd.GetCollection<DatosReunion>("Reuniones");
                         var listaReuniones = esAdmin
                             ? colReuniones.Find(_ => true).ToList()
                             : colReuniones.Find(r => r.IdSemillero == idSemilleroUsuario).ToList();
 
+                        // [NUEVO] Cargamos los usuarios en un diccionario para obtener el nombre del líder
+                        var colUsuarios = bd.GetCollection<DatosUsuario>("Usuarios");
+                        var dictUsuarios = colUsuarios.Find(_ => true).ToList()
+                            .ToDictionary(u => u.IdUsuario, u => u.NombreUsuario);
+
                         foreach (var reu in listaReuniones)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                reu.IdReunion.ToString(),
-                                reu.FechaReunion,
-                                reu.HoraInicio,
-                                reu.HoraFin,
-                                reu.LugarReunion,
-                                reu.IdLider.ToString(),
-                                reu.EstadoReunion,
-                                reu.MotivoReunion));
+                            string fechaHora = $"{reu.FechaReunion:dd/MM/yyyy} ({reu.HoraInicio} - {reu.HoraFin})";
+
+                            // [NUEVO] Buscamos el nombre del líder
+                            string liderInfo = dictUsuarios.ContainsKey(reu.IdLider)
+                                ? $"{reu.IdLider} - {dictUsuarios[reu.IdLider]}"
+                                : reu.IdLider.ToString();
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, reu.IdReunion.ToString() },
+                                { 1, fechaHora },
+                                { 2, reu.LugarReunion },
+                                { 3, reu.MotivoReunion },
+                                { 4, liderInfo }, // <-- Pasamos ID y Nombre del líder
+                                { 5, reu.EstadoReunion }
+                            }));
                         }
                         break;
                     }
@@ -203,60 +269,56 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                 case "eventos":
                     {
                         tituloReporte = "Reporte de Eventos - GesSi";
-                        encabezados = DistribuirColumnas("ID", "Nombre", "Tipo", "Fecha", "Hora", "Modalidad", "Lugar", "Estado");
+                        // 6 Campos llenos. Agrupamos Modalidad y Lugar.
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID" }, { 1, "Nombre" }, { 2, "Tipo" }, { 3, "Fecha y Hora" }, { 4, "Modalidad / Lugar" }, { 5, "Estado" }
+                        });
 
-                        // Leer directamente como BsonDocument para evitar problemas de deserialización
                         var colEventos = bd.GetCollection<MongoDB.Bson.BsonDocument>("Eventos");
                         var listaEventos = colEventos.Find(_ => true).ToList();
 
                         foreach (var doc in listaEventos)
                         {
-                            // Obtener los semilleros asociados al evento
-                            var semilleros = doc["idSemillero"]
-                                .AsBsonArray
-                                .Select(x => x.AsInt32)
-                                .ToList();
-
-                            // Si no es administrador, solo mostrar los eventos de su semillero
+                            var semilleros = doc["idSemillero"].AsBsonArray.Select(x => x.AsInt32).ToList();
                             if (!esAdmin && !semilleros.Contains(idSemilleroUsuario))
                                 continue;
 
-                            string horaCompleta = $"{doc["horaInicio"].AsString} - {doc["horaFin"].AsString}";
+                            string fechaHora = $"{doc["fechaEvento"].AsString} ({doc["horaInicio"].AsString} - {doc["horaFin"].AsString})";
+                            string modLugar = $"{doc["modalidad"].AsString} - {doc["lugarEvento"].AsString}";
 
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                doc["idEvento"].AsInt32.ToString(),
-                                doc["nombreEvento"].AsString,
-                                doc["tipoEvento"].AsString,
-                                doc["fechaEvento"].AsString,
-                                horaCompleta,
-                                doc["modalidad"].AsString,
-                                doc["lugarEvento"].AsString,
-                                doc["estado"].AsString
-                            ));
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, doc["idEvento"].AsInt32.ToString() },
+                                { 1, doc["nombreEvento"].AsString },
+                                { 2, doc["tipoEvento"].AsString },
+                                { 3, fechaHora },
+                                { 4, modLugar },
+                                { 5, doc["estado"].AsString }
+                            }));
                         }
-
                         break;
                     }
 
                 case "patrocinadores":
                     {
                         tituloReporte = "Reporte de Patrocinadores - GesSi";
-                        // El modelo actual no relaciona patrocinadores con un semillero,
-                        // así que se muestran a todos los roles. AJUSTAR si deben filtrarse.
-                        encabezados = DistribuirColumnas("ID", "Nombre", "Tipo", "Teléfono", "Correo");
+                        // 4 Campos. Posiciones 2 y 4 vacías para dar aire al Nombre y Contacto.
+                        encabezados = MapearColumnas(new Dictionary<int, string> {
+                            { 0, "ID" }, { 1, "Nombre" }, { 3, "Tipo" }, { 5, "Contacto (Tel - Correo)" }
+                        });
 
-                        // AJUSTAR "Patrocinadores" si la colección real se llama distinto.
                         var colPatrocinadores = bd.GetCollection<DatosPatrocinador>("Patrocinadores");
                         var listaPatrocinadores = colPatrocinadores.Find(_ => true).ToList();
 
                         foreach (var pat in listaPatrocinadores)
                         {
-                            dtGenerico.Rows.Add(DistribuirColumnas(
-                                pat.IdPatrocinador.ToString(),
-                                pat.NombrePatrocinador,
-                                pat.TipoPatrocinador,
-                                pat.TelefonoPatrocinador.ToString(),
-                                pat.CorreoPatrocinador));
+                            string contacto = $"{pat.TelefonoPatrocinador} - {pat.CorreoPatrocinador}";
+
+                            dtGenerico.Rows.Add(MapearColumnas(new Dictionary<int, string> {
+                                { 0, pat.IdPatrocinador.ToString() },
+                                { 1, pat.NombrePatrocinador },
+                                { 3, pat.TipoPatrocinador },
+                                { 5, contacto }
+                            }));
                         }
                         break;
                     }
@@ -265,7 +327,15 @@ namespace ProyectoSemillero_ASP.NET.Controllers
                     return HttpNotFound("Módulo no encontrado.");
             }
 
-            // 4. Cargar la plantilla (Asegurando la ruta correcta)
+            // Si el filtro por rol (ej. el semillero de un líder) no dejó ninguna
+            // fila, no tiene sentido exportar: esto evita el ParameterFieldCurrentValueException
+            // que se ve cuando Crystal Reports recibe el dataset vacío.
+            if (dtGenerico.Rows.Count == 0)
+            {
+                return Content("No hay datos disponibles para este reporte con tu rol/semillero actual.");
+            }
+
+            // 4. Cargar la plantilla
             ReportDocument rd = new ReportDocument();
             string rutaReporte = Path.Combine(Server.MapPath("~/Views/Reportes"), "PlantillaGeneral.rpt");
 
@@ -280,7 +350,8 @@ namespace ProyectoSemillero_ASP.NET.Controllers
             rd.SetDataSource(dsGenerico);
             rd.SetParameterValue("TituloReporte", tituloReporte);
 
-            for (int i = 0; i < 8; i++)
+            // CAMBIO: Ahora el bucle es de 0 a 6
+            for (int i = 0; i < 6; i++)
             {
                 rd.SetParameterValue($"Enc{i + 1}", encabezados[i]);
             }
@@ -296,35 +367,19 @@ namespace ProyectoSemillero_ASP.NET.Controllers
         }
 
         /// <summary>
-        /// Reparte los valores recibidos de forma pareja entre las 8 columnas del
-        /// reporte (el primero en la columna 1, el último en la columna 8), en vez
-        /// de amontonarlos al inicio. Evita el hueco enorme que queda cuando un
-        /// módulo usa menos de 8 campos.
+        /// Asigna valores a posiciones exactas (0 al 5) para el dataset de 6 columnas.
+        /// Las columnas no asignadas quedarán vacías (""), permitiendo espaciado estratégico.
         /// </summary>
-        private string[] DistribuirColumnas(params string[] valores)
+        private string[] MapearColumnas(Dictionary<int, string> posiciones)
         {
-            const int totalColumnas = 8;
-            string[] resultado = new string[totalColumnas];
-            for (int i = 0; i < totalColumnas; i++) resultado[i] = "";
+            string[] resultado = new string[6] { "", "", "", "", "", "" };
 
-            if (valores == null || valores.Length == 0) return resultado;
-
-            if (valores.Length == 1)
+            foreach (var item in posiciones)
             {
-                resultado[0] = valores[0];
-                return resultado;
-            }
-
-            if (valores.Length >= totalColumnas)
-            {
-                for (int i = 0; i < totalColumnas; i++) resultado[i] = valores[i];
-                return resultado;
-            }
-
-            for (int i = 0; i < valores.Length; i++)
-            {
-                int posicion = (int)Math.Round(i * (totalColumnas - 1) / (double)(valores.Length - 1));
-                resultado[posicion] = valores[i];
+                if (item.Key >= 0 && item.Key < 6)
+                {
+                    resultado[item.Key] = item.Value ?? "";
+                }
             }
 
             return resultado;
