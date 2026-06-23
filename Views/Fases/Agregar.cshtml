@@ -1,0 +1,277 @@
+﻿@{
+    ViewBag.Title = "Agregar Fase";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    bool vinoDesdePorActividad = ViewBag.VinoDesdePorActividad ?? false;
+    bool desdeGlobal = ViewBag.DesdeGlobal ?? false;
+    bool flujoSecuencial = ViewBag.FlujoSecuencial ?? false;
+
+    var proyectosCombobox = ViewBag.ProyectosMapeados as List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>;
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-plus-circle-fill text-success me-2"></i> Registrar Nueva Fase
+        </h3>
+
+        @if (!flujoSecuencial)
+        {
+            if (vinoDesdePorActividad)
+            {
+                <a href="@Url.Action("PorActividad", "Fases", new { idProyecto = ViewBag.IdProyecto, idActividad = ViewBag.IdActividad, desdeGlobal = desdeGlobal })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                    <i class="bi bi-arrow-left"></i> Volver a Fases de Actividad
+                </a>
+            }
+            else
+            {
+                <a href="@Url.Action("Index", "Fases")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                    <i class="bi bi-arrow-left"></i> Cancelar y Volver
+                </a>
+            }
+        }
+    </div>
+
+    @if (flujoSecuencial)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 border-start border-5 border-success mb-4" role="alert">
+            <h5 class="alert-heading fw-bold text-success mb-2">
+                <i class="bi bi-check-circle-fill me-2"></i> @Html.Raw(ViewBag.MensajeExito ?? "¡Actividad registrada con éxito!")
+            </h5>
+            <hr class="border-success opacity-25 my-2">
+            <p class="mb-0 text-dark">
+                <i class="bi bi-info-circle-fill text-primary me-1"></i> @Html.Raw(ViewBag.MensajeInstruccion ?? "Para finalizar este registro inicial, es obligatorio crear la primera fase de esta actividad.")
+            </p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+            <form action="@Url.Action("Agregar", "Fases")" method="post" id="formAgregarFase">
+
+                <input type="hidden" name="vinoDesdePorActividad" value="@(vinoDesdePorActividad ? "true" : "false")" />
+                <input type="hidden" name="desdeGlobal" value="@(desdeGlobal ? "true" : "false")" />
+                <input type="hidden" name="flujoSecuencial" value="@(flujoSecuencial ? "true" : "false")" />
+
+                <input type="hidden" name="origenActividad" value="@ViewBag.OrigenActividad" />
+
+                <div class="mb-4 bg-light p-3 rounded-3 border">
+
+                    @if (vinoDesdePorActividad || flujoSecuencial)
+                    {
+                        <input type="hidden" name="idProyecto" value="@ViewBag.IdProyecto" />
+                        <input type="hidden" name="idActividad" value="@ViewBag.IdActividad" />
+
+                        <div class="mb-2">
+                            <label class="form-label fw-bold text-success mb-1"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white text-dark fw-bold">ID: @ViewBag.IdProyecto</span>
+                                <input type="text" class="form-control bg-white text-muted fw-semibold" value="@ViewBag.TituloProyecto" readonly disabled />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-bold text-primary mb-1"><i class="bi bi-list-check me-1"></i> Actividad Asociada</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white text-dark fw-bold">ID: @ViewBag.IdActividad</span>
+                                <input type="text" class="form-control bg-white text-muted fw-semibold" value="@ViewBag.NombreActividad" readonly disabled />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-success"><i class="bi bi-folder-fill me-1"></i> Seleccionar Proyecto</label>
+                            <select class="form-select border-success fw-medium" name="idProyecto" id="selectProyecto" required>
+                                <option value="">-- Elija un proyecto --</option>
+                                @if (proyectosCombobox != null)
+                                {
+                                    foreach (var proj in proyectosCombobox.Where(p => p.Actividades != null && p.Actividades.Any()))
+                                    {
+                                        <option value="@proj.IdProyecto">ID: @proj.IdProyecto - @proj.TituloProyecto</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-bold text-primary"><i class="bi bi-list-check me-1"></i> Seleccionar Actividad</label>
+                            <select class="form-select border-primary fw-medium" name="idActividad" id="selectActividad" required disabled>
+                                <option value="">-- Elija primero un proyecto --</option>
+                            </select>
+                        </div>
+                    }
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="mb-3">
+                    <label for="nombreFase" class="form-label fw-bold text-secondary">
+                        <i class="bi bi-diagram-3-fill me-1"></i> Nombre de la Fase
+                    </label>
+
+                    <select class="form-select border-secondary-subtle" id="nombreFase" name="nombreFase" required>
+                        <option value="">-- Seleccione una fase estandarizada --</option>
+                        <option value="Análisis">Análisis</option>
+                        <option value="Diseño">Diseño</option>
+                        <option value="Desarrollo">Desarrollo</option>
+                        <option value="Pruebas">Pruebas</option>
+                        <option value="Implementación">Implementación</option>
+                        <option value="Documentación">Documentación</option>
+                        <option value="Despliegue">Despliegue</option>
+                        <option value="Cierre">Cierre</option>
+                    </select>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="fechaInicio" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-plus me-1"></i> Fecha de Inicio</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaInicio" name="fechaInicio" min="@ViewBag.MinFecha" max="@ViewBag.MaxFecha" required />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="fechaFin" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check me-1"></i> Fecha de Fin</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaFin" name="fechaFin" max="@ViewBag.MaxFecha" required />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="estado" class="form-label fw-bold text-secondary"><i class="bi bi-activity me-1"></i> Estado</label>
+                        <select class="form-select border-secondary-subtle fw-semibold" id="estado" name="estado" required>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Progreso">En Progreso</option>
+                            <option value="Completado">Completado</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada de la Fase</label>
+                    <div class="input-group w-75">
+                        <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" placeholder="Cant." required />
+                        <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                            <option value="Días">Días</option>
+                            <option value="Semanas">Semanas</option>
+                            <option value="Meses">Meses</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm" id="btnGuardarFase">
+                        @if (flujoSecuencial)
+                        {
+                            <i class="bi bi-flag-fill me-1"></i> @:Finalizar y Volver a Proyectos
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-circle me-1"></i> @:Guardar Fase
+                        }
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // --- BLOQUEO DEL BOTÓN ATRÁS ---
+        @if (flujoSecuencial)
+        {
+            <text>
+            $(document).ready(function() {
+                window.history.pushState(null, "", window.location.href);
+                window.onpopstate = function() {
+                    window.history.pushState(null, "", window.location.href);
+                };
+            });
+            </text>
+        }
+
+        // Lógica de ComboBox en cascada solo si estamos en el contexto Global
+        @if (!vinoDesdePorActividad && !flujoSecuencial && proyectosCombobox != null)
+        {
+            <text>
+            const jerarquiaActividades = {
+                @foreach(var p in proyectosCombobox.Where(p => p.Actividades != null && p.Actividades.Any()))
+                {
+                    @Html.Raw($"\"{p.IdProyecto}\": [")
+                    foreach(var a in p.Actividades)
+                    {
+                        @Html.Raw($"{{ id: \"{a.IdActividad}\", nombre: \"{HttpUtility.JavaScriptStringEncode(a.NombreActividad)}\" }},")
+                    }
+                    @Html.Raw("],")
+                }
+            };
+
+            const selectProyecto = document.getElementById('selectProyecto');
+            const selectActividad = document.getElementById('selectActividad');
+
+            if (selectProyecto) {
+                selectProyecto.addEventListener('change', function() {
+                    const idSeleccionado = this.value;
+                    selectActividad.innerHTML = '<option value="">-- Elija una actividad --</option>';
+
+                    if (idSeleccionado && jerarquiaActividades[idSeleccionado]) {
+                        selectActividad.disabled = false;
+                        jerarquiaActividades[idSeleccionado].forEach(act => {
+                            let option = document.createElement('option');
+                            option.value = act.id;
+                            option.textContent = `ID: ${act.id} - ${act.nombre}`;
+                            selectActividad.appendChild(option);
+                        });
+                    } else {
+                        selectActividad.disabled = true;
+                        if(idSeleccionado) {
+                            selectActividad.innerHTML = '<option value="">No hay actividades disponibles</option>';
+                        } else {
+                            selectActividad.innerHTML = '<option value="">-- Elija primero un proyecto --</option>';
+                        }
+                    }
+                });
+            }
+            </text>
+        }
+
+        // Loader de envío
+        document.getElementById('formAgregarFase').addEventListener('submit', function () {
+            const selectAct = document.getElementById('selectActividad');
+            if (selectAct) selectAct.disabled = false;
+
+            const btn = document.getElementById('btnGuardarFase');
+            setTimeout(() => {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando Fase...`;
+            }, 10);
+        });
+
+        // ==========================================
+        // BLOQUEO DINÁMICO DE FECHAS EN EL CLIENTE
+        // ==========================================
+        const inputInicio = document.getElementById('fechaInicio');
+        const inputFin = document.getElementById('fechaFin');
+
+        if (inputInicio && inputFin) {
+            inputInicio.addEventListener('change', function() {
+                // Cuando el usuario selecciona el inicio, la fecha fin no puede ser menor a esa
+                inputFin.min = this.value;
+
+                // Si la fecha final actual quedó por detrás del nuevo inicio, la limpiamos
+                if (inputFin.value && inputFin.value < this.value) {
+                    inputFin.value = '';
+                }
+            });
+        }
+    </script>
+}

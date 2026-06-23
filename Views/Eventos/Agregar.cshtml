@@ -1,0 +1,690 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosEvento
+
+@{
+    ViewBag.Title = "Crear Evento";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+    string rolUsuario = ViewBag.RolUsuario as string;
+}
+
+<!-- CSS de Flatpickr para el reloj formato 24h -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+
+    .caja-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .caja-scroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .table-agenda th {
+        background-color: #f8fafc;
+        color: #334155;
+        font-weight: 600;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-primary-subtle">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-calendar-plus-fill text-primary me-2"></i> Programar Nuevo Evento
+        </h3>
+
+        <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary fw-bold shadow-sm">
+            <i class="bi bi-arrow-left"></i> Cancelar y Volver
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+            @using (Html.BeginForm("Agregar", "Eventos", FormMethod.Post, new { id = "formAgregarEvento" }))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4 bg-light p-3 rounded-3 border border-primary-subtle">
+                    <label class="form-label fw-bold text-primary mb-1">
+                        <i class="bi bi-hash me-1"></i> ID Evento
+                    </label>
+                    @Html.TextBoxFor(m => m.IdEvento, new { @class = "form-control bg-white text-muted fw-semibold border-primary-subtle", @type = "number", @readonly = "readonly", id = "IdEvento" })
+                    <small class="text-muted"><i class="bi bi-info-circle-fill text-primary mt-2"></i> Este identificador se calcula automáticamente en el sistema.</small>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-card-text text-primary me-1"></i> Nombre del Evento <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.NombreEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: I Simposio de Desarrollo Tecnológico", @list = "listaNombres", autocomplete = "off", data_tipo = "nombres" })
+                        <datalist id="listaNombres">
+                            @if (ViewBag.NombresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.NombresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-tags-fill text-primary me-1"></i> Tipo de Evento <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.TipoEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: Congreso, Seminario", @list = "listaTipos", autocomplete = "off", data_tipo = "tipos", id = "TipoEvento" })
+                        <datalist id="listaTipos">
+                            @if (ViewBag.TiposSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.TiposSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-calendar-event-fill text-primary me-1"></i> Fecha de Celebración <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.FechaEvento, new { @class = "form-control border-secondary-subtle", @type = "date", @required = "required", id = "FechaEvento" })
+                        <small class="text-danger fw-semibold d-none" id="errorFecha">La fecha debe ser a partir de mañana.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-clock-fill text-primary me-1"></i> Hora de Inicio <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control border-secondary-subtle bg-white", @type = "text", @required = "required", id = "HoraInicio", placeholder = "00:00" })
+                        <small class="text-danger fw-semibold d-none" id="errorHoraInicio" style="font-size: 0.75rem;">Rango: 06:00 a 22:00.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-clock-history text-primary me-1"></i> Hora de Finalización <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control border-secondary-subtle bg-white", @type = "text", @required = "required", id = "HoraFin", placeholder = "00:00" })
+                        <small class="text-danger fw-semibold d-none" id="errorHoraFin" style="font-size: 0.75rem;">Rango: 06:00 a 22:00. Mínimo 1 hora.</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-globe text-primary me-1"></i> Modalidad <span class="text-danger">*</span>
+                        </label>
+                        @Html.DropDownListFor(m => m.Modalidad, new SelectList(new[] { "Presencial", "Virtual", "Híbrido" }), new { @class = "form-select border-secondary-subtle fw-medium", id = "selectModalidad" })
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-diagram-3-fill text-primary me-1"></i> Semillero(s) Vinculado(s) <span class="text-danger">*</span>
+                        </label>
+                        @if (rolUsuario == "Líder")
+                        {
+                            <input type="text" class="form-control bg-light border-secondary-subtle text-muted" value="@ViewBag.NombreSemilleroFijo" readonly />
+                            <input type="hidden" name="semillerosSeleccionados" id="IdSemillero" value="@ViewBag.IdSemilleroFijo" />
+                        }
+                        else
+                        {
+                            <div class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 120px; overflow-y: auto;" id="contenedorSemilleros">
+                                @if (ViewBag.ListaSemilleros != null)
+                                {
+                                    foreach (var sem in (List<ProyectoSemillero_ASP.NET.Models.DatosSemillero>)ViewBag.ListaSemilleros)
+                                    {
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input border-primary semillero-checkbox" type="checkbox" name="semillerosSeleccionados" value="@sem.IdSemillero" id="sem_@sem.IdSemillero">
+                                            <label class="form-check-label text-dark fw-medium" for="sem_@sem.IdSemillero" style="cursor: pointer;">
+                                                @sem.nombreSemillero
+                                            </label>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-muted small">No hay semilleros registrados.</div>
+                                }
+                            </div>
+                            <p class="text-muted small mt-1 mb-0">Marca las casillas de los semilleros participantes.</p>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3 d-none" id="divEnlaceReunion">
+                    <label class="form-label fw-bold text-primary">
+                        <i class="bi bi-link-45deg me-1"></i> Enlace de la Reunión (Teams / Zoom / Meet) <span class="text-danger">*</span>
+                    </label>
+                    @Html.TextBoxFor(m => m.EnlaceReunion, new { @class = "form-control border-primary-subtle", placeholder = "https://ejemplo.com/reunion-semillero", id = "EnlaceReunion" })
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-geo-alt-fill text-primary me-1"></i> Lugar / Ubicación <span class="text-danger">*</span>
+                        </label>
+                        @Html.TextBoxFor(m => m.LugarEvento, new { @class = "form-control border-secondary-subtle autocompletar", @required = "required", @placeholder = "Ej: Auditorio Principal o Virtual", @list = "listaLugares", autocomplete = "off", data_tipo = "lugares", id = "LugarEvento" })
+                        <datalist id="listaLugares">
+                            @if (ViewBag.LugaresSugeridos != null)
+                            {
+                                foreach (var item in ViewBag.LugaresSugeridos)
+                                {
+                                    <option value="@item"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-secondary">
+                            <i class="bi bi-person-badge-fill text-primary me-1"></i> Organizador Principal <span class="text-danger">*</span>
+                        </label>
+                        @Html.DropDownListFor(m => m.OrganizadorEvento, ViewBag.ListaOrganizadores as SelectList, "-- Seleccione un Usuario --", new { @class = "form-select border-secondary-subtle fw-medium", @required = "required" })
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="bi bi-blockquote-left text-primary me-1"></i> Descripción del Evento <span class="text-danger">*</span>
+                    </label>
+                    @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control border-secondary-subtle", rows = "3", placeholder = "Escribe una breve descripción u objetivos del evento (mínimo 10 caracteres)...", @required = "required", minlength = "10", id = "Descripcion" })
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar3-event text-primary me-1"></i> Cronograma / Agenda del Evento <span class="text-secondary fw-normal small">(Opcional)</span>
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" id="btnAgregarActividad">
+                            <i class="bi bi-plus-lg"></i> Añadir Actividad
+                        </button>
+                    </div>
+                    <div class="border border-primary-subtle rounded-3 p-2 bg-light shadow-sm caja-scroll" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered border-white align-middle mb-0 table-agenda bg-white">
+                            <thead>
+                                <tr class="text-center">
+                                    <th style="width: 20%;">Hora</th>
+                                    <th style="width: 50%;">Actividad / Tema</th>
+                                    <th style="width: 25%;">Ponente / Responsable</th>
+                                    <th style="width: 5%;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoAgenda">
+                            </tbody>
+                        </table>
+                        <div id="agendaVacia" class="text-muted text-center small p-3">
+                            No se han definido actividades para la agenda de este evento.
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="text-muted border-primary-subtle my-4" />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark">
+                            <i class="bi bi-journal-code text-primary me-1"></i> Proyectos Participantes <span class="text-danger">*</span>
+                        </label>
+                        <p class="text-muted small mb-2">Selecciona los proyectos a vincular de los semilleros marcados.</p>
+
+                        <div id="contenedorProyectos" class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 150px; overflow-y: auto;">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-dark">
+                            <i class="bi bi-award text-primary me-1"></i> Patrocinadores Unificados <span class="text-secondary fw-normal small">(Opcional)</span>
+                        </label>
+                        <p class="text-muted small mb-2">Marca las entidades que respaldarán económicamente este evento.</p>
+
+                        <div class="caja-scroll border border-primary-subtle rounded-3 p-2 bg-white shadow-sm" style="height: 150px; overflow-y: auto;">
+                            @if (ViewBag.CatalogoPatrocinadores != null)
+                            {
+                                foreach (var pat in (List<ProyectoSemillero_ASP.NET.Models.DatosPatrocinador>)ViewBag.CatalogoPatrocinadores)
+                                {
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input border-primary" type="checkbox" name="patrocinadoresSeleccionados" value="@pat.IdPatrocinador" id="pat_@pat.IdPatrocinador">
+                                        <label class="form-check-label text-dark fw-medium" for="pat_@pat.IdPatrocinador" style="cursor: pointer;">
+                                            @pat.NombrePatrocinador <span class="text-muted small">(@pat.TipoPatrocinador)</span>
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-muted small">No hay patrocinadores registrados.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnGuardarEvento">
+                        <i class="bi bi-check-circle me-1"></i> Publicar y Programar Evento
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script>
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+        });
+
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        // ==========================================
+        // VALIDACIÓN DE NÚMEROS EN TIPO DE EVENTO
+        // ==========================================
+        const inputTipoEvento = document.getElementById('TipoEvento');
+        if (inputTipoEvento) {
+            inputTipoEvento.addEventListener('input', function() {
+                this.value = this.value.replace(/[0-9]/g, '');
+            });
+        }
+
+        // ==========================================
+        // VALIDACIÓN DE DESCRIPCIÓN MIN 10 CARACTERES
+        // ==========================================
+        const inputDescripcion = document.getElementById('Descripcion');
+        if (inputDescripcion) {
+            inputDescripcion.addEventListener('blur', function() {
+                const longitud = this.value.trim().length;
+                if (longitud > 0 && longitud < 10) {
+                    Toast.fire({ icon: 'warning', title: 'La descripción es muy corta.' });
+                    this.classList.add('border-danger');
+                } else {
+                    this.classList.remove('border-danger');
+                }
+            });
+        }
+
+        // ==========================================
+        // MANEJO SEGURO DE FECHA (A partir de mañana)
+        // ==========================================
+        const inputFecha = document.getElementById('FechaEvento');
+        const errorFecha = document.getElementById('errorFecha');
+
+        const mañana = new Date();
+        mañana.setDate(mañana.getDate() + 1);
+        const yyyy = mañana.getFullYear();
+        const mm = String(mañana.getMonth() + 1).padStart(2, '0');
+        const dd = String(mañana.getDate()).padStart(2, '0');
+        const fechaMinima = `${yyyy}-${mm}-${dd}`;
+
+        if (inputFecha) {
+            inputFecha.setAttribute('min', fechaMinima);
+            inputFecha.addEventListener('change', function() {
+                if(this.value && this.value < fechaMinima) {
+                    this.classList.add('border-danger');
+                    if(errorFecha) errorFecha.classList.remove('d-none');
+                    this.value = '';
+                } else {
+                    this.classList.remove('border-danger');
+                    if(errorFecha) errorFecha.classList.add('d-none');
+                    validarLugarTiempoReal();
+                }
+            });
+        }
+
+        // ==========================================
+        // CONFIGURACIÓN FLATPICKR (RELOJ 24H MILITAR)
+        // ==========================================
+        const inputHoraInicio = document.getElementById('HoraInicio');
+        const inputHoraFin = document.getElementById('HoraFin');
+        const errorHoraInicio = document.getElementById('errorHoraInicio');
+        const errorHoraFin = document.getElementById('errorHoraFin');
+
+        const configReloj = {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true,
+            disableMobile: "true",
+            onChange: function(selectedDates, dateStr, instance) {
+                validarHorariosEnTiempoReal(instance.element);
+            }
+        };
+
+        if (inputHoraInicio) flatpickr(inputHoraInicio, configReloj);
+        if (inputHoraFin) flatpickr(inputHoraFin, configReloj);
+
+        function validarHorariosEnTiempoReal(inputElement) {
+            const hInicio = inputHoraInicio.value;
+            const hFin = inputHoraFin.value;
+
+            if(inputElement.id === 'HoraInicio') errorHoraInicio.classList.add('d-none');
+            else if (inputElement.id === 'HoraFin') errorHoraFin.classList.add('d-none');
+
+            if (inputElement.value && (inputElement.value < "06:00" || inputElement.value > "22:00")) {
+                inputElement.value = '';
+                inputElement.classList.add('border-danger');
+                if(inputElement.id === 'HoraInicio') errorHoraInicio.classList.remove('d-none');
+                if(inputElement.id === 'HoraFin') errorHoraFin.classList.remove('d-none');
+                return;
+            } else {
+                inputElement.classList.remove('border-danger');
+            }
+
+            if (hInicio && hFin) {
+                const [hI, mI] = hInicio.split(':').map(Number);
+                const [hF, mF] = hFin.split(':').map(Number);
+                const minutosInicio = (hI * 60) + mI;
+                const minutosFin = (hF * 60) + mF;
+
+                if (minutosFin - minutosInicio < 60) {
+                    inputElement.value = '';
+                    inputElement.classList.add('border-danger');
+                    if(inputElement.id === 'HoraFin') errorHoraFin.classList.remove('d-none');
+                    if(inputElement.id === 'HoraInicio') errorHoraInicio.classList.remove('d-none');
+                } else {
+                    validarLugarTiempoReal();
+                }
+            }
+        }
+
+        // ==========================================
+        // VALIDACIÓN DE CRUCE DE HORARIOS (AJAX)
+        // ==========================================
+        const inputLugar = document.getElementById('LugarEvento');
+
+        async function validarLugarTiempoReal() {
+            const hInicio = inputHoraInicio ? inputHoraInicio.value : null;
+            const hFin = inputHoraFin ? inputHoraFin.value : null;
+            const fechaE = inputFecha ? inputFecha.value : null;
+            const lugarSeleccionado = inputLugar ? inputLugar.value : '';
+            const idEventoActual = document.getElementById('IdEvento') ? document.getElementById('IdEvento').value : '';
+
+            if(lugarSeleccionado && fechaE && hInicio && hFin) {
+                try {
+                    const respuesta = await fetch(`/Eventos/VerificarLugarOcupado?lugar=${encodeURIComponent(lugarSeleccionado)}&fecha=${fechaE}&horaInicio=${hInicio}&horaFin=${hFin}&idEvento=${idEventoActual}`);
+                    if(respuesta.ok) {
+                        const data = await respuesta.json();
+                        if (data.ocupado) {
+                            Toast.fire({ icon: 'warning', title: 'Aviso: Lugar ocupado en este horario.' });
+                        }
+                    }
+                } catch (error) { console.error("Error validando lugar", error); }
+            }
+        }
+
+        if (inputLugar) {
+            inputLugar.addEventListener('blur', validarLugarTiempoReal);
+        }
+
+        // ==========================================
+        // CONTROL CONDICIONAL: Modalidad y Enlaces
+        // ==========================================
+        const selectModalidad = document.getElementById('selectModalidad');
+        const divEnlaceReunion = document.getElementById('divEnlaceReunion');
+        const inputEnlace = document.getElementById('EnlaceReunion');
+
+        function toggleModalidad() {
+            if (!selectModalidad || !divEnlaceReunion || !inputEnlace) return;
+            if (selectModalidad.value === 'Virtual' || selectModalidad.value === 'Híbrido') {
+                divEnlaceReunion.classList.remove('d-none');
+                inputEnlace.setAttribute('required', 'required');
+            } else {
+                divEnlaceReunion.classList.add('d-none');
+                inputEnlace.removeAttribute('required');
+                inputEnlace.value = '';
+            }
+        }
+        if(selectModalidad) {
+            selectModalidad.addEventListener('change', toggleModalidad);
+            toggleModalidad();
+        }
+
+        // ==========================================
+        // CONTROL DINÁMICO DE AGENDA
+        // ==========================================
+        const btnAgregarActividad = document.getElementById('btnAgregarActividad');
+        const cuerpoAgenda = document.getElementById('cuerpoAgenda');
+        const agendaVacia = document.getElementById('agendaVacia');
+
+        function verificarAgendaVacia() {
+            if (!cuerpoAgenda || !agendaVacia) return;
+            if (cuerpoAgenda.children.length === 0) {
+                agendaVacia.classList.remove('d-none');
+            } else {
+                agendaVacia.classList.add('d-none');
+            }
+        }
+
+        function reindexarAgenda() {
+            if (!cuerpoAgenda) return;
+            const filas = cuerpoAgenda.querySelectorAll('.fila-agenda');
+            filas.forEach((fila, index) => {
+                fila.querySelector('input[name$=".Hora"]').setAttribute('name', `Agenda[${index}].Hora`);
+                fila.querySelector('input[name$=".Actividad"]').setAttribute('name', `Agenda[${index}].Actividad`);
+                fila.querySelector('input[name$=".Ponente"]').setAttribute('name', `Agenda[${index}].Ponente`);
+            });
+            verificarAgendaVacia();
+        }
+
+        if(btnAgregarActividad && cuerpoAgenda) {
+            btnAgregarActividad.addEventListener('click', function() {
+                const index = cuerpoAgenda.children.length;
+                const nuevaFila = `
+                    <tr class="fila-agenda">
+                        <td><input type="text" name="Agenda[${index}].Hora" class="form-control form-control-sm border-secondary-subtle bg-white input-hora-agenda" placeholder="00:00" required /></td>
+                        <td><input type="text" name="Agenda[${index}].Actividad" class="form-control form-control-sm border-secondary-subtle" required placeholder="Ej. Exposición de adelantos" /></td>
+                        <td><input type="text" name="Agenda[${index}].Ponente" class="form-control form-control-sm border-secondary-subtle" placeholder="Opcional" /></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-eliminar-actividad"><i class="bi bi-trash3-fill"></i></button>
+                        </td>
+                    </tr>`;
+                cuerpoAgenda.insertAdjacentHTML('beforeend', nuevaFila);
+
+                const nuevoInput = cuerpoAgenda.querySelector(`input[name="Agenda[${index}].Hora"]`);
+                flatpickr(nuevoInput, {
+                    ...configReloj,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        const horaAg = instance.element.value;
+                        const hInicio = inputHoraInicio.value;
+                        const hFin = inputHoraFin.value;
+
+                        if (!hInicio || !hFin) {
+                            Toast.fire({ icon: 'info', title: 'Define la hora general primero.' });
+                            instance.element.value = ''; return;
+                        }
+
+                        if (horaAg && (horaAg < hInicio || horaAg > hFin)) {
+                            Toast.fire({ icon: 'error', title: 'Hora fuera de rango del evento.' });
+                            instance.element.value = '';
+                            instance.element.classList.add('border-danger');
+                        } else {
+                            instance.element.classList.remove('border-danger');
+                        }
+                    }
+                });
+
+                verificarAgendaVacia();
+            });
+
+            cuerpoAgenda.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-eliminar-actividad') || e.target.closest('.btn-eliminar-actividad')) {
+                    const fila = e.target.closest('.fila-agenda');
+                    fila.remove();
+                    reindexarAgenda();
+                }
+            });
+        }
+
+        // ==========================================
+        // PROYECTOS (Carga dinámica según Checkboxes de Semilleros)
+        // ==========================================
+        const contenedorProyectos = document.getElementById('contenedorProyectos');
+        const inputOcultoLider = document.getElementById('IdSemillero');
+
+        const proyectosDisponibles = [
+            @if(ViewBag.ListaProyectos != null) {
+                foreach(var p in (List<ProyectoSemillero_ASP.NET.Models.DatosProyecto>)ViewBag.ListaProyectos) {
+                    @Html.Raw($"{{ id: '{p.IdProyecto}', titulo: '{HttpUtility.JavaScriptStringEncode(p.TituloProyecto)}', semillero: '{p.IdSemillero}' }},")
+                }
+            }
+        ];
+
+        function actualizarProyectos() {
+            if(!contenedorProyectos) return;
+
+            let opcionesSeleccionadas = [];
+
+            if (inputOcultoLider) {
+                opcionesSeleccionadas = [inputOcultoLider.value];
+            } else {
+                const checkboxesSemilleros = document.querySelectorAll('.semillero-checkbox:checked');
+                opcionesSeleccionadas = Array.from(checkboxesSemilleros).map(chk => chk.value);
+            }
+
+            contenedorProyectos.innerHTML = '';
+
+            if(opcionesSeleccionadas.length === 0) {
+                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">-- Seleccione al menos un semillero arriba para cargar sus proyectos --</div>';
+                return;
+            }
+
+            const filtrados = proyectosDisponibles.filter(p => opcionesSeleccionadas.includes(p.semillero.toString()));
+
+            if(filtrados.length === 0) {
+                contenedorProyectos.innerHTML = '<div class="text-muted small p-2">No hay proyectos registrados en los semilleros seleccionados.</div>';
+            } else {
+                filtrados.forEach(p => {
+                    const chkHTML = `
+                        <div class="form-check mb-1">
+                            <input class="form-check-input border-primary" type="checkbox" name="proyectosSeleccionados" value="${p.id}" id="proy_${p.id}">
+                            <label class="form-check-label text-dark fw-medium" for="proy_${p.id}" style="cursor: pointer;">
+                                <span class="badge bg-light text-primary border border-primary-subtle me-1">ID: ${p.id}</span> ${p.titulo}
+                            </label>
+                        </div>
+                    `;
+                    contenedorProyectos.insertAdjacentHTML('beforeend', chkHTML);
+                });
+            }
+        }
+
+        if(inputOcultoLider) {
+            actualizarProyectos();
+        } else {
+            const checksSemilleros = document.querySelectorAll('.semillero-checkbox');
+            checksSemilleros.forEach(chk => {
+                chk.addEventListener('change', actualizarProyectos);
+            });
+            actualizarProyectos();
+        }
+
+        // ==========================================
+        // AUTOCOMPLETADOS DE DICCIONARIOS
+        // ==========================================
+        const diccionarios = {
+            nombres: [ @if(ViewBag.NombresSugeridos != null) { foreach(var n in ViewBag.NombresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(n)}\",") } } ],
+            tipos: [ @if(ViewBag.TiposSugeridos != null) { foreach(var t in ViewBag.TiposSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(t)}\",") } } ],
+            lugares: [ @if(ViewBag.LugaresSugeridos != null) { foreach(var l in ViewBag.LugaresSugeridos) { @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(l)}\",") } } ]
+        };
+
+        function normalizar(texto) {
+            return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+        }
+
+        document.querySelectorAll('.autocompletar').forEach(input => {
+            input.addEventListener('blur', function() {
+                const valorIngresado = normalizar(this.value);
+                if (!valorIngresado) return;
+
+                const tipoDiccionario = this.getAttribute('data-tipo');
+                if(!diccionarios[tipoDiccionario]) return;
+
+                const lista = diccionarios[tipoDiccionario];
+                const coincidencia = lista.find(item => normalizar(item) === valorIngresado);
+
+                if (coincidencia && coincidencia !== this.value.trim()) {
+                    this.value = coincidencia;
+                    Toast.fire({ icon: 'info', title: 'Estandarizado', text: `Corregido a "${coincidencia}"` });
+                }
+            });
+        });
+
+        // ==========================================
+        // VALIDACIÓN FINAL AL ENVIAR (Y BLOQUEO DE LUGAR)
+        // ==========================================
+        const formAgregar = document.getElementById('formAgregarEvento');
+
+        if (formAgregar) {
+            formAgregar.addEventListener('submit', async function (e) {
+                e.preventDefault(); // Detenemos momentáneamente el submit
+
+                // 1. Validaciones sincronas
+                if (!inputOcultoLider) {
+                    const semillerosSeleccionados = document.querySelectorAll('.semillero-checkbox:checked');
+                    if (semillerosSeleccionados.length === 0) {
+                        Swal.fire({ icon: 'warning', title: 'Semilleros Requeridos', text: 'Debes vincular al menos un semillero a este evento.', confirmButtonColor: '#0d6efd' });
+                        document.getElementById('contenedorSemilleros').classList.replace('border-primary-subtle', 'border-danger');
+                        return;
+                    } else {
+                        document.getElementById('contenedorSemilleros').classList.replace('border-danger', 'border-primary-subtle');
+                    }
+                }
+
+                const proyectosSeleccionados = document.querySelectorAll('input[name="proyectosSeleccionados"]:checked');
+                if (proyectosSeleccionados.length === 0) {
+                    Swal.fire({ icon: 'warning', title: 'Proyectos Requeridos', text: 'Es obligatorio vincular al menos un proyecto participante para poder programar este evento.', confirmButtonColor: '#0d6efd' });
+                    document.getElementById('contenedorProyectos').classList.replace('border-primary-subtle', 'border-danger');
+                    return;
+                }
+
+                const btn = document.getElementById('btnGuardarEvento');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validando disponibilidad...`;
+                }
+
+                // 2. Validación asíncrona estricta (Bloquear si lugar está ocupado)
+                const hInicio = inputHoraInicio.value;
+                const hFin = inputHoraFin.value;
+                const fechaE = inputFecha.value;
+                const lugarSeleccionado = inputLugar.value;
+                const idEventoActual = document.getElementById('IdEvento') ? document.getElementById('IdEvento').value : '';
+
+                if (lugarSeleccionado && fechaE && hInicio && hFin) {
+                    try {
+                        const respuesta = await fetch(`/Eventos/VerificarLugarOcupado?lugar=${encodeURIComponent(lugarSeleccionado)}&fecha=${fechaE}&horaInicio=${hInicio}&horaFin=${hFin}&idEvento=${idEventoActual}`);
+                        if (respuesta.ok) {
+                            const data = await respuesta.json();
+                            if (data.ocupado) {
+                                Swal.fire({ icon: 'error', title: 'Lugar no disponible', text: 'No se puede programar el evento porque el lugar seleccionado ya está ocupado en ese horario por otro evento.', confirmButtonColor: '#dc3545' });
+                                inputLugar.classList.add('border-danger');
+                                if(btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = `<i class="bi bi-check-circle me-1"></i> Publicar y Programar Evento`;
+                                }
+                                return; // Detiene el flujo
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error validando lugar", error);
+                    }
+                }
+
+                // 3. Si pasó todo, envía el formulario
+                if (btn) btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando Evento...`;
+                HTMLFormElement.prototype.submit.call(formAgregar);
+            });
+        }
+    </script>
+}

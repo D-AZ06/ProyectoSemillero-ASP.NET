@@ -1,0 +1,175 @@
+﻿@{
+    ViewBag.Title = "Asistente Virtual";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+
+    .caja-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .caja-scroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .area-chat {
+        height: 450px;
+        overflow-y: auto;
+        background-color: #f8fafc;
+    }
+
+    .burbuja-usuario {
+        background-color: #0d6efd;
+        color: white;
+        max-width: 75%;
+        border-radius: 15px 15px 0px 15px;
+    }
+
+    .burbuja-ia {
+        background-color: #e2e8f0;
+        color: #1e293b;
+        max-width: 75%;
+        border-radius: 15px 15px 15px 0px;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 850px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-primary-subtle">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-robot text-primary me-2"></i> Asistente de Inteligencia Artificial
+        </h3>
+        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-2 fw-semibold">
+            En Línea
+        </span>
+    </div>
+
+    <div class="card shadow-sm border-primary-subtle bg-white">
+        <div class="card-body area-chat p-4 caja-scroll" id="contenedorMensajes">
+
+            <div class="d-flex justify-content-start mb-3">
+                <div class="burbuja-ia p-3 shadow-sm">
+                    <p class="mb-0 fw-semibold" style="font-size: 0.85rem; color: #475569;">Asistente Corporativo</p>
+                    <p class="mb-0">¡Hola, @ViewBag.NombreUsuario! Estoy listo para ayudarte con tus tareas, consultas técnicas o análisis de información hoy. ¿En qué puedo colaborar de tu jornada?</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card-footer bg-light p-3 border-top border-primary-subtle">
+            <div class="input-group">
+                <input type="text" id="txtMensajeUsuario" class="form-control border-primary-subtle py-2 shadow-sm" placeholder="Escribe tu consulta aquí..." autocomplete="off" />
+                <button class="btn btn-primary fw-bold px-4 shadow-sm" type="button" id="btnEnviarChat">
+                    <i class="bi bi-send-fill me-1"></i> Enviar
+                </button>
+            </div>
+            <div class="text-muted mt-2 small d-none" id="indicadorEscribiendo">
+                <span class="spinner-border spinner-border-sm text-primary me-1" role="status"></span> El asistente está procesando una respuesta...
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const contenedorMensajes = document.getElementById('contenedorMensajes');
+        const txtMensajeUsuario = document.getElementById('txtMensajeUsuario');
+        const btnEnviarChat = document.getElementById('btnEnviarChat');
+        const indicadorEscribiendo = document.getElementById('indicadorEscribiendo');
+
+        function hacerScrollAlFinal() {
+            contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
+        }
+
+        async function procesarEnvioMensaje() {
+            const mensaje = txtMensajeUsuario.value.trim();
+            if (!mensaje) return;
+
+            // 1. Deshabilitar entradas temporalmente
+            txtMensajeUsuario.value = '';
+            txtMensajeUsuario.disabled = true;
+            btnEnviarChat.disabled = true;
+            indicadorEscribiendo.classList.remove('d-none');
+
+            // 2. Pintar mensaje del Usuario en pantalla
+            const plantillaUsuario = `
+                    <div class="d-flex justify-content-end mb-3">
+                        <div class="burbuja-usuario p-3 shadow-sm">
+                            <p class="mb-0">${escapeHTML(mensaje)}</p>
+                        </div>
+                    </div>`;
+            contenedorMensajes.insertAdjacentHTML('beforeend', plantillaUsuario);
+            hacerScrollAlFinal();
+
+            // 3. Petición POST asíncrona al Controlador
+            try {
+                const FormDataPayload = new URLSearchParams();
+                FormDataPayload.append('mensaje', mensaje);
+
+                const respuesta = await fetch('/Chat/EnviarMensaje', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: FormDataPayload
+                });
+
+                if (respuesta.ok) {
+                    const datos = await respuesta.json();
+
+                    // 4. Pintar respuesta de la IA en pantalla
+                    const plantillaIA = `
+                            <div class="d-flex justify-content-start mb-3">
+                                <div class="burbuja-ia p-3 shadow-sm">
+                                    <p class="mb-0 fw-semibold" style="font-size: 0.85rem; color: #475569;">Asistente Corporativo</p>
+                                    <p class="mb-0">${datos.respuesta.replace(/\n/g, '<br>')}</p>
+                                </div>
+                            </div>`;
+                    contenedorMensajes.insertAdjacentHTML('beforeend', plantillaIA);
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                // Manejo de error sutil en la burbuja
+                const plantillaError = `
+                        <div class="d-flex justify-content-start mb-3">
+                            <div class="burbuja-ia p-3 border border-danger text-danger bg-danger-subtle shadow-sm">
+                                <p class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> No se pudo obtener respuesta de la IA debido a un fallo en la conexión.</p>
+                            </div>
+                        </div>`;
+                contenedorMensajes.insertAdjacentHTML('beforeend', plantillaError);
+            } finally {
+                // 5. Rehabilitar controles
+                txtMensajeUsuario.disabled = false;
+                btnEnviarChat.disabled = false;
+                indicadorEscribiendo.classList.add('d-none');
+                txtMensajeUsuario.focus();
+                hacerScrollAlFinal();
+            }
+        }
+
+        // Escuchadores de Eventos
+        btnEnviarChat.addEventListener('click', procesarEnvioMensaje);
+        txtMensajeUsuario.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                procesarEnvioMensaje();
+            }
+        });
+
+        // Utilidad preventiva contra inyección de scripts maliciosos (XSS)
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g,
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Hacer scroll inicial al cargar
+        hacerScrollAlFinal();
+    </script>
+}

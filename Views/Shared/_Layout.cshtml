@@ -1,0 +1,453 @@
+﻿@{
+    string nombreUsuario = Session["UsuarioLogueado"] as string ?? "Usuario";
+    string rolUsuario = Session["Rol"] as string ?? "Sin Rol";
+    string controladorActual = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title - GesSi</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --bg-body: #f4f7f6;
+            --bg-sidebar: #1e293b;
+            --blue-primary: #0284c7;
+            --navbar-height: 75px;
+            --sidebar-width: 270px;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* --- BARRA SUPERIOR FIJA --- */
+        .top-navbar {
+            height: var(--navbar-height);
+            background-color: rgba(255, 255, 255, 0.98);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1.5rem;
+        }
+
+        #wrapper {
+            padding-top: var(--navbar-height);
+        }
+
+        /* --- MENÚ LATERAL FLOTANTE --- */
+        #sidebar-wrapper {
+            position: fixed;
+            top: calc(var(--navbar-height) + 15px);
+            left: 15px;
+            width: calc(var(--sidebar-width) - 30px);
+            height: calc(100vh - var(--navbar-height) - 30px);
+            background-color: var(--bg-sidebar);
+            color: #f1f5f9;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 1040;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-120%);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 2.2rem 0.5rem 2.2rem;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        #wrapper.toggled #sidebar-wrapper {
+            transform: translateX(0);
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar, .caja-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-thumb, .caja-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        .caja-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+        }
+
+        #page-content-wrapper {
+            width: 100%;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease-in-out;
+            padding-top: 15px;
+        }
+
+        @@media (min-width: 768px) {
+            #sidebar-wrapper {
+                transform: translateX(0);
+            }
+
+            #page-content-wrapper {
+                margin-left: var(--sidebar-width);
+                width: calc(100% - var(--sidebar-width));
+            }
+
+            #wrapper.toggled #sidebar-wrapper {
+                transform: translateX(-120%);
+            }
+
+            #wrapper.toggled #page-content-wrapper {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        .list-group-item-action {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            padding: 0.75rem 1.2rem;
+            margin: 0.35rem 1rem;
+            width: calc(100% - 2rem);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+            .list-group-item-action:hover, .list-group-item-action:focus {
+                background-color: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.3);
+                color: #ffffff;
+                transform: translateX(4px);
+            }
+
+        .list-group-item i {
+            margin-right: 12px;
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .main-content-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 24px;
+            min-height: calc(100vh - var(--navbar-height) - 45px);
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .logo-icon {
+            background-color: var(--blue-primary);
+            color: white;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .active-menu-item {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: var(--blue-primary);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+
+            .active-menu-item i {
+                opacity: 1;
+                color: #38bdf8;
+            }
+
+        /* --- ESTILOS INTERNOS DEL CHAT MODAL --- */
+        .area-chat-modal {
+            height: 400px;
+            overflow-y: auto;
+            background-color: #f8fafc;
+        }
+
+        .burbuja-usuario {
+            background-color: #8b5cf6;
+            color: white;
+            max-width: 80%;
+            border-radius: 15px 15px 0px 15px;
+        }
+
+        .burbuja-ia {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #1e293b;
+            max-width: 80%;
+            border-radius: 15px 15px 15px 0px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="d-flex align-items-center" style="flex: 1;">
+            <button class="btn btn-light rounded-3 me-3" id="menu-toggle" style="background-color: #f1f5f9; border: 1px solid #e2e8f0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-list fs-4 text-secondary"></i>
+            </button>
+
+            <div class="d-none d-md-flex flex-column lh-sm border-start ps-3" style="border-color: #e2e8f0 !important;">
+                <span class="fw-bold text-dark" style="font-size: 0.95rem;">@nombreUsuario</span>
+                <span class="text-secondary mt-1 d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                    <i class="bi bi-person-badge-fill text-primary"></i> @rolUsuario
+                </span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center align-items-center" style="flex: 1;">
+            <a href="@Url.Action("Index", "Gessi")" class="text-decoration-none d-flex align-items-center gap-2">
+                <div class="logo-icon">
+                    <i class="bi bi-cpu fs-5"></i>
+                </div>
+                <span class="fs-4 fw-bold text-dark m-0 tracking-tight" style="letter-spacing: -0.5px;">GesSi</span>
+            </a>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 align-items-center" style="flex: 1;">
+            <button type="button" class="btn text-white rounded-pill d-flex align-items-center gap-2 px-3" data-bs-toggle="modal" data-bs-target="#modalAsistenteIA" style="background-color: #8b5cf6; border: 1px solid #7c3aed; font-size: 0.9rem; padding-top: 0.45rem; padding-bottom: 0.45rem;">
+                <i class="bi bi-robot fs-6"></i>
+                <span class="d-none d-lg-inline fw-medium">Asistente IA</span>
+            </button>
+
+            <button type="button" class="btn text-danger rounded-pill d-flex align-items-center gap-2 px-3" style="background-color: #fef2f2; border: 1px solid #fecdd3; font-size: 0.9rem; padding-top: 0.45rem; padding-bottom: 0.45rem;" onclick="confirmarSalida('@Url.Action("CerrarSesion", "Home")')">
+                <i class="bi bi-box-arrow-right fs-6"></i>
+                <span class="d-none d-lg-inline fw-medium">Salir</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="wrapper">
+        <div id="sidebar-wrapper">
+            <div class="sidebar-header">
+                Menú Principal
+            </div>
+
+            <div class="list-group list-group-flush mt-2 pb-4">
+                <a href="@Url.Action("Index", "Usuarios")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Usuarios" ? "active-menu-item" : "")"><i class="bi bi-people"></i> Usuarios</a>
+                <a href="@Url.Action("Index", "Semillero")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Semillero" ? "active-menu-item" : "")"><i class="bi bi-tree"></i> Semillero</a>
+                <a href="@Url.Action("Index", "Proyectos")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Proyectos" ? "active-menu-item" : "")"><i class="bi bi-folder2-open"></i> Proyectos</a>
+                <a href="@Url.Action("Index", "Actividades")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Actividades" ? "active-menu-item" : "")"><i class="bi bi-card-checklist"></i> Actividades</a>
+                <a href="@Url.Action("Index", "Fases")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Fases" ? "active-menu-item" : "")"><i class="bi bi-signpost-split"></i> Fases</a>
+                <a href="@Url.Action("Index", "Reuniones")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Reuniones" ? "active-menu-item" : "")"><i class="bi bi-camera-video"></i> Reuniones</a>
+                <a href="@Url.Action("Index", "Eventos")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Eventos" ? "active-menu-item" : "")"><i class="bi bi-calendar-event"></i> Eventos</a>
+                <a href="@Url.Action("Index", "Patrocinadores")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Patrocinadores" ? "active-menu-item" : "")"><i class="bi bi-heart"></i> Patrocinadores</a>
+
+                @if (rolUsuario != "Investigador")
+                {
+                    <a href="@Url.Action("Index", "Reportes")" class="list-group-item list-group-item-action text-decoration-none @(controladorActual == "Reportes" ? "active-menu-item" : "")"><i class="bi bi-file-earmark-bar-graph"></i> Reportes</a>
+                }
+            </div>
+        </div>
+
+        <div id="page-content-wrapper">
+            <main class="container-fluid pe-3 pe-md-4">
+                <div class="main-content-card position-relative">
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAsistenteIA" tabindex="-1" aria-labelledby="modalAsistenteIALabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header text-white px-4 py-3" style="background-color: #8b5cf6;">
+                    <h5 class="modal-title fw-bold" id="modalAsistenteIALabel">
+                        <i class="bi bi-robot me-2"></i> Asistente Inteligente GesSi
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body area-chat-modal p-4 caja-scroll" id="contenedorMensajesModal">
+                    <div class="d-flex justify-content-start mb-4">
+                        <div class="burbuja-ia p-3 shadow-sm">
+                            <p class="mb-1 fw-bold" style="font-size: 0.85rem; color: #8b5cf6;"><i class="bi bi-cpu-fill"></i> GesSi Bot</p>
+                            <p class="mb-0">¡Hola, <strong>@nombreUsuario</strong>! Estoy aquí de forma emergente para resolver tus dudas sobre los módulos, roles o reglas de negocio de los semilleros sin interrumpir tu espacio de trabajo. ¿En qué puedo ayudarte?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white p-3 border-top-0 d-block">
+                    <form id="formChatModal" onsubmit="return false;">
+                        <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                            <input type="text" id="txtMensajeModal" class="form-control border-secondary-subtle fs-6 py-2" placeholder="Escribe tu consulta sobre la plataforma aquí..." autocomplete="off" />
+                            <button class="btn text-white fw-bold px-4" style="background-color: #8b5cf6; border-color: #8b5cf6;" type="submit" id="btnEnviarModal">
+                                <i class="bi bi-send-fill me-1"></i> Enviar
+                            </button>
+                        </div>
+                    </form>
+                    <div class="text-muted mt-2 small d-none ms-2" id="indicadorEscribiendoModal" style="font-size: 0.8rem;">
+                        <span class="spinner-grow spinner-grow-sm text-secondary me-1" role="status"></span> Procesando respuesta...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.getElementById("menu-toggle").addEventListener("click", function (e) {
+            e.preventDefault();
+            document.getElementById("wrapper").classList.toggle("toggled");
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
+
+    <script>
+        const contenedorMensajesModal = document.getElementById('contenedorMensajesModal');
+        const txtMensajeModal = document.getElementById('txtMensajeModal');
+        const btnEnviarModal = document.getElementById('btnEnviarModal');
+        const indicadorEscribiendoModal = document.getElementById('indicadorEscribiendoModal');
+        const formChatModal = document.getElementById('formChatModal');
+
+        function hacerScrollAlFinalModal() {
+            if (contenedorMensajesModal) {
+                contenedorMensajesModal.scrollTop = contenedorMensajesModal.scrollHeight;
+            }
+        }
+
+        // Auto-enfoque al abrir el modal emergente
+        const miModalEl = document.getElementById('modalAsistenteIA');
+        if (miModalEl) {
+            miModalEl.addEventListener('shown.bs.modal', () => {
+                txtMensajeModal.focus();
+                hacerScrollAlFinalModal();
+            });
+        }
+
+        async function enviarMensajeChatModal() {
+            const mensaje = txtMensajeModal.value.trim();
+            if (!mensaje) return;
+
+            // Bloquear controles e indicador visible
+            txtMensajeModal.value = '';
+            txtMensajeModal.disabled = true;
+            btnEnviarModal.disabled = true;
+            indicadorEscribiendoModal.classList.remove('d-none');
+
+            // Renderizar mensaje del usuario
+            const plantillaUsuario = `
+                        <div class="d-flex justify-content-end mb-4">
+                            <div class="burbuja-usuario p-3 shadow-sm">
+                                <p class="mb-0">${escapeHTMLGlobal(mensaje)}</p>
+                            </div>
+                        </div>`;
+            contenedorMensajesModal.insertAdjacentHTML('beforeend', plantillaUsuario);
+            hacerScrollAlFinalModal();
+
+            try {
+                const FormDataPayload = new URLSearchParams();
+                FormDataPayload.append('mensaje', mensaje);
+
+                // Llama al endpoint de tu ChatController existente
+                const respuesta = await fetch('/Chat/EnviarMensaje', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: FormDataPayload
+                });
+
+                if (respuesta.ok) {
+                    const datos = await respuesta.json();
+
+                    let textoFormateado = escapeHTMLGlobal(datos.respuesta)
+                        .replace(/\n/g, '<br>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                    const plantillaIA = `
+                                <div class="d-flex justify-content-start mb-4">
+                                    <div class="burbuja-ia p-3 shadow-sm">
+                                        <p class="mb-1 fw-bold" style="font-size: 0.85rem; color: #8b5cf6;"><i class="bi bi-cpu-fill"></i> GesSi Bot</p>
+                                        <p class="mb-0 text-break">${textoFormateado}</p>
+                                    </div>
+                                </div>`;
+                    contenedorMensajesModal.insertAdjacentHTML('beforeend', plantillaIA);
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                const plantillaError = `
+                            <div class="d-flex justify-content-start mb-4">
+                                <div class="burbuja-ia p-3 border-danger bg-danger-subtle text-danger shadow-sm">
+                                    <p class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Conexión interrumpida con el servicio de IA.</p>
+                                </div>
+                            </div>`;
+                contenedorMensajesModal.insertAdjacentHTML('beforeend', plantillaError);
+            } finally {
+                txtMensajeModal.disabled = false;
+                btnEnviarModal.disabled = false;
+                indicadorEscribiendoModal.classList.add('d-none');
+                txtMensajeModal.focus();
+                hacerScrollAlFinalModal();
+            }
+        }
+
+        if (formChatModal) {
+            formChatModal.addEventListener('submit', enviarMensajeChatModal);
+        }
+
+        function escapeHTMLGlobal(str) {
+            return str.replace(/[&<>'"]/g,
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+
+    <script>
+        function confirmarSalida(urlDestino) {
+            Swal.fire({
+                title: '¿Deseas cerrar sesión?',
+                text: "Tendrás que volver a ingresar tus credenciales para acceder al sistema.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0284c7',
+                cancelButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, salir',
+                cancelButtonText: 'Cancelar',
+                borderRadius: '12px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Hasta pronto!',
+                        text: 'Tu sesión se ha cerrado correctamente.',
+                        confirmButtonColor: '#0284c7',
+                        confirmButtonText: 'OK',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then(() => {
+                        window.location.href = urlDestino;
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosUsuario
+
+@{
+    ViewBag.Title = "Modificar Usuario";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Usuarios")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Modificar Usuario</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Modificar", "Usuarios", FormMethod.Post, new { id = "form-usuario" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold text-muted">ID Usuario (Solo lectura)</label>
+                            @Html.TextBoxFor(m => m.IdUsuario, new { @class = "form-control bg-light", @readonly = "readonly" })
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Rol del Usuario</label>
+                            @if (ViewBag.RolUsuario == "Líder")
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
+                            }
+                            else
+                            {
+                                @Html.DropDownListFor(m => m.RolUsuario, new SelectList(new[] { "Administrador", "Líder", "Investigador" }), "Seleccione un rol...", new { @class = "form-select", required = "required", id = "RolUsuario" })
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre Completo</label>
+                        @Html.TextBoxFor(m => m.NombreUsuario, new { @class = "form-control", required = "required" })
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Correo Electrónico</label>
+                            @Html.TextBoxFor(m => m.CorreoUsuario, new { @class = "form-control", type = "email", required = "required" })
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Contraseña</label>
+                            @Html.TextBoxFor(m => m.ContrasenaUsuario, new { @class = "form-control", required = "required" })
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Edad</label>
+                            @Html.TextBoxFor(m => m.EdadUsuario, new { @class = "form-control", type = "number", min = "15", required = "required" })
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            @Html.TextBoxFor(m => m.TelefonoUsuario, new { @class = "form-control", type = "text", maxlength = "10", placeholder = "Ej: 3001234567", required = "required", id = "TelefonoUsuario" })
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            @if (ViewBag.RolUsuario == "Administrador" || ViewBag.RolUsuario == "Admin")
+                            {
+                                <label class="form-label fw-semibold">Asignar Semillero</label>
+                                @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select", id = "IdSemillero" })
+                                <small class="text-muted">Nota: Si el rol es Administrador, esta caja se desactivará automáticamente.</small>
+                            }
+                            else if (ViewBag.RolUsuario == "Líder")
+                            {
+                                <label class="form-label fw-semibold text-muted">Semillero Asignado (Automático)</label>
+                                <input type="text" class="form-control bg-light" value="@ViewBag.NombreSemilleroLider (ID: @ViewBag.IdSemilleroLider)" readonly />
+                            }
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" id="btnGuardar" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Usuario
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            var mensajeError = '@Html.Raw(TempData["Error"])';
+            if (mensajeError && mensajeError !== '') {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: mensajeError, confirmButtonColor: '#dc3545' });
+            }
+
+            var mensajeExito = '@Html.Raw(TempData["Exito"])';
+            if (mensajeExito && mensajeExito !== '') {
+                Swal.fire({ icon: 'success', title: '¡Operación Exitosa!', text: mensajeExito, confirmButtonColor: '#0284c7' });
+            }
+
+            // =======================================================
+            // BLOQUEO DE SEMILLERO PARA ADMINISTRADORES (USANDO JQUERY)
+            // =======================================================
+            $('#RolUsuario').on('change', function() {
+                var rolSeleccionado = $(this).val();
+                if (rolSeleccionado === "Administrador" || rolSeleccionado === "Admin") {
+                    $('#IdSemillero').val('');
+                    $('#IdSemillero').prop('disabled', true);
+                    $('#IdSemillero').css('background-color', '#e9ecef');
+                } else {
+                    $('#IdSemillero').prop('disabled', false);
+                    $('#IdSemillero').css('background-color', '#ffffff');
+                }
+            });
+            $('#RolUsuario').trigger('change');
+
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los cambios que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            const txtNombre = document.getElementById('NombreUsuario');
+            if (txtNombre) {
+                txtNombre.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                });
+            }
+
+            const txtNumerotelefonico = document.getElementById('TelefonoUsuario');
+            if (txtNumerotelefonico) {
+                txtNumerotelefonico.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    if(this.value.length > 0 && !this.value.startsWith('3')) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const btnGuardar = document.getElementById('btnGuardar');
+            const formUsuario = document.getElementById('form-usuario');
+
+            if (btnGuardar && formUsuario) {
+                btnGuardar.addEventListener('click', function () {
+                    if (!formUsuario.checkValidity()) {
+                        formUsuario.reportValidity();
+                        return;
+                    }
+
+                    let tel = txtNumerotelefonico.value;
+                    if(tel.length !== 10 || !tel.startsWith('3')) {
+                        Swal.fire('Error en Celular', 'El número de teléfono en Colombia debe tener exactamente 10 dígitos y empezar con el número 3.', 'error');
+                        return;
+                    }
+
+                    $('#IdSemillero').prop('disabled', false);
+
+                    Swal.fire({
+                        title: '¿Actualizar Usuario?',
+                        text: "¿Estás seguro de que deseas sobrescribir los datos?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#0284c7',
+                        cancelButtonColor: '#dc3545',
+                        confirmButtonText: 'Sí, actualizar',
+                        cancelButtonText: 'Revisar de nuevo'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Actualizando Usuario...',
+                                text: 'Por favor espera mientras se guardan los cambios.',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); }
+                            });
+                            formUsuario.submit();
+                        } else {
+                            $('#RolUsuario').trigger('change');
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}

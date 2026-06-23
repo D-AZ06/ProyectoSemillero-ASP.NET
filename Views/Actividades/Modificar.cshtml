@@ -1,0 +1,279 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.Actividad
+
+@{
+    ViewBag.Title = "Modificar Actividad";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+
+    // Igual que en Agregar
+    bool proyectoFijo = ViewBag.ProyectoFijo != null && (bool)ViewBag.ProyectoFijo;
+    int idProyecto = ViewBag.IdProyecto;
+    string tituloProyecto = ViewBag.TituloProyecto;
+
+    int duracionValor = 1;
+    string duracionUnidad = "Días";
+
+    if (Model != null && !string.IsNullOrEmpty(Model.DuracionActividad))
+    {
+        var partes = Model.DuracionActividad.Split(' ');
+        if (partes.Length >= 2)
+        {
+            int.TryParse(partes[0], out duracionValor);
+            duracionUnidad = System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(partes[1].ToLower());
+        }
+    }
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 700px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-pencil-square text-primary me-2"></i> Modificar Actividad
+        </h3>
+
+        @if (proyectoFijo)
+        {
+            <a href="@Url.Action("PorProyecto", "Actividades", new { idProyecto = idProyecto })" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Proyecto
+            </a>
+        }
+        else
+        {
+            <a href="@Url.Action("Index", "Actividades")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Listado
+            </a>
+        }
+    </div>
+
+    <div class="card shadow-sm border-0 bg-white">
+        <div class="card-body p-4">
+
+            <form action="@Url.Action("Modificar", "Actividades")" method="post" id="formModificarActividad">
+
+                <input type="hidden" name="vinoDesdeProyecto" value="@(proyectoFijo ? "true" : "false")" />
+                <input type="hidden" name="idProyecto" value="@idProyecto" />
+                <input type="hidden" name="idActividad" value="@Model.IdActividad" />
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-folder-fill me-1"></i> Proyecto Asociado</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-dark fw-bold">ID: @idProyecto</span>
+                        <input type="text" class="form-control bg-light text-muted fw-semibold" value="@tituloProyecto" readonly disabled />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary"><i class="bi bi-key-fill me-1"></i> Identificador de Actividad</label>
+                    <input type="text" class="form-control bg-light text-muted fw-bold" value="Cód. Actividad: @Model.IdActividad" readonly disabled style="max-width: 200px;" />
+                </div>
+
+                <hr class="text-muted my-3" />
+
+                <div class="row mt-3">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="estadoActividad" class="form-label fw-bold text-secondary"><i class="bi bi-activity me-1"></i> Estado de la Actividad</label>
+                        <select class="form-select border-secondary-subtle fw-semibold" id="estadoActividad" name="estadoActividad" required>
+                            <option value="Pendiente" @(Model.EstadoActividad == "Pendiente" ? "selected" : "")>Pendiente</option>
+                            <option value="En Progreso" @(Model.EstadoActividad == "En Progreso" ? "selected" : "")>En Progreso</option>
+                            <option value="Finalizado" @(Model.EstadoActividad == "Finalizado" ? "selected" : "")>Finalizado</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-8 mb-3">
+                        <label class="form-label fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i> Investigadores Responsables (Máx 2)</label>
+                        <div class="card border-secondary-subtle shadow-sm p-3 bg-light" style="max-height: 140px; overflow-y: auto;" id="contenedorCheckboxesModificar">
+                            @if (ViewBag.InvestigadoresSemillero != null)
+                            {
+                                foreach (var inv in ViewBag.InvestigadoresSemillero)
+                                {
+                                    // Verificamos si el ID del investigador ya está guardado en la lista de la actividad
+                                    bool yaAsignado = Model.InvestigadoresResponsables != null && Model.InvestigadoresResponsables.Contains(inv.IdUsuario);
+
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input chk-investigador border-secondary" type="checkbox" name="investigadoresResponsables" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaAsignado ? "checked" : "")>
+                                        <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                            @inv.NombreUsuario
+                                        </label>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted small fst-italic">No hay investigadores asignados al semillero de este proyecto.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="nombreActividad" class="form-label fw-bold text-secondary"><i class="bi bi-bookmark-plus-fill me-1"></i> Nombre de la Actividad</label>
+                    <input type="text" class="form-control border-secondary-subtle" id="nombreActividad" name="nombreActividad" value="@Model.NombreActividad" maxlength="150" required autocomplete="off" />
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="fechaInicioActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-play-fill me-1"></i> Fecha de Inicio</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaInicioActividad" name="fechaInicioActividad" value="@Model.FechaInicioActividad" required />
+                    </div>
+
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="duracionValor" class="form-label fw-bold text-secondary"><i class="bi bi-stopwatch-fill me-1"></i> Duración Estimada</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control border-secondary-subtle" id="duracionValor" name="duracionValor" min="1" value="@duracionValor" required />
+                            <select class="form-select border-secondary-subtle fw-semibold" id="duracionUnidad" name="duracionUnidad" required>
+                                <option value="Días" @(duracionUnidad == "Días" ? "selected" : "")>Días</option>
+                                <option value="Semanas" @(duracionUnidad == "Semanas" ? "selected" : "")>Semanas</option>
+                                <option value="Meses" @(duracionUnidad == "Meses" ? "selected" : "")>Meses</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4 mb-3">
+                        <label for="fechaEntregaActividad" class="form-label fw-bold text-secondary"><i class="bi bi-calendar-check-fill me-1"></i> Fecha de Entrega</label>
+                        <input type="date" class="form-control border-secondary-subtle" id="fechaEntregaActividad" name="fechaEntregaActividad" value="@Model.FechaEntregaActividad" required />
+                        <small class="text-muted" id="ayudaFecha"><i class="bi bi-info-circle"></i> Puedes cambiar el tiempo para recalcular.</small>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm" id="btnGuardarCambios">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const txtInicio = document.getElementById('fechaInicioActividad');
+        const txtValor = document.getElementById('duracionValor');
+        const cboUnidad = document.getElementById('duracionUnidad');
+        const txtFecha = document.getElementById('fechaEntregaActividad');
+        const ayudaFecha = document.getElementById('ayudaFecha');
+
+        function calcularFechaProyectada() {
+            if (!txtValor || !cboUnidad || !txtFecha || !txtInicio || !txtInicio.value) return;
+
+            const valor = parseInt(txtValor.value) || 0;
+            const unidad = cboUnidad.value;
+
+            if (valor <= 0) return;
+
+            let fechaCalculada = new Date(txtInicio.value + 'T00:00:00');
+
+            if (unidad === 'Días') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + valor);
+            } else if (unidad === 'Semanas') {
+                fechaCalculada.setDate(fechaCalculada.getDate() + (valor * 7));
+            } else if (unidad === 'Meses') {
+                fechaCalculada.setMonth(fechaCalculada.getMonth() + valor);
+            }
+
+            const yyyy = fechaCalculada.getFullYear();
+            const mm = String(fechaCalculada.getMonth() + 1).padStart(2, '0');
+            const dd = String(fechaCalculada.getDate()).padStart(2, '0');
+
+            txtFecha.value = `${yyyy}-${mm}-${dd}`;
+            txtFecha.min = txtInicio.value;
+            if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-lock-fill text-success"></i> Fecha recalculada según nueva duración.`;
+        }
+
+        function validarLimitesFecha() {
+            if (!txtInicio || !txtInicio.value || !txtFecha || !txtFecha.value) return;
+
+            const limiteInicio = '@(ViewBag.FechaInicioProyecto ?? "")';
+            const limiteFin = '@(ViewBag.FechaFinProyecto ?? "")';
+
+            if (!limiteInicio || !limiteFin) return;
+
+            const vInicio = new Date(txtInicio.value + 'T00:00:00');
+            const vEntrega = new Date(txtFecha.value + 'T00:00:00');
+            const max = new Date(limiteFin + 'T00:00:00');
+            const min = new Date(limiteInicio + 'T00:00:00');
+
+            if (vInicio < min || vInicio > max) {
+                Swal.fire({ icon: 'warning', title: 'Fecha de Inicio Inválida', text: `La actividad debe iniciar dentro de las fechas del proyecto (${limiteInicio} al ${limiteFin}).`, confirmButtonColor: '#ffc107' });
+                txtInicio.value = limiteInicio;
+                originalCalcularFecha();
+            }
+
+            const vEntregaNueva = new Date(txtFecha.value + 'T00:00:00');
+            if (vEntregaNueva > max) {
+                Swal.fire({ icon: 'warning', title: 'Límite de Entrega Excedido', text: `La duración hace que la entrega supere la fecha final del proyecto (${limiteFin}). Se ajustará al máximo permitido.`, confirmButtonColor: '#ffc107' });
+                txtFecha.value = limiteFin;
+                if (ayudaFecha) ayudaFecha.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning"></i> Entrega ajustada al límite del proyecto.`;
+            }
+        }
+
+        const originalCalcularFecha = calcularFechaProyectada;
+        calcularFechaProyectada = function() {
+            originalCalcularFecha();
+            validarLimitesFecha();
+        };
+
+        if (txtInicio) txtInicio.addEventListener('change', calcularFechaProyectada);
+        if (txtValor) txtValor.addEventListener('input', calcularFechaProyectada);
+        if (cboUnidad) cboUnidad.addEventListener('change', calcularFechaProyectada);
+        if (txtFecha) txtFecha.addEventListener('change', validarLimitesFecha);
+
+        document.getElementById('formModificarActividad').addEventListener('submit', function () {
+            const btn = document.getElementById('btnGuardarCambios');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sincronizando...`;
+        });
+
+        // Validar límite de 2 seleccionados en la modificación
+        const contenedorCheckboxes = document.getElementById('contenedorCheckboxesModificar');
+        if (contenedorCheckboxes) {
+            contenedorCheckboxes.addEventListener('change', function (e) {
+                if (e.target && e.target.classList.contains('chk-investigador')) {
+                    const checkeados = document.querySelectorAll('.chk-investigador:checked');
+                    if (checkeados.length > 2) {
+                        e.target.checked = false;
+                        Swal.fire({ icon: 'warning', title: 'Límite alcanzado', text: 'Solo puedes asignar un máximo de 2 investigadores a esta actividad.', confirmButtonColor: '#ffc107' });
+                    }
+                }
+            });
+        }
+
+        function calcularEstadoAutomatico() {
+            if (!txtInicio || !txtInicio.value || !txtFecha || !txtFecha.value) return;
+
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            const vInicio = new Date(txtInicio.value + 'T00:00:00');
+            const vEntrega = new Date(txtFecha.value + 'T00:00:00');
+            const inputEstado = document.getElementById('estadoActividad');
+
+            if (inputEstado) {
+                // Respetamos si el backend ya mandó que está Finalizado
+                if (inputEstado.value === "Finalizado") {
+                    inputEstado.className = "form-control bg-light fw-bold text-success border-success-subtle";
+                    return;
+                }
+
+                // CAMBIO A RETRASADO
+                if (hoy > vEntrega) {
+                    inputEstado.value = "Retrasado";
+                    inputEstado.className = "form-control bg-light fw-bold text-danger border-danger-subtle";
+                } else if (hoy >= vInicio && hoy <= vEntrega) {
+                    inputEstado.value = "En Progreso";
+                    inputEstado.className = "form-control bg-light fw-bold text-primary border-primary-subtle";
+                } else {
+                    inputEstado.value = "Pendiente";
+                    inputEstado.className = "form-control bg-light fw-bold text-warning border-warning-subtle";
+                }
+            }
+        }
+    </script>
+}

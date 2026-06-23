@@ -1,0 +1,354 @@
+﻿@model IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosEvento>
+
+@{
+    ViewBag.Title = "Gestionar Eventos";
+
+    string rolActual = "";
+    if (Session["Rol"] != null)
+    {
+        rolActual = Session["Rol"].ToString();
+    }
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 1200px; margin: 0 auto;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-primary-subtle">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-calendar-event-fill text-primary me-2"></i> Gestionar Eventos
+        </h3>
+
+        @if (rolActual != "Investigador")
+        {
+            <a href="@Url.Action("Agregar", "Eventos")" class="btn btn-primary fw-bold shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Programar Nuevo Evento
+            </a>
+        }
+    </div>
+
+    <!-- Buscador -->
+    <div class="card bg-white border border-primary-subtle shadow-sm mb-4 rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <form action="@Url.Action("Index", "Eventos")" method="get" id="formBusqueda">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-md-auto">
+                        <span class="fw-bold text-secondary mb-0"><i class="bi bi-funnel-fill text-primary me-1"></i> Consultar por parámetros:</span>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <select class="form-select border-primary-subtle fw-medium" id="selectFiltro" name="tipoFiltro">
+                            <option value="">Seleccione filtro...</option>
+                            <option value="idEvento">ID Evento</option>
+                            <option value="nombreEvento">Nombre del Evento</option>
+                            <option value="tipoEvento">Tipo de Evento</option>
+                            <option value="lugarEvento">Lugar / Ubicación</option>
+                            <option value="organizadorEvento">Organizador</option>
+                            <option value="fechaEvento">Fecha Exacta</option>
+                            <option value="mesEvento">Mes del Evento</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md" id="contenedorInput">
+                        <input type="text" class="form-control border-primary-subtle bg-light text-muted" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>
+                    </div>
+
+                    <datalist id="opcionesSugeridas"></datalist>
+
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-primary text-white fw-bold px-4 w-100 shadow-sm" id="btnConsultar" disabled>
+                            <i class="bi bi-search me-1"></i> Buscar
+                        </button>
+                    </div>
+
+                    @if (Request.QueryString["tipoFiltro"] != null)
+                    {
+                        <div class="col-12 col-md-auto">
+                            <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary fw-bold w-100 shadow-sm">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Limpiar
+                            </a>
+                        </div>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Eventos -->
+    <div class="table-responsive shadow-sm rounded-3 border border-primary-subtle bg-white">
+        <table class="table table-hover mb-0 align-middle" id="tablaEventos">
+            <thead class="table-dark border-bottom border-primary-subtle">
+                <tr>
+                    <th scope="col" class="py-3 ps-4 text-white fw-bold">ID</th>
+                    <th scope="col" class="py-3 text-white fw-bold">Nombre del Evento</th>
+                    <th scope="col" class="py-3 text-white fw-bold">Tipo / Modalidad</th>
+                    <th scope="col" class="py-3 text-white fw-bold">Fecha y Hora</th>
+                    <th scope="col" class="py-3 text-white fw-bold">Participantes</th>
+                    <th scope="col" class="py-3 text-white fw-bold">Patrocinadores</th>
+                    <th scope="col" class="py-3 text-center text-white fw-bold" style="min-width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var evento in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted data-idEvento">@evento.IdEvento</td>
+                            <td>
+                                <span class="fw-bold text-dark data-nombreEvento">@evento.NombreEvento</span>
+
+                                @{
+                                    string textoEstado = string.IsNullOrEmpty(evento.Estado) ? "Programado" : evento.Estado;
+                                    string colorEstado = "bg-primary";
+
+                                    if (textoEstado == "En Ejecución" || textoEstado == "En curso") { colorEstado = "bg-success"; }
+                                    else if (textoEstado == "Borrador") { colorEstado = "bg-secondary"; }
+                                    else if (textoEstado == "Cancelado") { colorEstado = "bg-danger"; }
+                                    else if (textoEstado == "Finalizado") { colorEstado = "bg-dark"; }
+                                    else if (textoEstado == "Reprogramado") { colorEstado = "bg-warning text-dark"; }
+                                }
+                                <span class="badge @colorEstado ms-2 align-text-top shadow-sm" style="font-size: 0.7rem;">@textoEstado</span>
+                                <br />
+
+                                <small class="text-muted"><i class="bi bi-person-badge-fill text-secondary pe-1"></i>Org: <span class="data-organizadorEvento">@evento.OrganizadorEvento</span></small>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle mb-1 data-tipoEvento">@evento.TipoEvento</span>
+
+                                @if (evento.Modalidad == "Virtual")
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle mb-1 ms-1"><i class="bi bi-laptop"></i> Virtual</span>
+                                }
+                                else if (evento.Modalidad == "Híbrido")
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle mb-1 ms-1"><i class="bi bi-building"></i>+<i class="bi bi-laptop"></i> Híbrido</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle mb-1 ms-1"><i class="bi bi-building"></i> Presencial</span>
+                                }
+                                <br />
+
+                                <small class="text-dark fw-medium data-lugarEvento"><i class="bi bi-geo-alt-fill text-danger"></i> @evento.LugarEvento</small>
+                            </td>
+                            <td class="fw-medium text-secondary">
+                                <div class="mb-1 text-dark">
+                                    <i class="bi bi-calendar3 text-primary me-1"></i>
+                                    @if (DateTime.TryParse(evento.FechaEvento, out DateTime fechaParsed))
+                                    {
+                                        @fechaParsed.ToString("dd/MM/yyyy")
+                                    }
+                                    else
+                                    {
+                                        @evento.FechaEvento
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(evento.HoraInicio) && !string.IsNullOrEmpty(evento.HoraFin))
+                                {
+                                    <small class="text-muted fw-normal"><i class="bi bi-clock text-primary me-1"></i> @evento.HoraInicio - @evento.HoraFin</small>
+                                }
+                            </td>
+
+                            <td>
+                                @if (evento.ProyectosParticipantes != null && evento.ProyectosParticipantes.Any())
+                                {
+                                    <div class="d-flex flex-column gap-1">
+                                        @foreach (var p in evento.ProyectosParticipantes.Take(2))
+                                        {
+                                            <span class="badge bg-light text-dark border border-secondary-subtle text-start text-truncate" style="max-width: 180px;" title="@p.TituloProyecto">
+                                                <i class="bi bi-journal-text text-primary"></i> @p.TituloProyecto
+                                            </span>
+                                        }
+                                        @if (evento.ProyectosParticipantes.Count > 2)
+                                        {
+                                            <span class="text-muted small ms-1">+ @(evento.ProyectosParticipantes.Count - 2) más...</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small fst-italic">Sin proyectos</span>
+                                }
+                            </td>
+
+                            <td>
+                                @if (evento.Patrocinadores != null && evento.Patrocinadores.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var pat in evento.Patrocinadores.Take(2))
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1" title="@pat.CorreoPatrocinador">
+                                                <i class="bi bi-award-fill"></i> @pat.NombrePatrocinador
+                                            </span>
+                                        }
+                                        @if (evento.Patrocinadores.Count > 2)
+                                        {
+                                            <span class="text-muted small ms-1">+ @(evento.Patrocinadores.Count - 2)</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small fst-italic">Sin patrocinadores</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <!-- Botón Detalle: Siempre Habilitado -->
+                                <a href="@Url.Action("Detalle", "Eventos", new { id = evento.IdEvento })" class="btn btn-sm btn-light text-primary border-primary-subtle shadow-sm me-1" title="Ver Detalles y Agenda">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+
+                                @if (rolActual != "Investigador")
+                                {
+                                    if (textoEstado == "Cancelado" || textoEstado == "Finalizado")
+                                    {
+                                        <!-- Botones Deshabilitados si está cancelado o finalizado -->
+                                        <button class="btn btn-sm btn-light text-muted border-secondary-subtle shadow-sm me-1" disabled title="No se puede editar un evento @textoEstado.ToLower()">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-light text-muted border-secondary-subtle shadow-sm" disabled title="El evento ya está @textoEstado.ToLower()">
+                                            <i class="bi bi-slash-circle"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <!-- Botones Habilitados -->
+                                        <a href="@Url.Action("Modificar", "Eventos", new { id = evento.IdEvento })" class="btn btn-sm btn-light text-success border-success-subtle shadow-sm me-1" title="Editar Evento">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-light text-danger border-danger-subtle shadow-sm" onclick="confirmarCancelacion(@evento.IdEvento)" title="Cancelar Evento">
+                                            <i class="bi bi-slash-circle"></i>
+                                        </button>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted bg-light">
+                            <i class="bi bi-calendar-x fs-1 text-secondary d-block mb-3 mt-2"></i>
+                            <h5 class="fw-bold text-dark">No hay eventos para mostrar</h5>
+                            <p class="mb-3">No se encontraron eventos registrados o que coincidan con los filtros de búsqueda aplicados.</p>
+                            @if (Request.QueryString["tipoFiltro"] != null)
+                            {
+                                <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-primary fw-bold shadow-sm">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Limpiar Filtros
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        const datosAutocompletado = {
+            idEvento: [...new Set(Array.from(document.querySelectorAll('.data-idEvento')).map(el => el.textContent.trim()))],
+            nombreEvento: [...new Set(Array.from(document.querySelectorAll('.data-nombreEvento')).map(el => el.textContent.trim()))],
+            tipoEvento: [...new Set(Array.from(document.querySelectorAll('.data-tipoEvento')).map(el => el.textContent.trim()))],
+            lugarEvento: [...new Set(Array.from(document.querySelectorAll('.data-lugarEvento')).map(el => el.textContent.trim()))],
+            organizadorEvento: [...new Set(Array.from(document.querySelectorAll('.data-organizadorEvento')).map(el => el.textContent.trim()))]
+        };
+
+        const selectFiltro = document.getElementById('selectFiltro');
+        const contenedorInput = document.getElementById('contenedorInput');
+        const btnConsultar = document.getElementById('btnConsultar');
+        const datalist = document.getElementById('opcionesSugeridas');
+
+        selectFiltro.addEventListener('change', function () {
+            const filtroSeleccionado = this.value;
+            datalist.innerHTML = '';
+
+            if (!filtroSeleccionado) {
+                contenedorInput.innerHTML = '<input type="text" class="form-control border-primary-subtle bg-light text-muted" id="inputValor" name="valorFiltro" placeholder="Seleccione un filtro primero..." disabled>';
+                btnConsultar.disabled = true;
+                return;
+            }
+
+            btnConsultar.disabled = false;
+
+            let tipoInput = 'text';
+            let placeholder = 'Escriba parámetros de búsqueda...';
+
+            if (filtroSeleccionado === 'idEvento') {
+                tipoInput = 'number';
+                placeholder = 'ID exacto del evento...';
+            } else if (filtroSeleccionado === 'fechaEvento') {
+                tipoInput = 'date';
+                placeholder = 'Seleccione una fecha...';
+            } else if (filtroSeleccionado === 'mesEvento') {
+                tipoInput = 'month';
+                placeholder = 'Seleccione mes y año...';
+            }
+
+            contenedorInput.innerHTML = `<input type="${tipoInput}" class="form-control border-primary shadow-sm" id="inputValor" name="valorFiltro" placeholder="${placeholder}" list="opcionesSugeridas" autocomplete="off" required>`;
+
+            if (datosAutocompletado[filtroSeleccionado]) {
+                datosAutocompletado[filtroSeleccionado].forEach(valor => {
+                    let option = document.createElement('option');
+                    option.value = valor;
+                    datalist.appendChild(option);
+                });
+            }
+        });
+
+        document.getElementById('formBusqueda').addEventListener('submit', function (e) {
+            const btn = document.getElementById('btnConsultar');
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Buscando...`;
+        });
+
+        // ======= ALERTAS DE CONTROLADOR =======
+        var mensajeExito = '@Html.Raw(TempData["Exito"] != null ? HttpUtility.JavaScriptStringEncode(TempData["Exito"].ToString()) : "")';
+        if (mensajeExito) {
+            Swal.fire({ icon: 'success', title: '¡Completado!', text: mensajeExito, confirmButtonColor: '#0d6efd' });
+        }
+
+        var mensajeError = '@Html.Raw(TempData["Error"] != null ? HttpUtility.JavaScriptStringEncode(TempData["Error"].ToString()) : "")';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+        // ======================================
+
+        function confirmarCancelacion(id) {
+            Swal.fire({
+                title: '¿Cancelar este evento?',
+                text: "Esta acción cambiará el estado del evento a 'Cancelado'. No se borrarán sus registros del sistema ni sus proyectos vinculados.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, Cancelar Evento',
+                cancelButtonText: 'No, mantener'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '@Url.Action("Eliminar", "Eventos")?id=' + id;
+                }
+            });
+        }
+    </script>
+}

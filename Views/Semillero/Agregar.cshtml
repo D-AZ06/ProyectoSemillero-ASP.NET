@@ -1,0 +1,107 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosSemillero
+
+@{
+    ViewBag.Title = "Agregar Semillero";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Semillero")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Agregar Semillero</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Semillero", FormMethod.Post, new { id = "form-semillero" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold text-muted">ID Semillero</label>
+                            @Html.TextBoxFor(m => m.IdSemillero, new { @class = "form-control bg-light", @readonly = "readonly" })
+                        </div>
+
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-semibold">Nombre del Semillero</label>
+                            @Html.TextBoxFor(m => m.nombreSemillero, new { @class = "form-control", required = "required", placeholder = "Ej: Investic" })
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Línea de Investigación Principal</label>
+                        @Html.TextBoxFor(m => m.LineaSemillero, new { @class = "form-control input-letras", id = "LineaSemillero", required = "required", placeholder = "Ej: Investigación Aplicada" })
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Enfoque o Descripción</label>
+                        @Html.TextAreaFor(m => m.EnfoqueSemillero, new { @class = "form-control input-letras", id = "EnfoqueSemillero", rows = "4", required = "required", placeholder = "Describe la misión y el enfoque principal del semillero..." })
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Agregar Semillero
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // REGLA: SOLO LETRAS Y ESPACIOS
+            const inputsLetras = document.querySelectorAll('.input-letras');
+            inputsLetras.forEach(input => {
+                input.addEventListener('input', function () {
+                    // Reemplaza cualquier cosa que NO sea letra (incluye tildes y ñ) o espacio por vacío
+                    this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+                });
+            });
+
+            // Botón volver con advertencia
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los datos que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+            // Alerta de carga al guardar
+            const formSemillero = document.getElementById('form-semillero');
+            if (formSemillero) {
+                formSemillero.addEventListener('submit', function () {
+                    Swal.fire({
+                        title: 'Guardando Semillero...',
+                        text: 'Por favor espera mientras se registra en la base de datos.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}

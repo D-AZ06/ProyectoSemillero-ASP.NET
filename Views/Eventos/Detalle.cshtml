@@ -1,0 +1,329 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosEvento
+
+@{
+    ViewBag.Title = "Detalles del Evento";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+    string rolUsuario = Session["Rol"] != null ? Session["Rol"].ToString() : "";
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+
+    .detalle-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+
+    .detalle-valor {
+        font-size: 1.05rem;
+        color: #1e293b;
+        font-weight: 500;
+    }
+
+    .caja-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .caja-scroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 900px; margin: 0 auto;">
+
+    <!-- Encabezado y Botones -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-2 border-bottom border-primary-subtle gap-3">
+        <h3 class="fw-bold text-dark mb-0">
+            <i class="bi bi-info-circle-fill text-primary me-2"></i> Detalles del Evento
+        </h3>
+
+        <div class="d-flex gap-2">
+            @* Se valida que no sea Investigador Y que el evento NO esté Cancelado ni Finalizado *@
+            @if (rolUsuario != "Investigador" && Model.Estado != "Cancelado" && Model.Estado != "Finalizado")
+            {
+                <a href="@Url.Action("Modificar", "Eventos", new { id = Model.IdEvento })" class="btn btn-primary fw-bold shadow-sm">
+                    <i class="bi bi-pencil-square me-1"></i> Editar Evento
+                </a>
+            }
+            <a href="@Url.Action("Index", "Eventos")" class="btn btn-outline-secondary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjeta Principal: Título y Estado -->
+    <div class="card shadow-sm border-primary-subtle bg-white mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h4 class="fw-bold text-dark mb-0">@Model.NombreEvento</h4>
+
+                @{
+                    string textoEstado = string.IsNullOrEmpty(Model.Estado) ? "Programado" : Model.Estado;
+                    string colorEstado = "bg-primary";
+
+                    if (textoEstado == "En Ejecución" || textoEstado == "En curso") { colorEstado = "bg-success"; }
+                    else if (textoEstado == "Borrador") { colorEstado = "bg-secondary"; }
+                    else if (textoEstado == "Cancelado") { colorEstado = "bg-danger"; }
+                    else if (textoEstado == "Finalizado") { colorEstado = "bg-dark"; }
+                    else if (textoEstado == "Reprogramado") { colorEstado = "bg-warning text-dark"; }
+                }
+                <span class="badge @colorEstado fs-6 shadow-sm">@textoEstado</span>
+            </div>
+            <p class="text-muted mb-0"><i class="bi bi-hash text-primary"></i> ID Evento: <strong>@Model.IdEvento</strong></p>
+        </div>
+    </div>
+
+    <!-- Sección de Información General -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0 bg-white h-100">
+                <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+                    <h6 class="fw-bold text-primary mb-0"><i class="bi bi-card-list me-1"></i> Información General</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <div class="detalle-label"><i class="bi bi-tags-fill me-1"></i> Tipo de Evento</div>
+                            <div class="detalle-valor">@Model.TipoEvento</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="detalle-label"><i class="bi bi-globe me-1"></i> Modalidad</div>
+                            <div class="detalle-valor">
+                                @if (Model.Modalidad == "Virtual")
+                                {
+                                    <i class="bi bi-laptop text-secondary me-1"></i>
+                                }
+                                else if (Model.Modalidad == "Híbrido")
+                                {
+                                    <i class="bi bi-building text-secondary"></i><i class="bi bi-laptop text-secondary me-1"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-building text-secondary me-1"></i>
+                                }
+                                @Model.Modalidad
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="detalle-label"><i class="bi bi-person-badge-fill me-1"></i> Organizador</div>
+                            <div class="detalle-valor">@Model.OrganizadorEvento</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="detalle-label"><i class="bi bi-diagram-3-fill me-1"></i> Semilleros Vinculados</div>
+                            <div class="detalle-valor">
+                                @if (Model.IdSemilleros != null && Model.IdSemilleros.Any())
+                                {
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
+                                        @Model.IdSemilleros.Count semillero(s)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic fs-6">No especificado</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0 bg-white h-100">
+                <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+                    <h6 class="fw-bold text-primary mb-0"><i class="bi bi-geo-alt-fill me-1"></i> Cuándo y Dónde</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <div class="detalle-label"><i class="bi bi-calendar-event-fill me-1"></i> Fecha</div>
+                        <div class="detalle-valor">
+                            @if (DateTime.TryParse(Model.FechaEvento, out DateTime fechaParsed))
+                            {
+                                @fechaParsed.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))
+                            }
+                            else
+                            {
+                                @Model.FechaEvento
+                            }
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="detalle-label"><i class="bi bi-clock-fill me-1"></i> Horario</div>
+                        <div class="detalle-valor">@Model.HoraInicio - @Model.HoraFin</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="detalle-label"><i class="bi bi-geo-alt-fill me-1"></i> Lugar / Ubicación</div>
+                        <div class="detalle-valor">@Model.LugarEvento</div>
+                    </div>
+
+                    @if (Model.Modalidad == "Virtual" || Model.Modalidad == "Híbrido")
+                    {
+                        <div>
+                            <div class="detalle-label"><i class="bi bi-link-45deg me-1"></i> Enlace de Reunión</div>
+                            <div class="detalle-valor">
+                                @if (!string.IsNullOrEmpty(Model.EnlaceReunion))
+                                {
+                                    <a href="@Model.EnlaceReunion" target="_blank" class="text-primary text-decoration-none fw-bold" style="word-break: break-all;">
+                                        Unirse a la reunión <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.85rem;"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic fs-6">Sin enlace proporcionado</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Descripción del Evento -->
+    <div class="card shadow-sm border-0 bg-white mb-4">
+        <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+            <h6 class="fw-bold text-primary mb-0"><i class="bi bi-blockquote-left me-1"></i> Descripción del Evento</h6>
+        </div>
+        <div class="card-body p-4">
+            <p class="mb-0 text-dark" style="line-height: 1.6; text-align: justify;">
+                @(string.IsNullOrWhiteSpace(Model.Descripcion) ? "No se ha proporcionado una descripción para este evento." : Model.Descripcion)
+            </p>
+        </div>
+    </div>
+
+    <!-- Agenda del Evento -->
+    <div class="card shadow-sm border-0 bg-white mb-4">
+        <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+            <h6 class="fw-bold text-primary mb-0"><i class="bi bi-calendar3-event me-1"></i> Cronograma / Agenda</h6>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Agenda != null && Model.Agenda.Any())
+            {
+                <div class="table-responsive caja-scroll" style="max-height: 300px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-4 text-secondary" style="width: 20%;">Hora</th>
+                                <th class="text-secondary" style="width: 50%;">Actividad / Tema</th>
+                                <th class="text-secondary" style="width: 30%;">Ponente / Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Agenda.OrderBy(a => a.Hora))
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-bold text-dark">
+                                        <i class="bi bi-clock me-1 text-muted"></i> @item.Hora
+                                    </td>
+                                    <td class="text-dark fw-medium">@item.Actividad</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.Ponente))
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle">
+                                                <i class="bi bi-person-fill"></i> @item.Ponente
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-list-ul fs-1 text-secondary opacity-50 mb-2"></i>
+                    <p class="mb-0">No se ha registrado una agenda detallada para este evento.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Proyectos y Patrocinadores (2 Columnas) -->
+    <div class="row g-4 mb-4">
+
+        <!-- Proyectos Participantes -->
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 bg-white h-100">
+                <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+                    <h6 class="fw-bold text-primary mb-0"><i class="bi bi-journal-code me-1"></i> Proyectos Participantes</h6>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.ProyectosParticipantes != null && Model.ProyectosParticipantes.Any())
+                    {
+                        <ul class="list-group list-group-flush caja-scroll" style="max-height: 250px;">
+                            @foreach (var p in Model.ProyectosParticipantes)
+                            {
+                                <li class="list-group-item px-4 py-3 d-flex align-items-start">
+                                    <i class="bi bi-file-earmark-text text-primary fs-5 me-3"></i>
+                                    <div>
+                                        <div class="fw-bold text-dark">@p.TituloProyecto</div>
+                                        <div class="small text-muted mt-1">ID Proyecto: <span class="badge bg-light text-primary border border-primary-subtle">@p.IdProyecto</span></div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-folder-x fs-2 text-secondary opacity-50 mb-2"></i>
+                            <p class="mb-0 small">No hay proyectos vinculados.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Patrocinadores -->
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 bg-white h-100">
+                <div class="card-header bg-light border-bottom border-primary-subtle py-3">
+                    <h6 class="fw-bold text-primary mb-0"><i class="bi bi-award me-1"></i> Entidades Patrocinadoras</h6>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Patrocinadores != null && Model.Patrocinadores.Any())
+                    {
+                        <ul class="list-group list-group-flush caja-scroll" style="max-height: 250px;">
+                            @foreach (var pat in Model.Patrocinadores)
+                            {
+                                <li class="list-group-item px-4 py-3 d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex justify-content-center align-items-center text-primary me-3" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark mb-0">@pat.NombrePatrocinador</div>
+                                        <div class="small text-muted mt-1">
+                                            <span class="badge bg-light text-secondary border border-secondary-subtle">@pat.TipoPatrocinador</span>
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-cash-stack fs-2 text-secondary opacity-50 mb-2"></i>
+                            <p class="mb-0 small">Este evento no cuenta con patrocinadores unificados.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

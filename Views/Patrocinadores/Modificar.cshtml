@@ -1,0 +1,227 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosPatrocinador
+
+@{
+    ViewBag.Title = "Editar Patrocinador";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<style>
+    body > .container {
+        display: block !important;
+        padding-top: 2rem !important;
+    }
+    /* Estilos sutiles para el botón de volver */
+    .btn-volver {
+        padding: 0.375rem 0.75rem;
+    }
+</style>
+
+<div class="w-100 text-start mb-5" style="max-width: 800px; margin: 0 auto;">
+
+    <div class="card shadow-sm border-0 bg-white" style="border-radius: 8px;">
+
+        <div class="card-header bg-white border-bottom p-4">
+            <div class="d-flex align-items-center">
+                <a href="@Url.Action("Index", "Patrocinadores")" id="btnVolver" class="btn btn-outline-secondary btn-volver me-3">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                    <i class="bi bi-pencil-square text-primary me-2"></i> Editar Patrocinador
+                </h4>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            @using (Html.BeginForm("Modificar", "Patrocinadores", FormMethod.Post, new { id = "formModificarPatrocinador" }))
+            {
+                @Html.AntiForgeryToken()
+
+                @Html.HiddenFor(m => m.Id)
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-dark mb-1">
+                            ID Patrocinador
+                        </label>
+                        @Html.TextBoxFor(m => m.IdPatrocinador, new { @class = "form-control bg-light text-muted", @type = "number", @readonly = "readonly" })
+                        <small class="text-muted mt-1 d-block">Este identificador no se puede modificar.</small>
+                    </div>
+                    <div class="col-md-6 mt-3 mt-md-0">
+                        <label class="form-label text-dark mb-1">
+                            Nombre de la Empresa / Organización
+                        </label>
+                        @Html.TextBoxFor(m => m.NombrePatrocinador, new { @class = "form-control", @required = "required" })
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-dark mb-1">
+                            Correo Electrónico
+                        </label>
+                        @Html.TextBoxFor(m => m.CorreoPatrocinador, new { @class = "form-control", @type = "email", @required = "required" })
+                    </div>
+                    <div class="col-md-6 mt-3 mt-md-0">
+                        <label class="form-label text-dark mb-1" for="inputTelefono">
+                            Teléfono
+                        </label>
+                        @Html.TextBoxFor(m => m.TelefonoPatrocinador, new { @class = "form-control", @type = "tel", @required = "required", id = "inputTelefono" })
+                        <small class="text-danger fw-semibold d-none mt-1" id="errorTelefono">
+                            El teléfono debe tener entre 7 y 10 dígitos.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <label class="form-label text-dark mb-1" for="inputTipoPatrocinador">
+                            Tipo de Patrocinio
+                        </label>
+                        @Html.TextBoxFor(m => m.TipoPatrocinador, new { @class = "form-control", @required = "required", @list = "listaTiposSugeridos", @autocomplete = "off", id = "inputTipoPatrocinador", @placeholder = "Seleccione o escriba un tipo..." })
+
+                        <datalist id="listaTiposSugeridos">
+                            @if (ViewBag.TiposSugeridos != null)
+                            {
+                                foreach (var tipo in ViewBag.TiposSugeridos)
+                                {
+                                    <option value="@tipo"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4 pt-2 border-top">
+                    <button type="submit" class="btn btn-primary text-white fw-bold py-2 mt-3" id="btnGuardarPatrocinador" style="border-radius: 6px;">
+                        <i class="bi bi-save me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 1. Mostrar errores del servidor si existen
+        var mensajeError = '@TempData["Error"]';
+        if (mensajeError) {
+            Swal.fire({ icon: 'error', title: 'Error', text: mensajeError, confirmButtonColor: '#dc3545' });
+        }
+
+        // 2. Elementos del DOM
+        const form = document.getElementById('formModificarPatrocinador');
+        const btnSubmit = document.getElementById('btnGuardarPatrocinador');
+        const inputTelefono = document.getElementById('inputTelefono');
+        const errorTelefono = document.getElementById('errorTelefono');
+        const inputTipoSoporte = document.getElementById('inputTipoPatrocinador');
+        const btnVolver = document.getElementById('btnVolver');
+
+        // 3. NUEVA FUNCIÓN: Preguntar antes de salir
+        btnVolver.addEventListener('click', function(e) {
+            e.preventDefault();
+            const urlDestino = this.getAttribute('href');
+
+            Swal.fire({
+                title: '¿Estás seguro de salir?',
+                text: "Los cambios no guardados se perderán.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#dc3545',
+                confirmButtonText: 'Sí, salir',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = urlDestino;
+                }
+            });
+        });
+
+        // 4. Validación en tiempo real para Tipo de Patrocinio (Solo letras y espacios)
+        inputTipoSoporte.addEventListener('input', function () {
+            this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+        });
+
+        // 5. Validación Realista del Teléfono en Tiempo Real
+        inputTelefono.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, ''); // Elimina letras
+
+            if (this.value.length > 10) {
+                this.value = this.value.slice(0, 10);
+            }
+
+            if (this.value.length > 0 && this.value.length < 7) {
+                errorTelefono.classList.remove('d-none');
+                inputTelefono.classList.add('border-danger');
+            } else {
+                errorTelefono.classList.add('d-none');
+                inputTelefono.classList.remove('border-danger');
+            }
+        });
+
+        // 6. Lógica de Estandarización de Tipos de Patrocinio (Autocompletado blur)
+        const diccionarioTipos = [
+            @if(ViewBag.TiposSugeridos != null) {
+                foreach(var t in ViewBag.TiposSugeridos) {
+                    @Html.Raw($"\"{HttpUtility.JavaScriptStringEncode(t)}\",")
+                }
+            }
+        ];
+
+        function normalizarTexto(texto) {
+            if (!texto) return "";
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        }
+
+        inputTipoSoporte.addEventListener('blur', function() {
+            const valorIngresado = normalizarTexto(this.value);
+            if (!valorIngresado) return;
+
+            const coincidencia = diccionarioTipos.find(t => normalizarTexto(t) === valorIngresado);
+
+            if (coincidencia && coincidencia !== this.value.trim()) {
+                this.value = coincidencia;
+
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3500,
+                    timerProgressBar: true
+                });
+
+                Toast.fire({
+                    icon: 'info',
+                    title: 'Formato Unificado',
+                    text: `Se ha auto-corregido a "${coincidencia}" para mantener el orden en el sistema.`
+                });
+            }
+        });
+
+        // 7. Validación final antes de enviar + Loader
+        form.addEventListener('submit', function (e) {
+            if (inputTelefono.value.length < 7) {
+                e.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Teléfono Inválido',
+                    text: 'Asegúrate de ingresar un número telefónico real de entre 7 y 10 dígitos antes de guardar.',
+                    confirmButtonColor: '#ffc107'
+                });
+
+                inputTelefono.focus();
+                return;
+            }
+
+            setTimeout(() => {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Actualizando...`;
+            }, 10);
+        });
+
+        // Disparar la validación del teléfono al cargar la página por si el dato viene incorrecto de la BD
+        inputTelefono.dispatchEvent(new Event('input'));
+    </script>
+}

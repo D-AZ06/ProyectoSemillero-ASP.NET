@@ -1,0 +1,251 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosProyecto
+
+@{
+    ViewBag.Title = "Agregar Proyecto";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 col-lg-8 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100">
+
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Proyectos")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3" title="Volver">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-folder-plus text-primary me-2"></i> Nuevo Proyecto</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Agregar", "Proyectos", FormMethod.Post, new { id = "form-proyecto" }))
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row">
+                        <div class="col-md-6">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">ID de Proyecto Asignado (No modificable)</label>
+                                @Html.TextBoxFor(m => m.IdProyecto, new { @class = "form-control bg-light fw-bold", @readonly = "readonly" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Título del Proyecto</label>
+                                @Html.TextBoxFor(m => m.TituloProyecto, new { @class = "form-control", required = "required", placeholder = "Ej. Desarrollo de un Sistema Web" })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Objetivo del Proyecto</label>
+                                @Html.TextAreaFor(m => m.ObjetivoProyecto, new { @class = "form-control", rows = "4", required = "required", placeholder = "Describe el objetivo principal..." })
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Semillero Vinculado</label>
+
+                                @if (ViewBag.RolUsuario == "Líder")
+                                {
+                                    <input type="text" class="form-control bg-light text-dark fw-bold border-secondary" value="@ViewBag.NombreSemilleroLider" readonly />
+                                    <input type="hidden" name="IdSemillero" value="@ViewBag.IdSemilleroLider" />
+                                }
+                                else if (ViewBag.RolUsuario == "Admin" || ViewBag.RolUsuario == "Administrador")
+                                {
+                                    @Html.DropDownListFor(m => m.IdSemillero, (SelectList)ViewBag.ListaSemilleros, "Seleccione un semillero...", new { @class = "form-select", required = "required" })
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Descripción del Proyecto</label>
+                                @Html.TextAreaFor(m => m.DescripcionProyecto, new { @class = "form-control", rows = "4", required = "required", placeholder = "Detalla de qué trata el proyecto..." })
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Inicio</label>
+                                    @Html.TextBoxFor(m => m.FechaInicioProyecto, new { @class = "form-control", type = "date", id = "fechaInicio", required = "required" })
+                                </div>
+
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Fecha de Fin</label>
+                                    @Html.TextBoxFor(m => m.FechaFinProyecto, new { @class = "form-control", type = "date", id = "fechaFin", required = "required" })
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Estado del Proyecto</label>
+                                    <input type="text" class="form-control bg-light text-primary fw-bold" value="Se calculará automáticamente según las fechas" readonly />
+                                    <!-- El estado real se generará en el Controlador -->
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted" />
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary fw-bold py-2 px-4 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Guardar Proyecto
+                        </button>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const formProyecto = document.getElementById('form-proyecto');
+            const btnGuardar = formProyecto ? formProyecto.querySelector('button[type="submit"]') : null;
+            const inputTitulo = document.getElementById('TituloProyecto');
+            const inputObjetivo = document.getElementById('ObjetivoProyecto');
+            const inputDescripcion = document.getElementById('DescripcionProyecto');
+            const fechaInicio = document.getElementById('fechaInicio');
+            const fechaFin = document.getElementById('fechaFin');
+
+            if (fechaInicio && fechaFin) {
+                // ✅ Fecha mínima: hoy (compensando zona horaria local)
+                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+                const hoy = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+                fechaInicio.setAttribute('min', hoy);
+                fechaFin.setAttribute('min', hoy);
+
+                fechaInicio.addEventListener('change', function () {
+                    if (this.value) {
+                        let partes = this.value.split('-');
+                        let dateInst = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+                        dateInst.setMonth(dateInst.getMonth() + 1);
+
+                        let yyyy = dateInst.getFullYear();
+                        let mm = String(dateInst.getMonth() + 1).padStart(2, '0');
+                        let dd = String(dateInst.getDate()).padStart(2, '0');
+                        let fechaMinimaFin = `${yyyy}-${mm}-${dd}`;
+
+                        fechaFin.setAttribute('min', fechaMinimaFin);
+
+                        if (!fechaFin.value || fechaFin.value < fechaMinimaFin) {
+                            fechaFin.value = fechaMinimaFin;
+                        }
+                    }
+                });
+            }
+
+            // ✅ ÚNICO listener de submit (antes había dos, lo que causaba el bug)
+            if (formProyecto) {
+                formProyecto.addEventListener('submit', function (e) {
+
+                    // A. Validar espacios en blanco
+                    if (inputTitulo && inputTitulo.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Título Inválido', text: 'El título no puede estar vacío ni contener solo espacios.', confirmButtonColor: '#0284c7' });
+                        inputTitulo.value = ''; inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && inputObjetivo.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Objetivo Inválido', text: 'El objetivo no puede contener solo espacios.', confirmButtonColor: '#0284c7' });
+                        inputObjetivo.value = ''; inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && inputDescripcion.value.trim().length === 0) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Descripción Inválida', text: 'La descripción no puede estar vacía.', confirmButtonColor: '#0284c7' });
+                        inputDescripcion.value = ''; inputDescripcion.focus();
+                        return;
+                    }
+
+                    // B. Límite de caracteres
+                    if (inputTitulo && inputTitulo.value.trim().length > 150) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Título muy largo', text: 'El título excede el límite permitido (Máximo 150 caracteres).', confirmButtonColor: '#dc3545' });
+                        return;
+                    }
+
+                    // C. Anti doble clic
+                    if (btnGuardar) {
+                        btnGuardar.disabled = true;
+                        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+                    }
+
+                    // ── LONGITUD MÍNIMA ──────────────────────────────────────────
+                    if (inputTitulo && inputTitulo.value.trim().length < 5) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Título muy corto', text: 'El título debe tener al menos 5 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && inputObjetivo.value.trim().length < 10) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Objetivo muy corto', text: 'El objetivo debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && inputDescripcion.value.trim().length < 10) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Descripción muy corta', text: 'La descripción debe tener al menos 10 caracteres.', confirmButtonColor: '#0284c7' });
+                        inputDescripcion.focus();
+                        return;
+                    }
+
+                    // ── CARACTERES ESPECIALES PELIGROSOS ─────────────────────────
+                    const patronInvalido = /[<>"';]/;
+                    if (inputTitulo && patronInvalido.test(inputTitulo.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El título contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputTitulo.focus();
+                        return;
+                    }
+                    if (inputObjetivo && patronInvalido.test(inputObjetivo.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'El objetivo contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputObjetivo.focus();
+                        return;
+                    }
+                    if (inputDescripcion && patronInvalido.test(inputDescripcion.value)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Caracteres no permitidos', text: 'La descripción contiene caracteres inválidos: < > " \' ;', confirmButtonColor: '#dc3545' });
+                        inputDescripcion.focus();
+                        return;
+                    }
+
+                    // D. Alerta de procesamiento
+                    Swal.fire({
+                        title: 'Procesando Proyecto...',
+                        text: 'Guardando en la base de datos de GesSi.',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+                });
+            }
+
+            // --- BOTÓN VOLVER CON CONFIRMACIÓN ---
+            const btnVolver = document.getElementById('btn-volver');
+            if (btnVolver) {
+                btnVolver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const urlDestino = this.getAttribute('href');
+                    Swal.fire({
+                        title: '¿Estás seguro de salir?',
+                        text: "Si regresas, perderás los datos del proyecto que no hayas guardado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bi bi-box-arrow-left"></i> Sí, salir',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = urlDestino;
+                        }
+                    });
+                });
+            }
+
+        });
+    </script>
+}

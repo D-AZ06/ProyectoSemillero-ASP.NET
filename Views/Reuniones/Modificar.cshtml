@@ -1,0 +1,390 @@
+﻿@model ProyectoSemillero_ASP.NET.Models.DatosReunion
+
+@{
+    ViewBag.Title = "Modificar Reunión";
+    Layout = "~/Views/Shared/_LayoutSimple.cshtml";
+}
+
+<div class="row justify-content-center w-100 m-0">
+    <div class="col-12 col-md-10 p-0">
+        <div class="card shadow-sm border-0 rounded-3 mt-4 w-100" style="border-top: 4px solid var(--blue-primary) !important;">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                <a href="@Url.Action("Index", "Reuniones")" id="btn-volver" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i> Modificar Reunión</h4>
+            </div>
+
+            <div class="card-body p-4">
+                @using (Html.BeginForm("Modificar", "Reuniones", FormMethod.Post, new { id = "form-reunion" }))
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.IdReunion)
+                    @Html.HiddenFor(m => m.IdSemillero)
+
+                    <div class="row mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-2 mb-2 mb-md-0">
+                            <label class="fw-semibold text-muted small">ID Reunión</label>
+                            <input type="text" class="form-control form-control-sm text-primary fw-bold" value="@Model.IdReunion" readonly />
+                        </div>
+
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-diagram-3"></i> Semillero (Inalterable)</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="@ViewBag.NombreSemilleroReunion (ID: @Model.IdSemillero)" readonly />
+                        </div>
+
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <label class="fw-bold text-dark small text-uppercase"><i class="bi bi-person-badge"></i> Líder Responsable</label>
+                            @Html.DropDownListFor(m => m.IdLider, (SelectList)ViewBag.ListaLideres, "Seleccione un líder...", new { @class = "form-select form-select-sm border-primary", id = "SelectLider", required = "required" })
+                        </div>
+
+                        <div class="col-md-2 mb-2 mb-md-0">
+                            <label class="fw-semibold text-muted small">ID Líder</label>
+                            <input type="text" class="form-control form-control-sm text-success fw-bold" id="InputIdLider" value="@Model.IdLider" readonly />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Fecha</label>
+                            @Html.TextBoxFor(m => m.FechaReunion, new { @class = "form-control", type = "date", id = "FechaReunion", required = "required" })
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Hora de Inicio</label>
+                            @Html.TextBoxFor(m => m.HoraInicio, new { @class = "form-control", type = "time", id = "HoraInicio", required = "required" })
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="fw-semibold">Hora de Fin</label>
+                            @Html.TextBoxFor(m => m.HoraFin, new { @class = "form-control", type = "time", id = "HoraFin", required = "required" })
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-semibold">Lugar de la Reunión</label>
+                        <input type="text" class="form-control" id="LugarReunion" name="LugarReunion" list="listaLugares" required="required" autocomplete="off" placeholder="Doble clic para ver opciones..." value="@Model.LugarReunion" />
+                        <datalist id="listaLugares">
+                            @if (ViewBag.ListaLugaresExistentes != null)
+                            {
+                                foreach (var lugar in ViewBag.ListaLugaresExistentes)
+                                {
+                                    <option value="@lugar"></option>
+                                }
+                            }
+                        </datalist>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-semibold">Investigadores (Disponibles)</label>
+                            <div class="border rounded p-2 bg-light" style="height: 150px; overflow-y: auto;" id="contenedorInvestigadores">
+                                @if (ViewBag.ListaInvestigadores != null)
+                                {
+                                    var listaInv = ViewBag.ListaInvestigadores as IEnumerable<ProyectoSemillero_ASP.NET.Models.DatosUsuario>;
+                                    if (listaInv != null && listaInv.Any())
+                                    {
+                                        foreach (var inv in listaInv)
+                                        {
+                                            bool yaConvocado = Model.InvestigadoresConvocados != null && Model.InvestigadoresConvocados.Any(i => i.IdInvestigador == inv.IdUsuario);
+                                            <div class="form-check item-investigador" data-id="@inv.IdUsuario">
+                                                <input class="form-check-input" type="checkbox" name="investigadoresSeleccionados" value="@inv.IdUsuario" id="chk_@inv.IdUsuario" @(yaConvocado ? "checked" : "")>
+                                                <label class="form-check-label text-dark fw-medium" for="chk_@inv.IdUsuario">
+                                                    @inv.NombreUsuario <small class="text-muted">(ID: @inv.IdUsuario)</small>
+                                                </label>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="fw-semibold" id="lblMotivo">Motivo (Mín. 10 / Máx. 500 caract.)</label>
+                            @Html.TextAreaFor(m => m.MotivoReunion, new { @class = "form-control", id = "MotivoReunion", rows = "5", maxlength = "500", required = "required" })
+                            <div class="text-end text-muted small" id="contadorMotivo">0/500</div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="button" id="btnGuardar" class="btn btn-primary text-white fw-bold py-2 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Actualizar Reunión
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var idReunionJS = @Model.IdReunion;
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const txtFecha = document.getElementById('FechaReunion');
+            const txtInicio = document.getElementById('HoraInicio');
+            const txtFin = document.getElementById('HoraFin');
+            const txtMotivo = document.getElementById('MotivoReunion');
+            const btnGuardar = document.getElementById('btnGuardar');
+            const formReunion = document.getElementById('form-reunion');
+
+            var mensajeError = '@Html.Raw(TempData["Error"])';
+            if (mensajeError && mensajeError !== '') {
+                Swal.fire({ icon: 'error', title: 'Operación Denegada', text: mensajeError, confirmButtonColor: '#dc3545' });
+            }
+
+            const selectLiderAdmin = document.getElementById('AdminSelectLider');
+            if (selectLiderAdmin) {
+                selectLiderAdmin.addEventListener('change', validarDisponibilidad);
+            }
+
+            const selectLider = document.getElementById('SelectLider');
+            const inputIdLider = document.getElementById('InputIdLider');
+            if (selectLider) {
+                selectLider.addEventListener('change', function() {
+                    if (inputIdLider) inputIdLider.value = this.value;
+                    validarDisponibilidad();
+                });
+            }
+
+            setInterval(function() {
+                if (!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+
+                let [año, mes, dia] = txtFecha.value.split('-');
+                let [horaI, minI] = txtInicio.value.split(':');
+                let fechaSeleccionada = new Date(año, mes - 1, dia, horaI, minI);
+
+                let ahora = new Date();
+                let limiteEstricto = new Date(ahora.getTime() + 55 * 60000);
+
+                if (fechaSeleccionada.toDateString() === ahora.toDateString() && fechaSeleccionada < limiteEstricto) {
+
+                    let limiteMinutos = limiteEstricto.getHours() * 60 + limiteEstricto.getMinutes();
+                    if (limiteMinutos > 1290) {
+                        Swal.fire('Día Finalizado', 'Ya es muy tarde para programar una reunión el día de hoy. Se moverá a mañana.', 'warning');
+                        let mañana = new Date(ahora);
+                        mañana.setDate(mañana.getDate() + 1);
+                        if (mañana.getDay() === 0) mañana.setDate(mañana.getDate() + 1);
+
+                        txtFecha.value = mañana.toISOString().split('T')[0];
+                        txtInicio.value = "06:00";
+                        txtFin.value = "06:30";
+                        validarDisponibilidad();
+                        return;
+                    }
+
+                    txtInicio.value = String(limiteEstricto.getHours()).padStart(2, '0') + ":" + String(limiteEstricto.getMinutes()).padStart(2, '0');
+
+                    let [horaF, minF] = txtFin.value.split(':');
+                    let fechaFinVieja = new Date(año, mes - 1, dia, horaF, minF);
+                    let diferenciaOriginal = fechaFinVieja - fechaSeleccionada;
+
+                    let nuevaFin = new Date(limiteEstricto.getTime() + 30 * 60000);
+                    if (diferenciaOriginal >= 30 * 60000) {
+                        nuevaFin = new Date(limiteEstricto.getTime() + diferenciaOriginal);
+                    }
+
+                    if (nuevaFin.getHours() >= 22) {
+                        txtFin.value = "22:00";
+                    } else {
+                        txtFin.value = String(nuevaFin.getHours()).padStart(2, '0') + ":" + String(nuevaFin.getMinutes()).padStart(2, '0');
+                    }
+
+                    validarDisponibilidad();
+                }
+            }, 10000);
+
+            txtFecha.addEventListener('change', function() {
+                let fechaSel = new Date(this.value + "T12:00:00");
+                if (fechaSel.getDay() === 0) {
+                    Swal.fire('Atención', 'No se programan reuniones los domingos.', 'warning');
+                    fechaSel.setDate(fechaSel.getDate() - 2);
+                    this.value = fechaSel.toISOString().split('T')[0];
+                }
+                validarDisponibilidad();
+            });
+
+            function validarReglasHorario() {
+                if(!txtFecha.value || !txtInicio.value || !txtFin.value) return false;
+
+                let [año, mes, dia] = txtFecha.value.split('-');
+                let [horaI, minI] = txtInicio.value.split(':');
+                let fechaSeleccionada = new Date(año, mes - 1, dia, horaI, minI);
+
+                let limiteMinimo = new Date();
+                limiteMinimo.setMinutes(limiteMinimo.getMinutes() + 55);
+
+                if (fechaSeleccionada < limiteMinimo) {
+                    Swal.fire('Horario Inválido', 'Las reuniones deben programarse con al menos 1 hora de anticipación.', 'error');
+
+                    if (fechaSeleccionada.getDate() === new Date().getDate()) {
+                        let sugerida = new Date();
+                        sugerida.setHours(sugerida.getHours() + 1);
+                        txtInicio.value = String(sugerida.getHours()).padStart(2,'0') + ":" + String(sugerida.getMinutes()).padStart(2,'0');
+                    } else {
+                        txtInicio.value = "06:00";
+                    }
+                    horaI = txtInicio.value.split(':')[0];
+                    minI = txtInicio.value.split(':')[1];
+                }
+
+                let minIni = parseInt(horaI) * 60 + parseInt(minI);
+                let minFin = parseInt(txtFin.value.split(':')[0]) * 60 + parseInt(txtFin.value.split(':')[1]);
+
+                if (minIni < 360) {
+                    Swal.fire('Aviso', 'El inicio debe ser a partir de las 6:00 a.m.', 'info');
+                    minIni = 360;
+                    txtInicio.value = "06:00";
+                }
+
+                if (minIni > 1290) {
+                    Swal.fire('Límite', 'La hora máxima para iniciar una reunión es a las 9:30 p.m. para cumplir el mínimo de 30 mins.', 'warning');
+                    minIni = 1290;
+                    txtInicio.value = "21:30";
+                }
+
+                let duracion = minFin - minIni;
+
+                if (duracion < 30) {
+                    if (duracion < 0) Swal.fire('Ajuste', 'La hora de fin se ajustó automáticamente.', 'info');
+                    minFin = minIni + 30;
+                } else if (duracion > 300) {
+                    Swal.fire('Aviso', 'La duración máxima de una reunión es de 5 horas.', 'info');
+                    minFin = minIni + 300;
+                }
+
+                if (minFin > 1320) {
+                    minFin = 1320;
+                    if (minFin - minIni < 30) {
+                        minIni = minFin - 30;
+                        txtInicio.value = `${String(Math.floor(minIni/60)).padStart(2,'0')}:${String(minIni%60).padStart(2,'0')}`;
+                    }
+                }
+
+                txtFin.value = `${String(Math.floor(minFin/60)).padStart(2,'0')}:${String(minFin%60).padStart(2,'0')}`;
+
+                validarDisponibilidad();
+                return true;
+            }
+
+            txtInicio.addEventListener('blur', validarReglasHorario);
+            txtFin.addEventListener('blur', validarReglasHorario);
+            txtInicio.addEventListener('change', validarReglasHorario);
+            txtFin.addEventListener('change', validarReglasHorario);
+
+            function validarDisponibilidad() {
+                if(!txtFecha.value || !txtInicio.value || !txtFin.value) return;
+
+                let parametros = {
+                    fecha: txtFecha.value,
+                    horaInicio: txtInicio.value,
+                    horaFin: txtFin.value,
+                    idIgnorar: typeof idReunionJS !== 'undefined' ? idReunionJS : 0
+                };
+
+                $.get('@Url.Action("ObtenerOcupacion", "Reuniones")', parametros, function(res) {
+                    let txtLugar = document.getElementById('LugarReunion');
+                    if (txtLugar.value && res.lugares.includes(txtLugar.value)) {
+                        Swal.fire('Lugar Ocupado', 'Este lugar ya está reservado por otra reunión en este horario.', 'error');
+                        txtLugar.value = '';
+                    }
+
+                    let selectLiderComun = document.getElementById('SelectLider');
+                    let selectLiderAdmin = document.getElementById('AdminSelectLider');
+                    let idLiderSeleccionado = 0;
+
+                    if (selectLiderComun && selectLiderComun.value) {
+                        idLiderSeleccionado = parseInt(selectLiderComun.value);
+                    } else if (selectLiderAdmin && selectLiderAdmin.value) {
+                        idLiderSeleccionado = parseInt(selectLiderAdmin.value);
+                    } else {
+                        let inputIdLider = document.getElementById('InputIdLider');
+                        if (inputIdLider && inputIdLider.value) {
+                            idLiderSeleccionado = parseInt(inputIdLider.value);
+                        }
+                    }
+
+                    if (idLiderSeleccionado > 0 && res.lideres.includes(idLiderSeleccionado)) {
+                        Swal.fire('Líder Ocupado', 'El Líder responsable ya cuenta con un compromiso o reunión agendada en este mismo horario.', 'error');
+                        if (selectLiderComun) selectLiderComun.value = '';
+                        if (selectLiderAdmin) selectLiderAdmin.value = '';
+                        let inputIdLider = document.getElementById('InputIdLider');
+                        if (inputIdLider && selectLiderComun) inputIdLider.value = '';
+                    }
+
+                    document.querySelectorAll('.item-investigador').forEach(div => {
+                        let id = parseInt(div.getAttribute('data-id'));
+                        let chk = div.querySelector('input');
+
+                        if (res.investigadores.includes(id)) {
+                            div.style.display = 'none';
+                            if(chk) chk.checked = false;
+                        } else {
+                            div.style.display = 'block';
+                        }
+                    });
+                });
+            }
+
+            document.getElementById('LugarReunion').addEventListener('change', validarDisponibilidad);
+            setTimeout(validarDisponibilidad, 200);
+
+            function actualizarContador() {
+                let len = txtMotivo.value.length;
+                document.getElementById('contadorMotivo').innerText = `${len}/500`;
+
+                if(len >= 10 && len <= 500) {
+                    txtMotivo.classList.remove('is-invalid');
+                    btnGuardar.disabled = false;
+                } else {
+                    txtMotivo.classList.add('is-invalid');
+                    btnGuardar.disabled = true;
+                }
+            }
+
+            txtMotivo.addEventListener('input', actualizarContador);
+            actualizarContador();
+
+            btnGuardar.addEventListener('click', function() {
+                let adminSelect = document.getElementById('AdminSelectLider');
+                if (adminSelect && !adminSelect.value) {
+                    Swal.fire('Falta el Líder', 'Debes seleccionar qué Líder estará a cargo de esta reunión.', 'warning');
+                    return;
+                }
+
+                if (!formReunion.checkValidity()) {
+                    formReunion.reportValidity();
+                    return;
+                }
+
+                if (!validarReglasHorario()) return;
+
+                let checks = document.querySelectorAll('input[name="investigadoresSeleccionados"]:checked').length;
+                if (checks === 0) {
+                    Swal.fire('Error', 'Debes seleccionar al menos a un investigador disponible.', 'error');
+                    return;
+                }
+
+                Swal.fire({
+                    title: '¿Actualizar Reunión?',
+                    text: 'Se notificarán los cambios a los investigadores.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, actualizar',
+                    cancelButtonText: 'Cancelar'
+                }).then((r) => {
+                    if (r.isConfirmed) {
+                        Swal.fire({ title: 'Actualizando...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                        formReunion.submit();
+                    }
+                });
+            });
+
+            document.getElementById('btn-volver').addEventListener('click', function(e) {
+                e.preventDefault();
+                Swal.fire({ title: '¿Salir?', text: "Perderás los cambios no guardados.", icon: 'warning', showCancelButton: true }).then((r) => {
+                    if (r.isConfirmed) window.location.href = this.href;
+                });
+            });
+
+        });
+    </script>
+}
